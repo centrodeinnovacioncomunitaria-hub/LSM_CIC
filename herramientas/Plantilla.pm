@@ -32,55 +32,27 @@ sub nav {
     my $grupo = sub { my %en = map { $_ => 1 } @_; $en{$actual} ? ' actual' : '' };
     my $talleres = $grupo->(qw(hacer ser talleres));
     my $cursos = $grupo->(qw(cursos gestion acompanar-hacer facilitar-ser));
-    my $recursos = $grupo->('recursos');
-    my $cic = $grupo->(qw(el-cic como-funciona implementacion formacion glosario));
     return <<"HTML";
             <nav id="nav-publica" class="nav" aria-label="Principal">
                 <div class="submenu">
                     <button type="button" class="submenu-btn$talleres" aria-expanded="false" aria-controls="sub-talleres">Talleres $f</button>
                     <ul id="sub-talleres" class="submenu-lista" hidden>
-                        <li><a href="${P}rutas/hacer/"@{[ $cur->('hacer') ]}><span class="punto bg-durazno"></span><span><b>Ruta HACER</b><small>Emprendedoras · 6 sesiones en tu negocio</small></span></a></li>
-                        <li><a href="${P}rutas/ser/"@{[ $cur->('ser') ]}><span class="punto bg-lavanda"></span><span><b>Ruta SER</b><small>Emprendedoras · 4 talleres en grupo</small></span></a></li>
-                        <li><a class="todas" href="${P}#rutas">Ver los talleres</a></li>
+                        <li><a href="${P}rutas/hacer/"@{[ $cur->('hacer') ]}><span class="punto bg-durazno"></span><span><b>Ruta HACER</b><small>6 semanas en tu negocio</small></span></a></li>
+                        <li><a href="${P}rutas/ser/"@{[ $cur->('ser') ]}><span class="punto bg-lavanda"></span><span><b>Ruta SER</b><small>4 talleres en grupo</small></span></a></li>
                     </ul>
                 </div>
+                <a href="${P}recursos/"@{[ $cur->('recursos') ]}>Recursos</a>
+                <a href="${P}el-cic/"@{[ $cur->('el-cic') ]}>El CIC</a>
                 <div class="submenu">
-                    <button type="button" class="submenu-btn$cursos" aria-expanded="false" aria-controls="sub-cursos">Cursos del equipo $f</button>
+                    <button type="button" class="submenu-btn$cursos" aria-expanded="false" aria-controls="sub-cursos">Equipo $f</button>
                     <ul id="sub-cursos" class="submenu-lista" hidden>
-                        <li><a href="${P}cursos/gestion-cic/"@{[ $cur->('gestion') ]}><span class="punto bg-agua"></span><span><b>Gestión del CIC</b><small>Dinamizadoras y Secretaría · 5 módulos</small></span></a></li>
-                        <li><a href="${P}cursos/acompanar-hacer/"@{[ $cur->('acompanar-hacer') ]}><span class="punto bg-durazno"></span><span><b>Acompañar la ruta HACER</b><small>Dinamizadoras · 6 semanas</small></span></a></li>
-                        <li><a href="${P}cursos/facilitar-ser/"@{[ $cur->('facilitar-ser') ]}><span class="punto bg-lavanda"></span><span><b>Facilitar la ruta SER</b><small>Dinamizadoras · 4 talleres</small></span></a></li>
-                        <li><a class="todas" href="${P}cursos/"@{[ $cur->('cursos') ]}>Ver todos los cursos</a></li>
+                        <li><a href="${P}cursos/gestion-cic/"@{[ $cur->('gestion') ]}><span class="punto bg-agua"></span><span><b>Gestión del CIC</b><small>5 módulos</small></span></a></li>
+                        <li><a href="${P}cursos/acompanar-hacer/"@{[ $cur->('acompanar-hacer') ]}><span class="punto bg-durazno"></span><span><b>Acompañar la ruta HACER</b><small>6 semanas</small></span></a></li>
+                        <li><a href="${P}cursos/facilitar-ser/"@{[ $cur->('facilitar-ser') ]}><span class="punto bg-lavanda"></span><span><b>Facilitar la ruta SER</b><small>4 talleres</small></span></a></li>
+                        <li><a class="todas" href="${P}cursos/"@{[ $cur->('cursos') ]}>Cursos del equipo</a></li>
                     </ul>
                 </div>
-                <div class="submenu">
-                    <button type="button" class="submenu-btn$recursos" aria-expanded="false" aria-controls="sub-recursos">Recursos $f</button>
-                    <ul id="sub-recursos" class="submenu-lista" hidden>
-                        <li><a href="${P}recursos/"@{[ $cur->('recursos') ]}><span class="punto bg-mantequilla"></span><span><b>Biblioteca completa</b><small>13 plantillas gratuitas</small></span></a></li>
-                        <li><a href="${P}recursos/#tema-finanzas"><span class="punto bg-menta"></span><span><b>Finanzas</b><small>Costos, precio y flujo de caja</small></span></a></li>
-                        <li><a href="${P}recursos/#tema-ventas"><span class="punto bg-durazno"></span><span><b>Ventas</b><small>Clientes, tendencias y plan comercial</small></span></a></li>
-                        <li><a href="${P}recursos/#punto-equilibrio"><span class="punto bg-coral"></span><span><b>Calculadora de punto de equilibrio</b><small>Cuánto necesitas vender al mes</small></span></a></li>
-                    </ul>
-                </div>
-                <div class="submenu">
-                    <button type="button" class="submenu-btn$cic" aria-expanded="false" aria-controls="sub-cic">Sobre el CIC $f</button>
-                    <ul id="sub-cic" class="submenu-lista" hidden>
-                        <li><a href="${P}el-cic/"@{[ $cur->(q{el-cic}) ]}><span class="punto bg-menta"></span><span><b>Qué es el CIC</b><small>Modelo, objetivos y estructura en red</small></span></a></li>
-                        <li><a href="${P}el-cic/como-funciona/"@{[ $cur->(q{como-funciona}) ]}><span class="punto bg-durazno"></span><span><b>Cómo funciona</b><small>Pilares, financiamiento y desarrollo del ser</small></span></a></li>
-                        <li><a href="${P}el-cic/implementacion/"@{[ $cur->(q{implementacion}) ]}><span class="punto bg-coral"></span><span><b>Implementación y seguimiento</b><small>Fases, indicadores y hoja de ruta 2026-2030</small></span></a></li>
-                        <li><a href="${P}el-cic/formacion/"@{[ $cur->(q{formacion}) ]}><span class="punto bg-lavanda"></span><span><b>Proceso formativo</b><small>Formación en cascada, 62 horas y constancias</small></span></a></li>
-                        <li><a href="${P}#territorio"><span class="punto bg-mantequilla"></span><span><b>Territorio</b><small>8 satélites · 13 municipios</small></span></a></li>
-                        <li><a class="todas" href="${P}el-cic/glosario/"@{[ $cur->(q{glosario}) ]}>Glosario de términos y siglas</a></li>
-                    </ul>
-                </div>
-                <div class="submenu">
-                    <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-ayuda">Ayuda $f</button>
-                    <ul id="sub-ayuda" class="submenu-lista" hidden>
-                        <li><a href="${P}#ayuda"><span class="punto bg-agua"></span><span><b>Preguntas frecuentes</b><small>Ingreso, celular y constancias</small></span></a></li>
-                        <li><a href="${P}#verificar"><span class="punto bg-menta"></span><span><b>Verificar constancia</b><small>Con el código de la constancia</small></span></a></li>
-                        <li><a href="${P}#politica-datos"><span class="punto bg-lavanda"></span><span><b>Política de datos</b><small>Ley 1581 de 2012</small></span></a></li>
-                    </ul>
-                </div>
+                <a href="${P}#ayuda">Ayuda</a>
             </nav>
 HTML
 }
@@ -97,7 +69,7 @@ sub pie {
                         <svg aria-hidden="true"><use href="#isotipo"/></svg>
                         <span><span class="logo-palabra">cic</span><span class="logo-sub" style="display:block">Centro de Innovación Comunitaria</span></span>
                     </a>
-                    <p class="texto-suave" style="margin-top:1rem;font-size:.93rem">Formación y acompañamiento para la autonomía económica de las mujeres emprendedoras del Caribe, en red con la Red de Mujeres del Caribe.</p>
+                    <p class="texto-suave" style="margin-top:1rem;font-size:.95rem">Formación y acompañamiento para la autonomía económica de las mujeres emprendedoras del Caribe, en red con la Red de Mujeres del Caribe.</p>
                 </div>
                 <div>
                     <h2>Emprendedoras</h2>
@@ -105,15 +77,15 @@ sub pie {
                 </div>
                 <div>
                     <h2>Equipo del CIC</h2>
-                    <ul><li><a href="${P}cursos/">Cursos del equipo</a></li><li><a href="${P}cursos/gestion-cic/">Gestión del CIC</a></li><li><a href="${P}cursos/acompanar-hacer/">Acompañar la ruta HACER</a></li><li><a href="${P}cursos/facilitar-ser/">Facilitar la ruta SER</a></li></ul>
+                    <ul><li><a href="${P}cursos/">Cursos del equipo</a></li><li><a href="${P}cursos/gestion-cic/">Gestión del CIC</a></li><li><a href="${P}cursos/acompanar-hacer/">Acompañar HACER</a></li><li><a href="${P}cursos/facilitar-ser/">Facilitar SER</a></li></ul>
                 </div>
                 <div>
                     <h2>El CIC</h2>
-                    <ul><li><a href="${P}el-cic/">Qué es el CIC</a></li><li><a href="${P}el-cic/como-funciona/">Cómo funciona</a></li><li><a href="${P}el-cic/implementacion/">Implementación</a></li><li><a href="${P}el-cic/formacion/">Proceso formativo</a></li><li><a href="${P}el-cic/glosario/">Glosario</a></li><li><a href="${P}#aliados">Aliados</a></li></ul>
+                    <ul><li><a href="${P}el-cic/">Qué es el CIC</a></li><li><a href="${P}el-cic/#como-funciona">Cómo funciona</a></li><li><a href="${P}el-cic/#satelites">Los 8 satélites</a></li><li><a href="${P}#aliados">Aliados</a></li></ul>
                 </div>
                 <div>
                     <h2>Ayuda</h2>
-                    <ul><li><a href="${P}#ayuda">Centro de ayuda</a></li><li><a href="${P}#verificar">Verificar constancia</a></li><li><a href="${P}#politica-datos">Política de datos</a></li></ul>
+                    <ul><li><a href="${P}#ayuda">Preguntas frecuentes</a></li><li><a href="${P}#verificar">Verificar constancia</a></li><li><a href="${P}#politica-datos">Política de datos</a></li></ul>
                 </div>
             </div>
             <div class="pie-legal">
@@ -154,6 +126,9 @@ sub cabeza {
     <meta property="og:title" content="@{[ attr($o{og} // $o{titulo}) ]}">
     <meta property="og:description" content="@{[ attr($o{desc}) ]}">
     <meta property="og:url" content="$o{url}">
+    <meta property="og:image" content="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEicEkPOKCm_sE-jU7pciFF2BYTM6QwPMDneMMFKks7sapmv17WIn0rzCAw_O-QWl62bQCkdrrB9Vboed1-2YI24qd3sS_cV5OhRVkEnccxOJZpaBHiG-j52MkSkLGb7h19tBVGtq3_w2p4/s1200/IMG_6584.JPG">
+    <meta property="og:image:alt" content="Mujeres de la Red de Mujeres del Caribe reunidas en un taller del CIC">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='12 12 96 96'%3E%3Cpath d='M60,104 C30,100 14,78 18,44 C44,50 58,70 60,104 Z' fill='%239ED0B7'/%3E%3Cpath d='M60,104 C90,100 106,78 102,44 C76,50 62,70 60,104 Z' fill='%23F2B592'/%3E%3Ccircle cx='60' cy='30' r='12' fill='%23EE9884'/%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

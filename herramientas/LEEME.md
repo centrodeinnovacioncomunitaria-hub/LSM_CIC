@@ -1,30 +1,36 @@
 # Herramientas del portal
 
-El portal tiene dos espacios:
+El portal tiene tres espacios:
 
-- **Talleres para emprendedoras** (`rutas/hacer/` y `rutas/ser/`): se inscriben solas. Cada sesión o taller tiene su guía pública (`rutas/hacer/semana-N/`, `rutas/ser/taller-N/`) y un espacio para su video.
-- **Cursos del equipo** (`cursos/`): Gestión del CIC, Acompañar la ruta HACER y Facilitar la ruta SER, para dinamizadoras y Secretaría Técnica. Entran con su cédula si están en la base de datos. Las páginas públicas describen cada curso; el video, el material de estudio y el cuestionario de cada tema se abren al ingresar (área privada en Supabase).
+- **El CIC** (`index.html` y `el-cic/`): qué es el centro, cómo funciona desde la Secretaría Técnica hasta los 8 satélites (con mapa) y sus pilares. Poco texto, a propósito.
+- **Talleres para emprendedoras** (`rutas/hacer/` y `rutas/ser/`): cada semana o taller con su resumen y sus descargas (Word y Excel). Al ingresar, cada emprendedora ve **«Mi semana»**: su semana actual, su satélite, su dinamizadora, sus descargas y las grabaciones de los talleres virtuales.
+- **Cursos del equipo** (`cursos/`): Gestión del CIC, Acompañar la ruta HACER y Facilitar la ruta SER, para dinamizadoras y Secretaría Técnica. Al ingresar, cada módulo muestra su video (ver `../GUIA_VIDEOS.md`).
 
-## Scripts (se ejecutan desde la carpeta `LSM_CIC`)
+## Una sola fuente de datos
+
+`Datos.pm` tiene los 8 satélites (con sus municipios), las 6 semanas de HACER, los 4 talleres de SER con sus descargas, y los pilares. De ahí salen el mapa, las páginas de las rutas y `assets/datos-cic.js`, que lee la plataforma. Si cambia una semana, una descarga o un satélite, se edita solo ahí.
+
+`Plantilla.pm` tiene las piezas comunes de todas las páginas: símbolos, menú, pie, cabeza HTML (`cabeza`), apertura del cuerpo (`cuerpo_inicio`) y cierre (`final_pagina`).
+
+## Scripts (se ejecutan desde la carpeta `LSM_CIC`, en este orden)
 
 | Script | Qué hace |
 |---|---|
-| `perl herramientas/generar_lecciones.pl ../material_cursos` | Genera las 10 guías de las emprendedoras desde las «Guías de la emprendedora» del Drive y copia sus descargas a `/descargas`. |
+| `perl herramientas/generar_rutas.pl` | Genera `rutas/hacer/`, `rutas/ser/`, las redirecciones de las guías anteriores y `assets/datos-cic.js`. Avisa si falta alguna descarga. |
+| `perl herramientas/generar_el_cic.pl` | Genera `el-cic/` y las redirecciones de sus subpáginas anteriores. |
 | `perl herramientas/generar_cursos.pl` | Genera `cursos/` y las páginas de los tres cursos del equipo. |
-| `perl herramientas/aplicar_plantilla.pl` | Aplica el menú y el pie al inicio, la biblioteca y las páginas de las rutas. |
-| `perl herramientas/generar_el_cic.pl` | Genera la sección institucional `el-cic/` (Qué es el CIC, Cómo funciona, Implementación y seguimiento, Proceso formativo y Glosario) con los datos de los documentos oficiales 6.5 y 6.4 de la Red. |
+| `perl herramientas/aplicar_plantilla.pl` | Aplica menú y pie al inicio y a la biblioteca, y llena en el inicio los bloques del mapa y los pilares. |
 
-`Plantilla.pm` tiene las piezas comunes de todas las páginas: símbolos, menú principal, pie, cabeza HTML (`cabeza`), apertura del cuerpo (`cuerpo_inicio`) y cierre (`final_pagina`). Si cambia el menú o el pie, se edita ahí y se ejecutan los cuatro scripts.
+## Base de datos (Supabase)
 
-## Cuando la Secretaría Técnica publique una nueva versión del modelo
-
-Los documentos 6.5 y 6.4 son iterativos. Al recibir una versión nueva: se actualizan los datos en `generar_el_cic.pl` (cada página está en su propio bloque, en el mismo orden que el documento), se ejecuta el script y se revisan las cifras que también aparecen en el inicio (`index.html`: sección «Sobre el CIC», territorio y preguntas frecuentes) y en `llms.txt`.
-
-`material_cursos` es la carpeta *Material Plataforma* del Drive descargada en `Desktop\2HO\CIC\material_cursos`, con `hacer/semana-1 … semana-6`, `ser/taller-1 … taller-4` y `gestion`.
+- `supabase/migrations/20260928000000_cic_acceso.sql`: directorio del equipo, perfiles y permisos.
+- `supabase/migrations/20261006000000_cic_semana_videos.sql`: satélites, semana actual, dinamizadora asignada, `mi_dinamizadora()`, `fijar_semana()` y la tabla `videos`.
+- `supabase/functions/cic-acceso/`: ingreso con cédula, inscripción (el satélite sale del municipio), cambio y restablecimiento de contraseña.
+- Pasos para activarlo: `../CONFIGURAR_ACCESO.md`. Los datos personales (directorio y asignación de satélites) están en `privado_NO_SUBIR`, fuera del repositorio.
 
 ## Qué se publica y qué no
 
-- **Se publica:** las guías de la emprendedora (como página y en Word) y las plantillas de Excel A3, A8, A9, A11 y A12.
-- **No se publica** (área privada del equipo): videos y guiones, material de estudio, guías de facilitación, evaluaciones y cuestionarios, documentos de herramientas con claves para la dinamizadora y la guía de estudio del curso de Gestión.
+- **Se publica:** las guías de la emprendedora en Word, las plantillas de Excel A3, A8, A9, A11 y A12, y la descripción de cada curso del equipo.
+- **No se publica** (solo al ingresar): los videos de los cursos, las grabaciones de los talleres, el material de estudio y los cuestionarios del equipo.
 
-Las respuestas que las emprendedoras escriben en sus guías se guardan solo en su dispositivo.
+Los documentos oficiales del modelo (6.5 y 6.4) son iterativos: cuando la Secretaría publique una versión nueva, se revisan las cifras de `generar_el_cic.pl`, del inicio y de `llms.txt`.

@@ -31,6 +31,8 @@ En **SQL Editor**, pegar y ejecutar, en este orden:
 
 1. `supabase/migrations/20260928000000_cic_acceso.sql` (de este repositorio).
 2. `directorio_equipo_cic.sql`, que está en la carpeta privada `privado_NO_SUBIR` (fuera del repositorio). Trae las 29 personas del Excel del equipo.
+3. `supabase/migrations/20261006000000_cic_semana_videos.sql`: satélites, semana actual de cada emprendedora, dinamizadora asignada y videos.
+4. `asignar_satelites.sql`, también en `privado_NO_SUBIR`: le pone su satélite a cada dinamizadora. **Antes de ejecutarlo**, revisar las 6 líneas de Cesar y dejar en cada una `valledupar` o `pueblo-bello`.
 
 Para sumar o corregir personas del equipo más adelante, se edita la tabla `directorio` en **Table Editor**.
 
@@ -64,7 +66,8 @@ En **Project Settings → API Keys**, copiar la **URL del proyecto** y la llave 
 window.CIC_CONFIG = {
   supabaseUrl: 'https://xxxxxxxx.supabase.co',
   supabaseAnonKey: 'la-llave-anon-o-publishable',
-  funcion: 'cic-acceso'
+  funcion: 'cic-acceso',
+  whatsappCIC: '3001234567'   // opcional: el WhatsApp de atención del CIC
 };
 ```
 
@@ -74,13 +77,10 @@ Esa llave es pública por diseño. **Nunca** poner en `config.js` la llave `serv
 
 1. Entrar como Secretaría Técnica con una cédula del directorio (contraseña = cédula).
 2. Cambiar la contraseña en *Mi cuenta* y revisar que llegue el correo.
-3. Crear una cuenta de emprendedora de prueba y verla en *Seguimiento*.
+3. Crear una cuenta de emprendedora de prueba (con un municipio de la lista) y verla en *Seguimiento*.
+4. Como dinamizadora, cambiarle la semana; como emprendedora, comprobar que «Mi semana» muestre esa semana, su satélite y su dinamizadora.
+5. Como Secretaría, publicar un video en la pestaña *Videos* (ver `GUIA_VIDEOS.md`) y verlo en *Mis cursos*.
 
-## Datos del Excel que conviene revisar
+## Revisión de los datos del equipo
 
-- **Pamela Lizeth Peña Correa**: el correo dice `saimpeco@gmaill.com` (con doble l). Si es un error, no le llegarán los avisos.
-- **Ledys Hernández Jiménez**: en la hoja general no tiene correo; se tomó `carmenjimenezcorrea@hotmail.com` de la hoja de Sucre.
-- **Alina Esther Mendoza Mercado**: en la hoja general falta la cédula; se tomó 57434709 de la hoja de Bolívar.
-- **María Inés Cotes Peña**: la hoja general dice Cesar y la de La Guajira la incluye; se dejó La Guajira, según su cargo.
-- **Libia Luna** y **Doris Arregoces**: los apellidos difieren entre hojas; se usó el más completo.
-- **Wilson Darío Correa Oliva** y **Arturo Mayoral Romero** figuran en el equipo; la página usa «Dinamizadora» y «Secretaría Técnica» como nombre del perfil.
+Las observaciones sobre los datos del Excel (correos, cédulas y nombres por confirmar) están en `privado_NO_SUBIR/notas_directorio.md`, fuera del repositorio, porque contienen datos personales.

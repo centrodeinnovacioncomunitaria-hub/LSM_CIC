@@ -4,5 +4,6 @@
 window.CIC_CONFIG = {
   supabaseUrl: '',      // ej.: 'https://abcdefghijkl.supabase.co'
   supabaseAnonKey: '',  // Project Settings → API Keys → anon / publishable
-  funcion: 'cic-acceso'
+  funcion: 'cic-acceso',
+  whatsappCIC: ''       // WhatsApp de atención del CIC (solo números, ej.: '3001234567'); vacío = no se muestra el botón
 };

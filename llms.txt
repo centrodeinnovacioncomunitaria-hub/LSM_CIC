@@ -1,25 +1,23 @@
 # Centro de Innovación Comunitaria (CIC)
 
-> Formación y acompañamiento para la autonomía económica de las mujeres emprendedoras del Caribe colombiano, en red con la Red de Mujeres del Caribe. Una Secretaría Técnica, 8 satélites y 24 dinamizadoras acompañan a 200 emprendedoras en 13 municipios de 7 departamentos.
+> Formación y acompañamiento para la autonomía económica de las mujeres emprendedoras del Caribe colombiano, en red con la Red de Mujeres del Caribe. Una Secretaría Técnica acompaña a 8 satélites con 24 dinamizadoras, que acompañan a 200 emprendedoras en 13 municipios de 7 departamentos.
+
+## El CIC
+- [Qué es el CIC y cómo funciona](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/el-cic/): la cascada de la Secretaría Técnica a los satélites y a cada emprendedora, el mapa de los 8 satélites (La Guajira, Magdalena, Valledupar, Pueblo Bello, Atlántico, Bolívar, Sucre y Córdoba), los cinco pilares y el ciclo de seis meses.
 
 ## Talleres para emprendedoras (con inscripción)
-- [Ruta HACER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/hacer/): 6 sesiones individuales (12 h) en el negocio para ordenar costos, precios y ventas. Guías: https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/hacer/semana-1/ a semana-6/.
-- [Ruta SER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/ser/): 4 talleres grupales (16 h) de confianza, decisiones, liderazgo y ahorro colectivo. Guías: https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/ser/taller-1/ a taller-4/.
+- [Ruta HACER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/hacer/): 6 semanas de acompañamiento individual en el negocio (2 h cada una): costos, precio, ventas y plan de inversión. Cada semana tiene su guía en Word y sus plantillas en Excel para descargar.
+- [Ruta SER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/ser/): 4 talleres en grupo (4 h cada uno; 2 presenciales y 2 virtuales con grabación): confianza, decisiones, liderazgo, derechos y ahorro colectivo.
+- Al ingresar, cada emprendedora ve «Mi semana»: la semana que le toca, su satélite, su dinamizadora, sus descargas y las grabaciones de los talleres virtuales.
 
 ## Cursos del equipo (dinamizadoras y Secretaría Técnica)
-- [Cursos del equipo](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/): acceso con cédula para quienes están en la base de datos del equipo.
+- [Cursos del equipo](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/): acceso con cédula para quienes están en la base de datos del equipo. Cada módulo tiene un video.
 - [Gestión del CIC](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/gestion-cic/): 5 módulos (≈ 2 h) sobre cómo funciona el centro.
 - [Acompañar la ruta HACER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/acompanar-hacer/): preparación de las 6 sesiones con las emprendedoras.
 - [Facilitar la ruta SER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/facilitar-ser/): preparación de los 4 talleres grupales.
 
-## El CIC (modelo oficial)
-- [Qué es el CIC](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/el-cic/): software social, objetivos, población, estructura centro-satélite (Secretaría Técnica, 8 satélites, base comunitaria) y focalización territorial.
-- [Cómo funciona](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/el-cic/como-funciona/): acompañamiento integral, acceso a mercados, financiamiento en cuatro niveles (UMC de máximo 19 personas), seis dimensiones del ecosistema y el pilar transversal del desarrollo del ser.
-- [Implementación y seguimiento](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/el-cic/implementacion/): fases 0 a 4 del ciclo de seis meses, indicadores y metas, riesgos y hoja de ruta 2026-2030.
-- [Proceso formativo](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/el-cic/formacion/): formación en cascada, Diseño Centrado en las Personas, 19 temáticas en 7 macrotemas, 62 horas (28 por emprendedora), evaluación y constancias.
-- [Glosario](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/el-cic/glosario/): términos, siglas y referencias.
-- Fuentes: Modelo Metodológico CIC (documento 6.5) y Documento técnico y metodológico de los procesos formativos (documento 6.4, agosto de 2026), Red de Mujeres del Caribe.
-
 ## Otras páginas
-- [Biblioteca de recursos](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/recursos/): plantillas gratuitas de finanzas, ventas, formalización y marketing digital.
-- [Centro de ayuda](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/#ayuda): ingreso, constancias y contacto.
+- [Biblioteca de recursos](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/recursos/): 13 plantillas gratuitas y una calculadora de punto de equilibrio.
+- [Ayuda](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/#ayuda): inscripción, ingreso, constancias y contacto.
+
+Fuentes del modelo: Modelo Metodológico CIC (documento 6.5) y Documento técnico y metodológico de los procesos formativos (documento 6.4), Red de Mujeres del Caribe, 2026.

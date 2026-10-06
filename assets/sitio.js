@@ -4,14 +4,19 @@
     const $ = (s, r = document) => r.querySelector(s);
     const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
-    // Menú en celular
+    // Menú en celular: el ícono cambia a ✕ y un fondo oscurece la página mientras está abierto
     const menu = $('#menu-btn'), nav = $('#nav-publica');
-    if (menu && nav) {
-        menu.addEventListener('click', () => {
-            const abierto = nav.classList.toggle('abierta');
-            menu.setAttribute('aria-expanded', String(abierto));
-        });
+    const ICONO_MENU = '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    const ICONO_CERRAR = '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    function menuAbierto(abierto) {
+        if (!menu || !nav) return;
+        nav.classList.toggle('abierta', abierto);
+        document.body.classList.toggle('menu-abierto', abierto);
+        menu.setAttribute('aria-expanded', String(abierto));
+        menu.setAttribute('aria-label', abierto ? 'Cerrar menú' : 'Abrir menú');
+        menu.innerHTML = abierto ? ICONO_CERRAR : ICONO_MENU;
     }
+    if (menu && nav) menu.addEventListener('click', () => menuAbierto(!nav.classList.contains('abierta')));
 
     // Submenús: se abren con clic o teclado, se cierran con Escape, al hacer clic fuera o al elegir un enlace
     const botones = $$('.submenu-btn');
@@ -41,20 +46,21 @@
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
         const abierto = botones.find((b) => b.getAttribute('aria-expanded') === 'true');
-        if (abierto) { cerrar(); abierto.focus(); }
+        if (abierto) { cerrar(); abierto.focus(); return; }
+        if (nav && nav.classList.contains('abierta')) { menuAbierto(false); menu.focus(); }
     });
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.submenu')) cerrar();
-        if (e.target.closest('.nav a')) {
+        // Elegir un enlace o tocar fuera del menú lo cierra
+        if (e.target.closest('.nav a') || (nav && nav.classList.contains('abierta') && !e.target.closest('#nav-publica, #menu-btn'))) {
             cerrar();
-            if (nav) nav.classList.remove('abierta');
-            if (menu) menu.setAttribute('aria-expanded', 'false');
+            menuAbierto(false);
         }
     });
 
     const quieto = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // Cifras que cuentan desde cero al aparecer: <b data-contar="200">200</b>
+    // Cifras que cuentan al aparecer (desde el 60 % del valor, para no mostrar cifras sueltas como «1 años»): <b data-contar="200">200</b>
     function contar(el) {
         const meta = Number(el.dataset.contar);
         if (quieto || !meta) return;
@@ -65,7 +71,7 @@
         const paso = () => {
             const p = Math.min(1, Math.max(0, (performance.now() - inicio) / dura));
             if (p >= 1) { clearTimeout(tope); el.textContent = final; return; }
-            el.textContent = Math.round(meta * (1 - Math.pow(1 - p, 3))).toLocaleString('es-CO');
+            el.textContent = Math.round(meta * (.6 + .4 * (1 - Math.pow(1 - p, 3)))).toLocaleString('es-CO');
             requestAnimationFrame(paso);
         };
         requestAnimationFrame(paso);
@@ -146,4 +152,21 @@
             setTimeout(() => aro.remove(), 650);
         });
     }
+    // Mapa de satélites: al tocar un satélite (en la lista o en el mapa) se resalta su línea y se muestra su ficha
+    $$('.mapa-cic').forEach((m) => {
+        const info = $('.satelite-info', m);
+        const activar = (id) => {
+            $$('[data-sat]', m).forEach((el) => el.classList.toggle('activo', el.dataset.sat === id));
+            $$('.satelite-btn', m).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sat === id)));
+            const b = $(`.satelite-btn[data-sat="${id}"]`, m);
+            if (!b || !info) return;
+            info.replaceChildren(...[
+                ['b', b.dataset.nombre],
+                ['span', `${b.dataset.depto} · ${b.dataset.municipios}`],
+                ['span', '3 dinamizadoras: acompañamiento, acceso a mercados y financiamiento, acompañadas por la Secretaría Técnica.'],
+            ].map(([tag, texto]) => { const e = document.createElement(tag); e.textContent = texto; return e; }));
+        };
+        m.addEventListener('click', (e) => { const t = e.target.closest('[data-sat]'); if (t) activar(t.dataset.sat); });
+        $$('.satelite-btn, .mapa-pin', m).forEach((el) => el.addEventListener('mouseenter', () => activar(el.dataset.sat)));
+    });
 })();

@@ -85,7 +85,7 @@ my %CURSOS = (
       ['Responde el cuestionario', 'Antes de la visita: 5 preguntas de un banco de 10; apruebas con 4. Tienes 2 intentos.'],
       ['Acompaña y registra', 'Conduces la sesión con la emprendedora y la registras el mismo día. La Secretaría revisa las evidencias.'],
     ],
-    unidad => 'Semana', abrev => 'S', ancla => 'semana', guia => 'rutas/hacer/semana-',
+    unidad => 'Semana', abrev => 'S', ancla => 'semana', guia => 'rutas/hacer/#semana-',
     temario_intro => 'Cada semana prepara una sesión de 2 horas con la emprendedora, en su negocio. La guía de la emprendedora de cada sesión es pública.',
     unidades => [
       { t => 'Primer encuentro: entender la dinámica real del negocio', sesion => 'Cuéntame tu negocio',
@@ -141,7 +141,7 @@ my %CURSOS = (
       ['Prepara con tu equipo', 'Las tres dinamizadoras del satélite se reparten los roles, la convocatoria y los materiales.'],
       ['Facilita y registra', 'Conduces el taller y registras el mismo día la asistencia, las evidencias y la bitácora.'],
     ],
-    unidad => 'Taller', abrev => 'T', ancla => 'taller', guia => 'rutas/ser/taller-',
+    unidad => 'Taller', abrev => 'T', ancla => 'taller', guia => 'rutas/ser/#taller-',
     temario_intro => 'Cada taller dura 4 horas y reúne a las emprendedoras del satélite. La guía de la emprendedora de cada taller es pública.',
     unidades => [
       { t => 'Autoestima, identidad de gerenta y proyecto de vida', sesion => 'De la subsistencia a la gerencia', modo => 'Presencial',
@@ -195,7 +195,7 @@ for my $slug (@ORDEN) {
         my $aprende = $u->{aprende} ? '<p style="font-weight:700;margin-top:.9rem;color:var(--bosque)">Qué vas a aprender</p><ul class="lista-check">' . join('', map { "<li>$_</li>" } @{ $u->{aprende} }) . '</ul>' : '';
         my $logra = $u->{logra} ? qq{<p class="logra"><b>Resultado esperado:</b> $u->{logra}</p>} : '';
         my $momentos = $u->{momentos} ? '<div class="llevas"><span>La sesión:</span>' . join('', map { "<span class=\"chip\">$_</span>" } @{ $u->{momentos} }) . '</div>' : '';
-        my $guia = $c->{guia} ? qq{<a class="abrir-leccion" href="$P$c->{guia}$n/">Ver la guía de la emprendedora →</a>} : '';
+        my $guia = $c->{guia} ? qq{<a class="abrir-leccion" href="$P$c->{guia}$n">Ver la semana de la emprendedora y sus descargas →</a>} : '';
         my $privado = qq{<p class="privado"><svg aria-hidden="true"><use href="#candado"/></svg>Video, material de estudio y cuestionario: al ingresar con tu cédula</p>};
         <<"LI";
                     <li id="$c->{ancla}-$n" class="paso-ruta aparece">

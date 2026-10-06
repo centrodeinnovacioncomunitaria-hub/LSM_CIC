@@ -27,9 +27,21 @@ const NOMBRE_ROL: Record<string, string> = {
   dinamizadora: 'Dinamizadora',
   emprendedora: 'Emprendedora',
 };
-const DEPARTAMENTOS = ['Atlántico', 'Bolívar', 'Cesar', 'Córdoba', 'La Guajira', 'Magdalena', 'Sucre'];
+// Municipios de cada satélite (los mismos de herramientas/Datos.pm y de la tabla satelites)
+const SATELITES: Record<string, { departamento: string; municipios: string[] }> = {
+  "la-guajira": { departamento: "La Guajira", municipios: ["Riohacha", "Albania"] },
+  magdalena: { departamento: "Magdalena", municipios: ["Santa Marta"] },
+  valledupar: { departamento: "Cesar", municipios: ["Valledupar"] },
+  "pueblo-bello": { departamento: "Cesar", municipios: ["Pueblo Bello"] },
+  atlantico: { departamento: "Atlántico", municipios: ["Baranoa", "Campo de la Cruz"] },
+  bolivar: { departamento: "Bolívar", municipios: ["Cartagena", "María la Baja"] },
+  sucre: { departamento: "Sucre", municipios: ["Sincelejo", "Tolú"] },
+  cordoba: { departamento: "Córdoba", municipios: ["Montería", "Tierralta"] },
+};
+const sateliteDe = (municipio: string) =>
+  Object.entries(SATELITES).find(([, s]) => s.municipios.includes(municipio))?.[0] ?? null;
 const CAMPOS_PERFIL =
-  'id, cedula, nombre, rol, cargo, correo, celular, departamento, municipio, negocio, debe_cambiar_clave';
+  'id, cedula, nombre, rol, cargo, correo, celular, departamento, municipio, negocio, satelite, semana_actual, debe_cambiar_clave';
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -95,7 +107,7 @@ async function activarDesdeDirectorio(cedula: string, clave: string) {
   if (!d) return null;
   return crearCuenta(cedula, cedula, {
     nombre: d.nombre, rol: d.rol, cargo: d.cargo, correo: d.correo, celular: d.celular,
-    departamento: d.departamento, debe_cambiar_clave: true,
+    departamento: d.departamento, satelite: d.satelite ?? null, debe_cambiar_clave: true,
   });
 }
 
@@ -110,7 +122,7 @@ async function ingresar(b: Record<string, unknown>) {
   const sesion = perfil ? await iniciarSesion(cedula, clave) : null;
   if (!perfil || !sesion) {
     throw new Falla(401, 'credenciales', rol === 'emprendedora'
-      ? 'La cédula o la contraseña no coinciden. Si aún no tienes cuenta, créala en «Crear cuenta».'
+      ? 'La cédula o la contraseña no coinciden. Si aún no tienes cuenta, toca «Inscribirme».'
       : 'La cédula o la contraseña no coinciden. Si es tu primera vez, tu contraseña es tu número de cédula.');
   }
   // La contraseña ya se verificó: aquí sí podemos decirle cuál es su perfil.
@@ -125,16 +137,15 @@ async function registrar(b: Record<string, unknown>) {
   const nombre = texto(b.nombre, 90);
   const correo = texto(b.correo, 120).toLowerCase();
   const celular = soloDigitos(b.celular).slice(0, 12);
-  const departamento = texto(b.departamento, 40);
   const municipio = texto(b.municipio, 60);
+  const satelite = sateliteDe(municipio);
   const negocio = texto(b.negocio, 90);
   const clave = String(b.clave ?? '');
 
   if (nombre.length < 5 || !nombre.includes(' ')) throw new Falla(400, 'nombre', 'Escribe tu nombre y apellido.');
-  if (!correoValido(correo)) throw new Falla(400, 'correo', 'Revisa tu correo electrónico: ahí te avisaremos de cambios en tu cuenta.');
+  if (correo && !correoValido(correo)) throw new Falla(400, 'correo', 'Revisa tu correo electrónico, o déjalo vacío.');
   if (celular.length < 7) throw new Falla(400, 'celular', 'Escribe tu número de celular o WhatsApp.');
-  if (!DEPARTAMENTOS.includes(departamento)) throw new Falla(400, 'departamento', 'Elige tu departamento.');
-  if (!municipio) throw new Falla(400, 'municipio', 'Escribe tu municipio.');
+  if (!satelite) throw new Falla(400, 'municipio', 'Elige tu municipio de la lista.');
   if (clave.length < 8) throw new Falla(400, 'clave', 'La contraseña debe tener al menos 8 caracteres.');
   if (b.acepto !== true) throw new Falla(400, 'acepto', 'Para crear la cuenta debes autorizar el tratamiento de tus datos.');
 
@@ -143,7 +154,7 @@ async function registrar(b: Record<string, unknown>) {
   if (await perfilPorCedula(cedula)) throw new Falla(409, 'existe', 'Esta cédula ya tiene cuenta. Ingresa con tu cédula y tu contraseña.');
 
   const perfil = await crearCuenta(cedula, clave, {
-    nombre, rol: 'emprendedora', correo, celular, departamento, municipio, negocio: negocio || null,
+    nombre, rol: 'emprendedora', correo: correo || null, celular, departamento: SATELITES[satelite].departamento, municipio, satelite, negocio: negocio || null,
     acepto_datos_en: new Date().toISOString(),
   });
   const sesion = await iniciarSesion(cedula, clave);
