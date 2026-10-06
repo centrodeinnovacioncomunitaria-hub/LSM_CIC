@@ -804,6 +804,8 @@
                 modulos: [['SER 1 · Confianza para presentar mi negocio', 'Presencial · Árbol de vida, mapa de sueños y tarjeta de «gerenta».'], ['SER 2 · Decidir sin miedo', 'Virtual · Una decisión analizada con su primer paso.'], ['SER 3 · Liderazgo y derechos', 'Presencial · Rutas de atención, participación y compromiso de liderazgo.'], ['SER 4 · Ahorrar y crecer juntas', 'Virtual · Resolución de conflictos y acuerdos del grupo.']] },
         };
         const CURSOS_POR_ROL = { emprendedora: ['hacer', 'ser'], dinamizadora: ['gestion', 'hacer', 'ser'], secretaria: ['gestion', 'hacer', 'ser'] };
+        // Páginas de lección publicadas (las del curso de Gestión se habilitan con el área privada)
+        const urlLeccion = (id, i) => (id === 'hacer' ? `rutas/hacer/semana-${i + 1}/` : id === 'ser' ? `rutas/ser/taller-${i + 1}/` : '');
         const ETAPAS = ['Vinculación y diagnóstico', 'Ruta HACER', 'Ruta SER', 'Conexión y financiamiento'];
         const DEPARTAMENTOS = ['Atlántico', 'Bolívar', 'Cesar', 'Córdoba', 'La Guajira', 'Magdalena', 'Sucre'];
 
@@ -1087,7 +1089,7 @@
                             <div class="barra"><span class="barra-fondo" role="progressbar" aria-label="Avance en ${esc(c.titulo)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><span style="width:${pct}%"></span></span>${pct} %</div>
                             <ol class="modulos">
                             ${c.modulos.map(([t, d], i) => `
-                                <li><label class="${sig && sig.id === id && sig.i === i ? 'siguiente' : ''}"><input type="checkbox" data-curso="${id}" data-i="${i}" ${hechos.has(i) ? 'checked' : ''}><span><b>${esc(t)}</b><span>${esc(d)}</span></span></label></li>`).join('')}
+                                <li><label class="${sig && sig.id === id && sig.i === i ? 'siguiente' : ''}"><input type="checkbox" data-curso="${id}" data-i="${i}" ${hechos.has(i) ? 'checked' : ''}><span><b>${esc(t)}</b><span>${esc(d)}</span>${urlLeccion(id, i) ? `<a class="enlace" style="display:inline-block;margin-top:.3rem;font-size:.85rem" href="${urlLeccion(id, i)}">Abrir la lección →</a>` : ''}</span></label></li>`).join('')}
                             </ol>
                         </div>
                     </article>`;
@@ -1112,6 +1114,9 @@
             }));
             const bc = $('#btn-continuar');
             if (bc) bc.addEventListener('click', () => {
+                // Si la lección pendiente tiene su página, «Continuar» lleva directo a ella
+                const url = urlLeccion(sig.id, sig.i);
+                if (url) { location.href = url; return; }
                 ir('cursos', false);
                 const n = $(`input[data-curso="${sig.id}"][data-i="${sig.i}"]`);
                 if (n) { n.closest('label').scrollIntoView({ behavior: 'smooth', block: 'center' }); n.focus({ preventScroll: true }); }

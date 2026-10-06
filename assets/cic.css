@@ -557,3 +557,68 @@ td small { color: var(--musgo); }
 /* El contenido siempre por encima de las hojas y los patrones decorativos */
 .heroe > .contenedor, .territorio > .contenedor, .ruta-heroe-grid, .cta-banda > div:not(.hojas-flotantes):not(.patron-hojas), .cta-banda > a, .calc-destacada > div:not(.hojas-flotantes), .calc-destacada > a { position: relative; z-index: 1; }
 .hojas-flotantes span { opacity: .42; }
+
+/* ===== Lecciones (una por semana o taller) ===== */
+.leccion-grid { display: grid; grid-template-columns: 16rem 1fr; gap: 2.5rem; align-items: start; margin-top: 2.5rem; }
+.indice-leccion { position: sticky; top: 6rem; background: #fff; border: 1px solid var(--linea); border-radius: 1.3rem; padding: 1.1rem 1.2rem; font-size: .9rem; }
+.indice-leccion p { font-weight: 700; margin-bottom: .5rem; }
+.indice-leccion ol { margin: 0; padding-left: 1.1rem; display: grid; gap: .35rem; }
+.indice-leccion a { color: var(--musgo); text-decoration: none; font-weight: 600; }
+.indice-leccion a:hover { color: var(--coralp); text-decoration: underline; }
+@media (max-width: 960px) { .leccion-grid { grid-template-columns: 1fr; } .indice-leccion { position: static; } }
+.guia { background: #fff; border: 1px solid var(--linea); border-radius: 1.6rem; padding: 2rem; min-width: 0; }
+@media (max-width: 680px) { .guia { padding: 1.2rem; border-radius: 1.2rem; } }
+.guia h2 { font-size: clamp(1.5rem, 3vw, 1.9rem); margin: 2.4rem 0 .9rem; padding-top: .4rem; scroll-margin-top: 6rem; }
+.guia h2:first-child { margin-top: 0; }
+.guia h2::after { content: ''; display: block; width: 4.5rem; height: 4px; border-radius: 4px; background: var(--menta); margin-top: .6rem; }
+.guia h3 { font-size: 1.2rem; margin: 1.6rem 0 .6rem; }
+.guia h4 { font-size: 1.05rem; margin: 1.2rem 0 .5rem; }
+.guia p { margin: .6rem 0; }
+.guia ul, .guia ol { margin: .6rem 0; padding-left: 1.4rem; display: grid; gap: .35rem; }
+.guia li::marker { color: var(--coralp); font-weight: 700; }
+.recuadro { border-radius: 1.1rem; padding: 1rem 1.2rem; margin: 1.1rem 0; }
+.recuadro.fresco { background: rgba(153, 207, 200, .28); border-left: 4px solid var(--agua); }
+.recuadro.calido { background: rgba(244, 225, 161, .45); border-left: 4px solid var(--mantequilla); }
+.recuadro-titulo { font: 700 1rem var(--titulo); margin-top: 0 !important; }
+.respuesta { margin: 1rem 0; background: var(--crema); border-radius: 1rem; padding: .9rem 1rem; }
+.respuesta label { display: block; font-weight: 700; }
+.respuesta small { display: block; color: var(--musgo); margin-top: .2rem; }
+.respuesta textarea { width: 100%; margin-top: .6rem; border: 1.5px dashed rgba(46, 74, 62, .3); border-radius: .8rem; padding: .7rem .8rem; background: #fff; font: inherit; resize: vertical; min-height: 4.5rem; }
+.respuesta textarea:focus, .tabla-guia input:focus { outline: none; border-color: var(--bosque); border-style: solid; box-shadow: 0 0 0 3px rgba(158, 208, 183, .6); }
+.tabla-guia { margin: 1rem 0; border-radius: 1rem; }
+.tabla-guia table { min-width: 0; }
+.tabla-guia th { background: var(--bosque); color: #fff; letter-spacing: .04em; text-transform: none; font-size: .85rem; }
+.tabla-guia th:first-child { border-radius: 1rem 0 0 0; }
+.tabla-guia th:last-child { border-radius: 0 1rem 0 0; }
+.tabla-guia td { font-size: .9rem; }
+.tabla-guia td p { margin: 0 0 .3rem; }
+.tabla-guia input { width: 100%; min-width: 5rem; border: 1.5px dashed rgba(46, 74, 62, .3); border-radius: .6rem; padding: .45rem .55rem; font: inherit; background: var(--crema); }
+.leccion-estado { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; align-items: center; justify-content: space-between; margin-top: 1rem; font-size: .88rem; color: var(--musgo); }
+.descargas { display: grid; gap: .6rem; }
+.descarga { display: flex; align-items: center; gap: .8rem; padding: .75rem .9rem; border-radius: 1rem; background: #fff; text-decoration: none; border: 1px solid var(--linea); transition: transform .2s; }
+.descarga:hover { transform: translateY(-2px); }
+.descarga .icono { width: 2.4rem; height: 2.4rem; border-radius: .7rem; font: 700 .7rem var(--texto); }
+.descarga b { display: block; font-size: .92rem; }
+.descarga small { color: var(--musgo); }
+.video-pendiente { display: flex; gap: .9rem; align-items: center; padding: .9rem 1rem; border-radius: 1rem; background: rgba(255, 255, 255, .6); font-size: .9rem; }
+.video-pendiente .video-boton { width: 2.6rem; height: 2.6rem; margin: 0; flex-shrink: 0; }
+.video-pendiente .video-boton::after { border-left-width: .7rem; border-top-width: .45rem; border-bottom-width: .45rem; }
+.pasos-leccion { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2.5rem; }
+.pasos-leccion a { display: block; padding: 1.2rem 1.3rem; border-radius: 1.3rem; background: #fff; border: 1px solid var(--linea); text-decoration: none; }
+.pasos-leccion a:hover { box-shadow: var(--sombra); }
+.pasos-leccion small { color: var(--coralp); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-size: .72rem; }
+.pasos-leccion b { display: block; font: 700 1.1rem var(--titulo); margin-top: .2rem; }
+.pasos-leccion .siguiente-leccion { text-align: right; grid-column: 2; }
+@media (max-width: 680px) { .pasos-leccion { grid-template-columns: 1fr; } .pasos-leccion .siguiente-leccion { grid-column: 1; } }
+.abrir-leccion { display: inline-flex; margin-top: .9rem; font-weight: 700; color: var(--coralp); text-decoration: none; }
+.abrir-leccion:hover { text-decoration: underline; }
+@media print {
+    .cabecera, .pie, .indice-leccion, .pasos-leccion, .migas, .hojas-flotantes, .decor, .leccion-estado button { display: none !important; }
+    .guia { border: 0; padding: 0; }
+    body { background: #fff; }
+}
+/* Las tablas anchas de las guías se desplazan dentro de su recuadro sin ensanchar la página */
+.leccion-grid { grid-template-columns: minmax(0, 16rem) minmax(0, 1fr); }
+.leccion-grid > * { min-width: 0; }
+@media (max-width: 960px) { .leccion-grid { grid-template-columns: minmax(0, 1fr); } }
+.guia p, .guia li, .guia td, .guia label, .recuadro { overflow-wrap: anywhere; }

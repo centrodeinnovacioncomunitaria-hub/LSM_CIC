@@ -3,8 +3,8 @@
 > Formación y acompañamiento para la autonomía económica de las mujeres emprendedoras del Caribe colombiano, en red con la Red de Mujeres del Caribe. Una Secretaría Técnica, 8 satélites y 24 dinamizadoras acompañan a 200 emprendedoras en 13 municipios de 7 departamentos.
 
 ## Rutas de aprendizaje
-- [Ruta HACER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/hacer/): 6 semanas (12 h) de acompañamiento individual para ordenar costos, precios y ventas.
-- [Ruta SER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/ser/): 4 talleres grupales (16 h) de confianza, decisiones, liderazgo y ahorro colectivo.
+- [Ruta HACER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/hacer/): 6 semanas (12 h) de acompañamiento individual para ordenar costos, precios y ventas. Lecciones: https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/hacer/semana-1/ a semana-6/.
+- [Ruta SER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/ser/): 4 talleres grupales (16 h) de confianza, decisiones, liderazgo y ahorro colectivo. Guías: https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/ser/taller-1/ a taller-4/.
 - [Gestión del CIC](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/gestion-cic/): curso virtual de 5 módulos (≈ 2 h) para dinamizadoras y Secretaría Técnica.
 
 ## Otras páginas
