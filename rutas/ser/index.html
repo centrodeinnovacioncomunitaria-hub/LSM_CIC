@@ -70,12 +70,20 @@
             </a>
             <nav id="nav-publica" class="nav" aria-label="Principal">
                 <div class="submenu">
-                    <button type="button" class="submenu-btn actual" aria-expanded="false" aria-controls="sub-rutas">Rutas <svg aria-hidden="true"><use href="#flecha"/></svg></button>
-                    <ul id="sub-rutas" class="submenu-lista" hidden>
-                        <li><a href="../hacer/"><span class="punto bg-durazno"></span><span><b>Ruta HACER</b><small>Emprendedoras · 12 horas</small></span></a></li>
-                        <li><a href="../ser/" aria-current="page"><span class="punto bg-lavanda"></span><span><b>Ruta SER</b><small>Emprendedoras en grupo · 16 horas</small></span></a></li>
-                        <li><a href="../gestion-cic/"><span class="punto bg-agua"></span><span><b>Gestión del CIC</b><small>Dinamizadoras y Secretaría · ≈ 2 horas</small></span></a></li>
-                        <li><a class="todas" href="../../#rutas">Ver todas las rutas</a></li>
+                    <button type="button" class="submenu-btn actual" aria-expanded="false" aria-controls="sub-talleres">Talleres <svg aria-hidden="true"><use href="#flecha"/></svg></button>
+                    <ul id="sub-talleres" class="submenu-lista" hidden>
+                        <li><a href="../../rutas/hacer/"><span class="punto bg-durazno"></span><span><b>Ruta HACER</b><small>Emprendedoras · 6 sesiones en tu negocio</small></span></a></li>
+                        <li><a href="../../rutas/ser/" aria-current="page"><span class="punto bg-lavanda"></span><span><b>Ruta SER</b><small>Emprendedoras · 4 talleres en grupo</small></span></a></li>
+                        <li><a class="todas" href="../../#rutas">Ver los talleres</a></li>
+                    </ul>
+                </div>
+                <div class="submenu">
+                    <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-cursos">Cursos del equipo <svg aria-hidden="true"><use href="#flecha"/></svg></button>
+                    <ul id="sub-cursos" class="submenu-lista" hidden>
+                        <li><a href="../../cursos/gestion-cic/"><span class="punto bg-agua"></span><span><b>Gestión del CIC</b><small>Dinamizadoras y Secretaría · 5 módulos</small></span></a></li>
+                        <li><a href="../../cursos/acompanar-hacer/"><span class="punto bg-durazno"></span><span><b>Acompañar la ruta HACER</b><small>Dinamizadoras · 6 semanas</small></span></a></li>
+                        <li><a href="../../cursos/facilitar-ser/"><span class="punto bg-lavanda"></span><span><b>Facilitar la ruta SER</b><small>Dinamizadoras · 4 talleres</small></span></a></li>
+                        <li><a class="todas" href="../../cursos/">Ver todos los cursos</a></li>
                     </ul>
                 </div>
                 <div class="submenu">
@@ -87,7 +95,6 @@
                         <li><a href="../../recursos/#punto-equilibrio"><span class="punto bg-coral"></span><span><b>Calculadora de punto de equilibrio</b><small>Cuánto necesitas vender al mes</small></span></a></li>
                     </ul>
                 </div>
-
                 <div class="submenu">
                     <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-cic">Sobre el CIC <svg aria-hidden="true"><use href="#flecha"/></svg></button>
                     <ul id="sub-cic" class="submenu-lista" hidden>
@@ -129,12 +136,12 @@
                 <div class="hojas-flotantes" data-hojas="7" data-color="rgba(255,255,255,.75)" aria-hidden="true"></div>
                 <div class="ruta-heroe-grid">
                     <div>
-                        <span class="chip" style="background:rgba(255,255,255,.6)">Emprendedoras en grupo · 16 horas</span>
+                        <span class="chip" style="background:rgba(255,255,255,.6)">Taller para emprendedoras · 4 talleres · 16 horas</span>
                         <h1 id="titulo-ruta">Ruta SER</h1>
                         <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
                         <p class="lead">Cuatro talleres grupales para fortalecer a la persona que sostiene el negocio: confianza, decisiones, liderazgo y ahorro en red.</p>
                         <div class="botones" style="margin-top:1.6rem">
-                            <a class="btn btn-primario" href="../../#crear-cuenta">Crear mi cuenta</a>
+                            <a class="btn btn-primario" href="../../#crear-cuenta">Inscribirme</a>
                             <a class="btn btn-claro" href="taller-1/">Ver la guía del taller 1</a>
                         </div>
                     </div>
@@ -268,10 +275,10 @@
 
         <section class="bloque" aria-labelledby="titulo-otras">
             <div class="contenedor">
-                <h2 id="titulo-otras" style="font-size:1.6rem;margin-bottom:1.2rem">Otras rutas del CIC</h2>
+                <h2 id="titulo-otras" style="font-size:1.6rem;margin-bottom:1.2rem">Sigue explorando</h2>
                 <div class="rejilla r2">
                     <a class="otra-ruta bg-durazno aparece" href="../hacer/"><small class="eyebrow" style="color:var(--bosque)">Emprendedoras · 12 horas</small><h3>Ruta HACER</h3><p>Seis semanas para ordenar costos, precios y ventas.</p><span>Ver la ruta →</span></a>
-                    <a class="otra-ruta bg-agua aparece" href="../gestion-cic/"><small class="eyebrow" style="color:var(--bosque)">Dinamizadoras y Secretaría · ≈ 2 horas</small><h3>Gestión del CIC</h3><p>El curso para entender cómo funciona el centro.</p><span>Ver el curso →</span></a>
+                    <a class="otra-ruta bg-agua aparece" href="../../cursos/"><small class="eyebrow" style="color:var(--bosque)">Para dinamizadoras y secretarias</small><h3>Cursos del equipo</h3><p>Cómo se preparan y conducen estas sesiones y talleres.</p><span>Ver los cursos →</span></a>
                 </div>
 
                 <div class="cta-banda">
@@ -281,7 +288,7 @@
                         <h2>Súmate a la ruta SER</h2>
                         <p>Crea tu cuenta con tu cédula y tu dinamizadora te contará cuándo es el primer taller.</p>
                     </div>
-                    <a class="btn btn-claro" href="../../#crear-cuenta">Crear mi cuenta</a>
+                    <a class="btn btn-claro" href="../../#crear-cuenta">Inscribirme</a>
                 </div>
             </div>
         </section>
@@ -298,8 +305,12 @@
                     <p class="texto-suave" style="margin-top:1rem;font-size:.93rem">Formación y acompañamiento para la autonomía económica de las mujeres emprendedoras del Caribe, en red con la Red de Mujeres del Caribe.</p>
                 </div>
                 <div>
-                    <h2>Aprende</h2>
-                    <ul><li><a href="../../#rutas">Rutas de aprendizaje</a></li><li><a href="../hacer/">Ruta HACER</a></li><li><a href="../ser/">Ruta SER</a></li><li><a href="../gestion-cic/">Gestión del CIC</a></li><li><a href="../../recursos/">Biblioteca de recursos</a></li></ul>
+                    <h2>Emprendedoras</h2>
+                    <ul><li><a href="../../rutas/hacer/">Ruta HACER</a></li><li><a href="../../rutas/ser/">Ruta SER</a></li><li><a href="../../recursos/">Biblioteca de recursos</a></li></ul>
+                </div>
+                <div>
+                    <h2>Equipo del CIC</h2>
+                    <ul><li><a href="../../cursos/">Cursos del equipo</a></li><li><a href="../../cursos/gestion-cic/">Gestión del CIC</a></li><li><a href="../../cursos/acompanar-hacer/">Acompañar la ruta HACER</a></li><li><a href="../../cursos/facilitar-ser/">Facilitar la ruta SER</a></li></ul>
                 </div>
                 <div>
                     <h2>El CIC</h2>

@@ -37,7 +37,8 @@
         },
         {
           "@type": "Course",
-          "@id": "https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/#ruta-gestion",
+          "@id": "https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/gestion-cic/",
+          "url": "https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/gestion-cic/",
           "name": "Gestión del CIC",
           "description": "Curso virtual de 5 módulos para dinamizadoras y Secretaría Técnica sobre cómo funciona un centro de innovación comunitaria.",
           "provider": { "@id": "https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/#cic" },
@@ -79,6 +80,7 @@
 
     <!-- Duotono para unificar fotos de distinta calidad (tratamiento de fotos del manual) y símbolos de la marca -->
     <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <symbol id="flecha" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
         <filter id="duo-verde" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".33 .33 .33 0 0 .33 .33 .33 0 0 .33 .33 .33 0 0 0 0 0 1 0"/><feComponentTransfer><feFuncR type="table" tableValues=".18 .66"/><feFuncG type="table" tableValues=".29 .85"/><feFuncB type="table" tableValues=".24 .75"/></feComponentTransfer></filter>
         <filter id="duo-durazno" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".33 .33 .33 0 0 .33 .33 .33 0 0 .33 .33 .33 0 0 0 0 0 1 0"/><feComponentTransfer><feFuncR type="table" tableValues=".45 .98"/><feFuncG type="table" tableValues=".24 .84"/><feFuncB type="table" tableValues=".17 .72"/></feComponentTransfer></filter>
         <filter id="duo-coral" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".33 .33 .33 0 0 .33 .33 .33 0 0 .33 .33 .33 0 0 0 0 0 1 0"/><feComponentTransfer><feFuncR type="table" tableValues=".40 .97"/><feFuncG type="table" tableValues=".18 .78"/><feFuncB type="table" tableValues=".15 .70"/></feComponentTransfer></filter>
@@ -99,16 +101,24 @@
             </a>
             <nav id="nav-publica" class="nav" aria-label="Principal">
                 <div class="submenu">
-                    <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-rutas">Rutas <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                    <ul id="sub-rutas" class="submenu-lista" hidden>
-                        <li><a href="rutas/hacer/"><span class="punto bg-durazno"></span><span><b>Ruta HACER</b><small>Emprendedoras · 12 horas</small></span></a></li>
-                        <li><a href="rutas/ser/"><span class="punto bg-lavanda"></span><span><b>Ruta SER</b><small>Emprendedoras en grupo · 16 horas</small></span></a></li>
-                        <li><a href="rutas/gestion-cic/"><span class="punto bg-agua"></span><span><b>Gestión del CIC</b><small>Dinamizadoras y Secretaría · ≈ 2 horas</small></span></a></li>
-                        <li><a class="todas" href="#rutas">Ver todas las rutas</a></li>
+                    <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-talleres">Talleres <svg aria-hidden="true"><use href="#flecha"/></svg></button>
+                    <ul id="sub-talleres" class="submenu-lista" hidden>
+                        <li><a href="rutas/hacer/"><span class="punto bg-durazno"></span><span><b>Ruta HACER</b><small>Emprendedoras · 6 sesiones en tu negocio</small></span></a></li>
+                        <li><a href="rutas/ser/"><span class="punto bg-lavanda"></span><span><b>Ruta SER</b><small>Emprendedoras · 4 talleres en grupo</small></span></a></li>
+                        <li><a class="todas" href="#rutas">Ver los talleres</a></li>
                     </ul>
                 </div>
                 <div class="submenu">
-                    <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-recursos">Recursos <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                    <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-cursos">Cursos del equipo <svg aria-hidden="true"><use href="#flecha"/></svg></button>
+                    <ul id="sub-cursos" class="submenu-lista" hidden>
+                        <li><a href="cursos/gestion-cic/"><span class="punto bg-agua"></span><span><b>Gestión del CIC</b><small>Dinamizadoras y Secretaría · 5 módulos</small></span></a></li>
+                        <li><a href="cursos/acompanar-hacer/"><span class="punto bg-durazno"></span><span><b>Acompañar la ruta HACER</b><small>Dinamizadoras · 6 semanas</small></span></a></li>
+                        <li><a href="cursos/facilitar-ser/"><span class="punto bg-lavanda"></span><span><b>Facilitar la ruta SER</b><small>Dinamizadoras · 4 talleres</small></span></a></li>
+                        <li><a class="todas" href="cursos/">Ver todos los cursos</a></li>
+                    </ul>
+                </div>
+                <div class="submenu">
+                    <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-recursos">Recursos <svg aria-hidden="true"><use href="#flecha"/></svg></button>
                     <ul id="sub-recursos" class="submenu-lista" hidden>
                         <li><a href="recursos/"><span class="punto bg-mantequilla"></span><span><b>Biblioteca completa</b><small>13 plantillas gratuitas</small></span></a></li>
                         <li><a href="recursos/#tema-finanzas"><span class="punto bg-menta"></span><span><b>Finanzas</b><small>Costos, precio y flujo de caja</small></span></a></li>
@@ -116,9 +126,8 @@
                         <li><a href="recursos/#punto-equilibrio"><span class="punto bg-coral"></span><span><b>Calculadora de punto de equilibrio</b><small>Cuánto necesitas vender al mes</small></span></a></li>
                     </ul>
                 </div>
-
                 <div class="submenu">
-                    <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-cic">Sobre el CIC <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                    <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-cic">Sobre el CIC <svg aria-hidden="true"><use href="#flecha"/></svg></button>
                     <ul id="sub-cic" class="submenu-lista" hidden>
                         <li><a href="#sobre-cic"><span class="punto bg-menta"></span><span><b>Qué es el CIC</b><small>Modelo, cascada y pilares</small></span></a></li>
                         <li><a href="#territorio"><span class="punto bg-mantequilla"></span><span><b>Territorio</b><small>8 satélites · 13 municipios</small></span></a></li>
@@ -126,7 +135,7 @@
                     </ul>
                 </div>
                 <div class="submenu">
-                    <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-ayuda">Ayuda <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                    <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-ayuda">Ayuda <svg aria-hidden="true"><use href="#flecha"/></svg></button>
                     <ul id="sub-ayuda" class="submenu-lista" hidden>
                         <li><a href="#ayuda"><span class="punto bg-agua"></span><span><b>Preguntas frecuentes</b><small>Ingreso, celular y constancias</small></span></a></li>
                         <li><a href="#verificar"><span class="punto bg-menta"></span><span><b>Verificar constancia</b><small>Con el código de la constancia</small></span></a></li>
@@ -168,45 +177,45 @@
                     <div class="roles">
                         <p class="roles-titulo" id="quien-eres">¿Quién eres?</p>
                         <div class="roles-tabs" role="tablist" aria-labelledby="quien-eres">
-                            <button type="button" class="rol-tab" role="tab" id="rol-emprendedora" aria-controls="panel-emprendedora" aria-selected="true"><b>Soy emprendedora</b><small>Sigue tu ruta semana a semana</small></button>
-                            <button type="button" class="rol-tab" role="tab" id="rol-dinamizadora" aria-controls="panel-dinamizadora" aria-selected="false" tabindex="-1"><b>Soy dinamizadora</b><small>Curso de gestión y guías</small></button>
-                            <button type="button" class="rol-tab" role="tab" id="rol-secretaria" aria-controls="panel-secretaria" aria-selected="false" tabindex="-1"><b>Soy secretaria</b><small>Secretaría Técnica del CIC</small></button>
+                            <button type="button" class="rol-tab" role="tab" id="rol-emprendedora" aria-controls="panel-emprendedora" aria-selected="true"><b>Soy emprendedora</b><small>Talleres y videos para tu negocio</small></button>
+                            <button type="button" class="rol-tab" role="tab" id="rol-dinamizadora" aria-controls="panel-dinamizadora" aria-selected="false" tabindex="-1"><b>Soy dinamizadora</b><small>Cursos para acompañar</small></button>
+                            <button type="button" class="rol-tab" role="tab" id="rol-secretaria" aria-controls="panel-secretaria" aria-selected="false" tabindex="-1"><b>Soy secretaria</b><small>Cursos y seguimiento del CIC</small></button>
                         </div>
                         <div class="rol-panel" role="tabpanel" id="panel-emprendedora" aria-labelledby="rol-emprendedora">
                             <ol class="pasos">
-                                <li>Crea tu cuenta con tu cédula, tu correo y una contraseña.</li>
-                                <li>Toca «Continuar» y abre la semana que te toca de la ruta HACER.</li>
-                                <li>Usa la plantilla de la semana en tu negocio, con tu dinamizadora.</li>
-                                <li>Consulta tus logros y recibe tu constancia al cerrar la ruta.</li>
+                                <li>Inscríbete con tu cédula, tu correo y una contraseña.</li>
+                                <li>Vive las 6 sesiones de la ruta HACER en tu negocio, con tu dinamizadora.</li>
+                                <li>Participa en los 4 talleres de la ruta SER con otras emprendedoras.</li>
+                                <li>Usa tu guía y los videos de cada taller, y recibe tu constancia al terminar.</li>
                             </ol>
                             <div class="botones">
-                                <button type="button" class="btn btn-primario btn-pequeno" data-abrir="registro">Crear mi cuenta</button>
-                                <a class="btn btn-borde btn-pequeno" href="rutas/hacer/">Ver la ruta HACER</a>
+                                <button type="button" class="btn btn-primario btn-pequeno" data-abrir="registro">Inscribirme</button>
+                                <a class="btn btn-borde btn-pequeno" href="#rutas">Ver los talleres</a>
                             </div>
-                            <p class="texto-suave" style="font-size:.88rem;margin-top:.8rem">¿Ya tienes cuenta? Toca «Ingresar» arriba a la derecha y elige «Emprendedora».</p>
+                            <p class="texto-suave" style="font-size:.88rem;margin-top:.8rem">¿Ya te inscribiste? Toca «Ingresar» arriba a la derecha y elige «Emprendedora».</p>
                         </div>
                         <div class="rol-panel" role="tabpanel" id="panel-dinamizadora" aria-labelledby="rol-dinamizadora" hidden>
                             <ol class="pasos">
-                                <li>Entra con tu cédula; la primera vez tu contraseña también es tu cédula.</li>
-                                <li>Aprueba los 5 módulos del curso de gestión del CIC.</li>
-                                <li>Antes de cada semana revisa la guía de la ruta que acompañas.</li>
-                                <li>Haz seguimiento a las emprendedoras de tu departamento.</li>
+                                <li>Entra con tu cédula si estás en la base de datos del equipo; la primera vez tu contraseña también es tu cédula.</li>
+                                <li>Aprueba el curso de Gestión del CIC.</li>
+                                <li>Antes de cada sesión, mira el video, estudia el material y responde el cuestionario.</li>
+                                <li>Acompaña a las emprendedoras de tu departamento y registra cada sesión.</li>
                             </ol>
                             <div class="botones">
                                 <button type="button" class="btn btn-primario btn-pequeno" data-abrir="ingresar" data-perfil="dinamizadora">Ingresar</button>
-                                <a class="btn btn-borde btn-pequeno" href="rutas/gestion-cic/">Ver el curso de gestión</a>
+                                <a class="btn btn-borde btn-pequeno" href="cursos/">Ver los cursos del equipo</a>
                             </div>
                         </div>
                         <div class="rol-panel" role="tabpanel" id="panel-secretaria" aria-labelledby="rol-secretaria" hidden>
                             <ol class="pasos">
-                                <li>Entra con tu cédula; la primera vez tu contraseña también es tu cédula.</li>
-                                <li>Aprueba el curso de gestión del CIC.</li>
-                                <li>Sigue el avance de las emprendedoras y del equipo por departamento.</li>
+                                <li>Entra con tu cédula si estás en la base de datos del equipo; la primera vez tu contraseña también es tu cédula.</li>
+                                <li>Aprueba el curso de Gestión del CIC y conoce cómo se acompañan las rutas HACER y SER.</li>
+                                <li>Revisa las evidencias de las sesiones y el avance del equipo por departamento.</li>
                                 <li>Restablece la contraseña de quien la olvide.</li>
                             </ol>
                             <div class="botones">
                                 <button type="button" class="btn btn-primario btn-pequeno" data-abrir="ingresar" data-perfil="secretaria">Ingresar</button>
-                                <a class="btn btn-borde btn-pequeno" href="rutas/gestion-cic/">Ver el curso de gestión</a>
+                                <a class="btn btn-borde btn-pequeno" href="cursos/">Ver los cursos del equipo</a>
                             </div>
                         </div>
                     </div>
@@ -227,18 +236,18 @@
             </div>
         </section>
 
-        <!-- Catálogo de rutas: cada ruta con su ficha (qué, para quién, duración, qué obtienes) -->
+        <!-- Talleres para emprendedoras (rutas HACER y SER) y formación del equipo -->
         <section id="rutas" class="seccion seccion-blanca con-decor" aria-labelledby="titulo-rutas">
             <div class="patron-puntos decor decor-derecha" aria-hidden="true"></div>
             <div class="contenedor">
                 <div class="cabeza aparece">
-                    <p class="eyebrow">Rutas de aprendizaje</p>
-                    <h2 id="titulo-rutas">Tres caminos, un mismo propósito.</h2>
+                    <p class="eyebrow">Talleres para emprendedoras</p>
+                    <h2 id="titulo-rutas">Dos rutas para hacer crecer tu negocio.</h2>
                     <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
-                    <p>Cada ruta explica antes de ingresar cuánto dura, para quién es y qué obtienes. Todas terminan con una constancia de participación.</p>
+                    <p>La ruta HACER te acompaña en tu negocio y la ruta SER te reúne con otras emprendedoras. Cada sesión tiene su guía y su video. Inscríbete y recibe tu constancia al terminar.</p>
                 </div>
 
-                <div class="rejilla r3">
+                <div class="rejilla r2">
                     <article id="ruta-hacer" class="ruta aparece">
                         <div class="ruta-cab bg-durazno">
                             <span class="chip" style="background:rgba(255,255,255,.55)">Emprendedoras · 12 horas</span>
@@ -261,7 +270,7 @@
                                 </ul>
                             </div>
                             <details class="desplegable">
-                                <summary>Ver temario · 6 semanas</summary>
+                                <summary>Ver las 6 sesiones</summary>
                                 <ol class="temario">
                                     <li><b>1 · Radiografía del negocio y registro diario</b><span>Partes de lo que ya sabes y empiezas a anotar lo que entra y lo que sale.</span></li>
                                     <li><b>2 · Canvas de la Esquina y nueva fuente de ingreso</b><span>Describes tu negocio en una hoja y defines un cambio pequeño para probar.</span></li>
@@ -272,7 +281,7 @@
                                 </ol>
                             </details>
                             <div class="ruta-pie">
-                                <button type="button" class="btn btn-primario btn-pequeno" data-abrir="registro">Crear mi cuenta</button>
+                                <button type="button" class="btn btn-primario btn-pequeno" data-abrir="registro">Inscribirme</button>
                                 <a class="btn btn-borde btn-pequeno" href="rutas/hacer/">Ver la ruta completa</a>
                             </div>
                         </div>
@@ -300,7 +309,7 @@
                                 </ul>
                             </div>
                             <details class="desplegable">
-                                <summary>Ver temario · 4 talleres</summary>
+                                <summary>Ver los 4 talleres</summary>
                                 <ol class="temario">
                                     <li><b>SER 1 · Confianza para presentar mi negocio</b><span>Presencial. Árbol de vida, mapa de sueños y tarjeta de «gerenta».</span></li>
                                     <li><b>SER 2 · Decidir sin miedo</b><span>Virtual. Una decisión analizada con su primer paso.</span></li>
@@ -309,52 +318,28 @@
                                 </ol>
                             </details>
                             <div class="ruta-pie">
-                                <button type="button" class="btn btn-primario btn-pequeno" data-abrir="registro">Crear mi cuenta</button>
+                                <button type="button" class="btn btn-primario btn-pequeno" data-abrir="registro">Inscribirme</button>
                                 <a class="btn btn-borde btn-pequeno" href="rutas/ser/">Ver la ruta completa</a>
-                            </div>
-                        </div>
-                    </article>
-
-                    <article id="ruta-gestion" class="ruta aparece">
-                        <div class="ruta-cab bg-agua">
-                            <span class="chip" style="background:rgba(255,255,255,.55)">Equipo del CIC · ≈ 2 horas</span>
-                            <h3>Gestión del CIC</h3>
-                            <p>Curso virtual de 5 módulos para entender cómo funciona el centro. Es el curso que todas las dinamizadoras deben hacer.</p>
-                        </div>
-                        <div class="ruta-cuerpo">
-                            <dl class="ficha">
-                                <dt>Duración</dt><dd>≈ 2 horas · 5 módulos</dd>
-                                <dt>Para quién</dt><dd>Dinamizadoras y Secretaría Técnica</dd>
-                                <dt>Modalidad</dt><dd>100 % virtual, a tu ritmo</dd>
-                            </dl>
-                            <div>
-                                <p style="font-weight:700;margin-bottom:.5rem">Qué obtienes</p>
-                                <ul class="lista-check">
-                                    <li>Qué significa gestionar un centro de innovación comunitario</li>
-                                    <li>Leer el ecosistema emprendedor de tu territorio</li>
-                                    <li>Tu rol, a quién reportas y cuándo</li>
-                                    <li>Constancia al aprobar los 5 módulos con al menos 70 %</li>
-                                </ul>
-                            </div>
-                            <details class="desplegable">
-                                <summary>Ver temario · 5 módulos</summary>
-                                <ol class="temario">
-                                    <li><b>1 · Introducción a la gestión de centros de innovación</b><span>20 min. Qué hace diferente a un CIC para la autonomía económica de la mujer.</span></li>
-                                    <li><b>2 · El ecosistema emprendedor y el papel del CIC</b><span>25 min. Los seis dominios del ecosistema y un mapa de actores de tu territorio.</span></li>
-                                    <li><b>3 · Cómo opera el centro</b><span>25 min. Secretaría Técnica, satélites, reportes semanales y gobernanza con la Red.</span></li>
-                                    <li><b>4 · La información del centro</b><span>15 min. Ficha de la unidad productiva, evidencias, listas de chequeo y bitácoras.</span></li>
-                                    <li><b>5 · Los pilares en acción</b><span>35 min. Acompañamiento, financiamiento y mercados, con un caso de referencia.</span></li>
-                                </ol>
-                            </details>
-                            <div class="ruta-pie">
-                                <button type="button" class="btn btn-primario btn-pequeno" data-abrir="ingresar" data-perfil="dinamizadora">Ingresar</button>
-                                <a class="btn btn-borde btn-pequeno" href="rutas/gestion-cic/">Ver el curso completo</a>
                             </div>
                         </div>
                     </article>
                 </div>
 
                 <p class="ventajas"><span>Pensadas para el celular</span><span>Plantillas para usar sin datos</span><span>Con el acompañamiento de tu dinamizadora</span></p>
+
+                <div id="cursos-equipo" class="equipo-bloque aparece">
+                    <div>
+                        <p class="eyebrow">Formación del equipo</p>
+                        <h3>Cursos para dinamizadoras y secretarias</h3>
+                        <p class="texto-suave">El equipo aprende a gestionar el CIC y a conducir las rutas HACER y SER: video, material de estudio y cuestionario en cada módulo. Entran con su cédula si están en la base de datos del equipo.</p>
+                        <div class="botones"><a class="btn btn-bosque btn-pequeno" href="cursos/">Ver los cursos del equipo</a><button type="button" class="btn btn-borde btn-pequeno" data-abrir="ingresar" data-perfil="dinamizadora">Ingresar</button></div>
+                    </div>
+                    <ul class="equipo-cursos">
+                        <li><a href="cursos/gestion-cic/"><span class="punto bg-agua"></span><span><b>Gestión del CIC</b><small>5 módulos · ≈ 2 horas</small></span></a></li>
+                        <li><a href="cursos/acompanar-hacer/"><span class="punto bg-durazno"></span><span><b>Acompañar la ruta HACER</b><small>6 semanas · una por sesión</small></span></a></li>
+                        <li><a href="cursos/facilitar-ser/"><span class="punto bg-lavanda"></span><span><b>Facilitar la ruta SER</b><small>4 talleres grupales</small></span></a></li>
+                    </ul>
+                </div>
             </div>
         </section>
 
@@ -543,7 +528,8 @@
                 <div class="ayuda">
                     <div class="preguntas">
                         <details><summary>¿Qué es el Centro de Innovación Comunitaria?</summary><p>Un modelo de acompañamiento para la autonomía económica de las mujeres del Caribe colombiano, que funciona en red con la Red de Mujeres del Caribe: una Secretaría Técnica, 8 satélites y 24 dinamizadoras acompañan a 200 emprendedoras en su negocio y en su desarrollo personal.</p></details>
-                        <details><summary>¿Quién puede ingresar a la plataforma?</summary><p>Las emprendedoras, las dinamizadoras y la Secretaría Técnica. El equipo del CIC entra con su cédula (la primera vez, la contraseña también es la cédula). Las emprendedoras crean su cuenta en «Crear cuenta» y después entran con su cédula y su contraseña.</p></details>
+                        <details><summary>¿Quién puede ingresar a la plataforma?</summary><p>Las emprendedoras se inscriben en «Inscribirme» y después entran con su cédula y su contraseña para ver sus talleres. Las dinamizadoras y la Secretaría Técnica entran con su cédula solo si están en la base de datos del equipo (la primera vez, la contraseña también es la cédula) y ven sus cursos.</p></details>
+                        <details><summary>¿Qué cursos hay para el equipo?</summary><p>Tres cursos para dinamizadoras y secretarias: <a class="enlace" href="cursos/gestion-cic/">Gestión del CIC</a>, <a class="enlace" href="cursos/acompanar-hacer/">Acompañar la ruta HACER</a> y <a class="enlace" href="cursos/facilitar-ser/">Facilitar la ruta SER</a>. Cada tema tiene un video, material de estudio y un cuestionario.</p></details>
                         <details><summary>¿Cómo recupero mi contraseña?</summary><p>Pídele a tu dinamizadora o a la Secretaría Técnica que la restablezca. Volverá a ser tu número de cédula y te llegará un correo de aviso; al entrar, elige una nueva.</p></details>
                         <details><summary>¿Puedo estudiar desde el celular y sin datos?</summary><p>Sí. La plataforma está pensada para el celular, con contenidos cortos y plantillas que puedes usar sin conexión una vez descargadas.</p></details>
                         <details><summary>¿Qué recibo al terminar?</summary><p>Una constancia de participación. Las dinamizadoras deben aprobar los 5 módulos del curso de gestión con al menos 70 %; las emprendedoras completan las 6 semanas de la ruta HACER, al menos 3 de los 4 talleres SER y su portafolio de evidencias.</p></details>
@@ -641,8 +627,12 @@
                     <p class="texto-suave" style="margin-top:1rem;font-size:.93rem">Formación y acompañamiento para la autonomía económica de las mujeres emprendedoras del Caribe, en red con la Red de Mujeres del Caribe.</p>
                 </div>
                 <div>
-                    <h2>Aprende</h2>
-                    <ul><li><a href="#rutas">Rutas de aprendizaje</a></li><li><a href="rutas/hacer/">Ruta HACER</a></li><li><a href="rutas/ser/">Ruta SER</a></li><li><a href="rutas/gestion-cic/">Gestión del CIC</a></li><li><a href="recursos/">Biblioteca de recursos</a></li></ul>
+                    <h2>Emprendedoras</h2>
+                    <ul><li><a href="rutas/hacer/">Ruta HACER</a></li><li><a href="rutas/ser/">Ruta SER</a></li><li><a href="recursos/">Biblioteca de recursos</a></li></ul>
+                </div>
+                <div>
+                    <h2>Equipo del CIC</h2>
+                    <ul><li><a href="cursos/">Cursos del equipo</a></li><li><a href="cursos/gestion-cic/">Gestión del CIC</a></li><li><a href="cursos/acompanar-hacer/">Acompañar la ruta HACER</a></li><li><a href="cursos/facilitar-ser/">Facilitar la ruta SER</a></li></ul>
                 </div>
                 <div>
                     <h2>El CIC</h2>
@@ -682,9 +672,9 @@
             <p id="elige-perfil" class="nota" style="background:#fff;border:1px dashed var(--linea)">Elige si eres secretaria, dinamizadora o emprendedora para continuar.</p>
 
             <div id="acceso-cuerpo" hidden>
-            <div id="pestanas-acceso" class="conmutador" role="tablist" aria-label="Ingresar o crear cuenta">
+            <div id="pestanas-acceso" class="conmutador" role="tablist" aria-label="Ingresar o inscribirme">
                 <button type="button" role="tab" id="pestana-ingresar" aria-controls="form-ingresar" aria-selected="true">Ingresar</button>
-                <button type="button" role="tab" id="pestana-registro" aria-controls="form-registro" aria-selected="false">Crear cuenta</button>
+                <button type="button" role="tab" id="pestana-registro" aria-controls="form-registro" aria-selected="false">Inscribirme</button>
             </div>
 
             <p id="acceso-mensaje" class="mensaje error" role="alert" hidden></p>
@@ -703,7 +693,7 @@
             </form>
 
             <form id="form-registro" role="tabpanel" aria-labelledby="pestana-registro" novalidate hidden>
-                <p class="nota" style="background:rgba(242,181,146,.4)">Crea tu cuenta de emprendedora. Después entrarás con tu cédula y la contraseña que elijas.</p>
+                <p class="nota" style="background:rgba(242,181,146,.4)">Inscríbete como emprendedora. Después entrarás con tu cédula y la contraseña que elijas.</p>
                 <label class="etiqueta" for="re-nombre">Nombre completo</label>
                 <input class="campo" id="re-nombre" name="nombre" autocomplete="name" maxlength="90" required>
                 <div class="dos-campos">
@@ -727,7 +717,7 @@
                     <div><label class="etiqueta" for="re-clave2">Repite la contraseña</label><input class="campo" id="re-clave2" name="clave2" type="password" autocomplete="new-password" minlength="8" required></div>
                 </div>
                 <label class="casilla"><input type="checkbox" name="acepto" required><span>Autorizo al CIC y a la Red de Mujeres del Caribe a tratar mis datos para mi formación y acompañamiento, según la Ley 1581 de 2012 y la <a class="enlace" href="#politica-datos" data-cerrar>política de datos</a>.</span></label>
-                <button type="submit" class="btn btn-primario ancho">Crear mi cuenta</button>
+                <button type="submit" class="btn btn-primario ancho">Inscribirme</button>
             </form>
             </div>
         </div>
@@ -791,21 +781,29 @@
         const DEMO = !(CFG.supabaseUrl && CFG.supabaseAnonKey);
         const CLAVE_SESION = 'cic-sesion';
         const ROL = {
-            secretaria:   { nombre: 'Secretaría Técnica', texto: 'Desde aquí sigues el avance de todo el centro: equipo, emprendedoras y rutas.' },
-            dinamizadora: { nombre: 'Dinamizadora',       texto: 'Aquí están tu curso de gestión, las rutas que acompañas y las emprendedoras de tu departamento.' },
-            emprendedora: { nombre: 'Emprendedora',       texto: 'Aquí están tus rutas de formación y el seguimiento de tu acompañamiento.' },
+            secretaria:   { nombre: 'Secretaría Técnica', texto: 'Tus cursos del equipo y el seguimiento de todo el centro: dinamizadoras, emprendedoras y evidencias.' },
+            dinamizadora: { nombre: 'Dinamizadora',       texto: 'Tus cursos para gestionar el CIC y acompañar las rutas HACER y SER, y las emprendedoras de tu departamento.' },
+            emprendedora: { nombre: 'Emprendedora',       texto: 'Tus talleres de las rutas HACER y SER, con su guía y su video, y el seguimiento de tu proceso.' },
         };
+        // Cursos del equipo (dinamizadoras y Secretaría) y talleres de las emprendedoras
         const CURSOS = {
-            gestion: { titulo: 'Gestión del CIC', color: 'bg-agua', meta: '≈ 2 horas · 5 módulos · virtual', para: 'Curso obligatorio para dinamizadoras y Secretaría Técnica.', insignia: 'Gestión del CIC',
-                modulos: [['Introducción a la gestión de centros de innovación', '20 min · Qué hace diferente a un CIC para la autonomía económica de la mujer.'], ['El ecosistema emprendedor y el papel del CIC', '25 min · Los seis dominios del ecosistema y un mapa de actores de tu territorio.'], ['Cómo opera el centro', '25 min · Secretaría Técnica, satélites, reportes semanales y gobernanza con la Red.'], ['La información del centro', '15 min · Ficha de la unidad productiva, evidencias, listas de chequeo y bitácoras.'], ['Los pilares en acción', '35 min · Acompañamiento, financiamiento y mercados, con un caso de referencia.']] },
-            hacer: { titulo: 'Ruta HACER', color: 'bg-durazno', meta: '12 horas · 6 semanas · 2 h por semana', para: 'Acompañamiento individual, en tu propio negocio, para ordenar costos, precios y ventas.', insignia: 'Ruta HACER',
-                modulos: [['Semana 1 · Radiografía del negocio y registro diario', 'Partes de lo que ya sabes y empiezas a anotar lo que entra y lo que sale.'], ['Semana 2 · Canvas de la Esquina', 'Describes tu negocio en una hoja y defines un cambio pequeño para probar.'], ['Semana 3 · Lectura de tendencias', 'Miras el mercado más allá de tu cuadra y ajustas lo que ofreces.'], ['Semana 4 · Nuevo precio y punto de equilibrio', 'Separas los dos bolsillos y fijas un precio que sí cubre lo que gastas.'], ['Semana 5 · Plan comercial y Mi CRM', 'Meta de ventas y al menos cinco clientes potenciales.'], ['Semana 6 · Plan de inversión', 'Con tu flujo de caja y estado de resultados formulas tu plan de inversión.']] },
-            ser: { titulo: 'Ruta SER', color: 'bg-lavanda', meta: '16 horas · 4 talleres de 4 horas', para: 'Talleres grupales para fortalecer a la persona que sostiene el negocio.', insignia: 'Ruta SER',
-                modulos: [['SER 1 · Confianza para presentar mi negocio', 'Presencial · Árbol de vida, mapa de sueños y tarjeta de «gerenta».'], ['SER 2 · Decidir sin miedo', 'Virtual · Una decisión analizada con su primer paso.'], ['SER 3 · Liderazgo y derechos', 'Presencial · Rutas de atención, participación y compromiso de liderazgo.'], ['SER 4 · Ahorrar y crecer juntas', 'Virtual · Resolución de conflictos y acuerdos del grupo.']] },
+            gestion: { titulo: 'Gestión del CIC', color: 'bg-agua', meta: '5 módulos · ≈ 2 horas · virtual', para: 'El primer curso del equipo: qué es el CIC, cómo opera y qué hace cada pilar.', insignia: 'Gestión del CIC', equipo: true, pagina: 'cursos/gestion-cic/', ancla: 'modulo',
+                modulos: [['Módulo 1 · Introducción a la gestión de centros de innovación', '20 min · Qué hace diferente a un CIC para la autonomía económica de la mujer.'], ['Módulo 2 · El ecosistema emprendedor y el papel del CIC', '25 min · Las seis dimensiones y el mapa de actores de tu territorio.'], ['Módulo 3 · Cómo opera el centro', '25 min · Secretaría Técnica, satélites, reportes semanales y gobernanza con la Red.'], ['Módulo 4 · La información del centro', '15 min · Registrar cada emprendedora y cada sesión cuidando los datos.'], ['Módulo 5 · Los pilares en acción', '35 min · Acompañamiento, financiamiento y mercados en tu satélite.']] },
+            'acompanar-hacer': { titulo: 'Acompañar la ruta HACER', color: 'bg-durazno', meta: '6 semanas · una por sesión', para: 'Prepara cada sesión individual con la emprendedora antes de la visita.', insignia: 'Acompañar HACER', equipo: true, pagina: 'cursos/acompanar-hacer/', ancla: 'semana', guia: 'rutas/hacer/semana-',
+                modulos: [['Semana 1 · Primer encuentro', 'Sesión «Cuéntame tu negocio»'], ['Semana 2 · Modelo de negocio y nuevas fuentes de ingreso', 'Sesión «Mi negocio puede ganar de otra forma»'], ['Semana 3 · Análisis de mercado', 'Sesión «Mirar más allá de mi cuadra»'], ['Semana 4 · Costos y finanzas frugales', 'Sesión «El bolsillo separado»'], ['Semana 5 · Acceso a mercados', 'Sesión «Cómo vender más»'], ['Semana 6 · Plan de inversión y financiamiento', 'Sesión «Crecer con orden»']] },
+            'facilitar-ser': { titulo: 'Facilitar la ruta SER', color: 'bg-lavanda', meta: '4 talleres · 2 presenciales y 2 virtuales', para: 'Prepara con tu equipo cada taller grupal: momentos, consignas y protocolos de cuidado.', insignia: 'Facilitar SER', equipo: true, pagina: 'cursos/facilitar-ser/', ancla: 'taller', guia: 'rutas/ser/taller-',
+                modulos: [['Taller 1 · Autoestima, identidad de gerenta y proyecto de vida', 'Presencial · «De la subsistencia a la gerencia»'], ['Taller 2 · Pensamiento crítico, resiliencia y decisiones', 'Virtual · «De la visión de túnel a la visión panorámica»'], ['Taller 3 · Liderazgo, derechos y vida libre de violencias', 'Presencial · «Mi liderazgo, mis derechos, mi protección»'], ['Taller 4 · Tejido social y resolución de conflictos', 'Virtual · «La confianza que sostiene»']] },
+            hacer: { titulo: 'Ruta HACER', color: 'bg-durazno', meta: '6 sesiones · 2 h cada una · en tu negocio', para: 'Tus sesiones individuales con tu dinamizadora para ordenar costos, precios y ventas.', insignia: 'Ruta HACER', guia: 'rutas/hacer/semana-',
+                modulos: [['Sesión 1 · Cuéntame tu negocio', 'Cuentas tu negocio y empiezas tu registro diario.'], ['Sesión 2 · Mi negocio puede ganar de otra forma', 'Tu Canvas de la Esquina y una nueva forma de ganar.'], ['Sesión 3 · Mirar más allá de mi cuadra', 'Tu matriz de tendencias y una decisión de cambio.'], ['Sesión 4 · El bolsillo separado', 'Tus costos, tu nuevo precio y tu punto de equilibrio.'], ['Sesión 5 · Cómo vender más', 'Tu plan comercial, tu CRM y tu meta de ventas.'], ['Sesión 6 · Crecer con orden', 'Tu plan de inversión y tus próximos pasos.']] },
+            ser: { titulo: 'Ruta SER', color: 'bg-lavanda', meta: '4 talleres · 4 h · 2 presenciales y 2 virtuales', para: 'Talleres en grupo para fortalecer a la mujer que sostiene el negocio.', insignia: 'Ruta SER', guia: 'rutas/ser/taller-',
+                modulos: [['Taller 1 · De la subsistencia a la gerencia', 'Presencial · Árbol de vida, mapa de sueños y tarjeta de «gerenta».'], ['Taller 2 · De la visión de túnel a la visión panorámica', 'Virtual · Una decisión analizada con su primer paso.'], ['Taller 3 · Mi liderazgo, mis derechos, mi protección', 'Presencial · Rutas de atención y compromiso de liderazgo.'], ['Taller 4 · La confianza que sostiene', 'Virtual · Acuerdos para ahorrar y crecer juntas.']] },
         };
-        const CURSOS_POR_ROL = { emprendedora: ['hacer', 'ser'], dinamizadora: ['gestion', 'hacer', 'ser'], secretaria: ['gestion', 'hacer', 'ser'] };
-        // Páginas de lección publicadas (las del curso de Gestión se habilitan con el área privada)
-        const urlLeccion = (id, i) => (id === 'hacer' ? `rutas/hacer/semana-${i + 1}/` : id === 'ser' ? `rutas/ser/taller-${i + 1}/` : '');
+        const CURSOS_POR_ROL = { emprendedora: ['hacer', 'ser'], dinamizadora: ['gestion', 'acompanar-hacer', 'facilitar-ser'], secretaria: ['gestion', 'acompanar-hacer', 'facilitar-ser'] };
+        const esEquipo = () => perfil && perfil.rol !== 'emprendedora';
+        // Guía pública de la emprendedora para cada sesión o taller
+        const urlLeccion = (id, i) => (CURSOS[id].guia ? `${CURSOS[id].guia}${i + 1}/` : '');
+        // «Continuar»: la emprendedora abre su guía; el equipo, el tema en la página del curso
+        const urlContinuar = (id, i) => (CURSOS[id].equipo ? `${CURSOS[id].pagina}#${CURSOS[id].ancla}-${i + 1}` : urlLeccion(id, i));
         const ETAPAS = ['Vinculación y diagnóstico', 'Ruta HACER', 'Ruta SER', 'Conexión y financiamiento'];
         const DEPARTAMENTOS = ['Atlántico', 'Bolívar', 'Cesar', 'Córdoba', 'La Guajira', 'Magdalena', 'Sucre'];
 
@@ -865,7 +863,7 @@
             $('#pestana-registro').setAttribute('aria-selected', String(esRegistro));
             $('#form-ingresar').hidden = esRegistro;
             $('#form-registro').hidden = !esRegistro;
-            $('#acceso-titulo').textContent = esRegistro ? 'Crea tu cuenta' : 'Ingresa al CIC';
+            $('#acceso-titulo').textContent = esRegistro ? 'Inscríbete' : 'Ingresa al CIC';
             mensaje('');
         }
         // Mientras no elija quién es, solo ve la pregunta. Crear cuenta es solo para emprendedoras.
@@ -999,6 +997,7 @@
             $('#bienvenida-titulo').textContent = `Hola, ${primerNombre(perfil.nombre)}`;
             $('#bienvenida-texto').textContent = ROL[perfil.rol].texto;
             $('#aviso-clave').hidden = !perfil.debe_cambiar_clave;
+            $('#tab-cursos').textContent = esEquipo() ? 'Mis cursos' : 'Mis talleres';
             pintarCursos();
             pintarSeguimiento();
             pintarCuenta();
@@ -1065,22 +1064,21 @@
             cont.hidden = false;
             cont.innerHTML = sig
                 ? `<div><small>Tu siguiente paso</small><b>${esc(CURSOS[sig.id].titulo)} · ${esc(CURSOS[sig.id].modulos[sig.i][0])}</b></div><button type="button" class="btn btn-claro btn-pequeno" id="btn-continuar">Continuar <span aria-hidden="true">▶</span></button>`
-                : `<div><small>¡Lo lograste!</small><b>Completaste todas tus rutas. Tu constancia se emitirá al cerrar el ciclo.</b></div>`;
-            const intro = perfil.rol === 'emprendedora'
-                ? 'Marca cada tema cuando lo termines con tu dinamizadora.'
-                : 'Tu curso de gestión y las rutas que acompañas en territorio.';
+                : `<div><small>¡Lo lograste!</small><b>${esEquipo() ? 'Completaste todos tus cursos.' : 'Completaste tus talleres.'} Tu constancia se emitirá al cerrar el ciclo.</b></div>`;
+            const intro = esEquipo()
+                ? 'Gestión del CIC y la preparación de cada sesión de HACER y de cada taller de SER. El video, el material de estudio y el cuestionario de cada tema se abren cuando se active el acceso del equipo.'
+                : 'Tus sesiones de la ruta HACER y tus talleres de la ruta SER. Abre la guía de cada uno y márcalo cuando lo termines.';
             $('#vista-cursos').innerHTML = `
-                <h2>Mis rutas</h2>
+                <h2>${esEquipo() ? 'Mis cursos' : 'Mis talleres'}</h2>
                 <p class="vista-intro">${esc(intro)} Tu avance se guarda en este dispositivo.</p>
                 <div class="rejilla ${ids.length === 3 ? 'r3' : 'r2'}" style="align-items:start">
                 ${ids.map((id) => {
                     const c = CURSOS[id];
                     const hechos = new Set(avance[id] || []);
                     const pct = Math.round((hechos.size / c.modulos.length) * 100);
-                    const acompanas = perfil.rol !== 'emprendedora' && id !== 'gestion';
                     return `<article class="curso" id="curso-${id}">
                         <div class="curso-cab ${c.color}">
-                            <span class="eyebrow" style="color:var(--bosque)">${acompanas ? 'Ruta que acompañas' : 'Tu ruta'}</span>
+                            <span class="eyebrow" style="color:var(--bosque)">${c.equipo ? 'Curso del equipo' : 'Tus talleres'}</span>
                             <h3>${esc(c.titulo)}</h3>
                             <p style="font-size:.9rem;margin-top:.2rem">${esc(c.meta)}</p>
                         </div>
@@ -1089,8 +1087,9 @@
                             <div class="barra"><span class="barra-fondo" role="progressbar" aria-label="Avance en ${esc(c.titulo)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><span style="width:${pct}%"></span></span>${pct} %</div>
                             <ol class="modulos">
                             ${c.modulos.map(([t, d], i) => `
-                                <li><label class="${sig && sig.id === id && sig.i === i ? 'siguiente' : ''}"><input type="checkbox" data-curso="${id}" data-i="${i}" ${hechos.has(i) ? 'checked' : ''}><span><b>${esc(t)}</b><span>${esc(d)}</span>${urlLeccion(id, i) ? `<a class="enlace" style="display:inline-block;margin-top:.3rem;font-size:.85rem" href="${urlLeccion(id, i)}">Abrir la lección →</a>` : ''}</span></label></li>`).join('')}
+                                <li><label class="${sig && sig.id === id && sig.i === i ? 'siguiente' : ''}"><input type="checkbox" data-curso="${id}" data-i="${i}" ${hechos.has(i) ? 'checked' : ''}><span><b>${esc(t)}</b><span>${esc(d)}</span><span class="enlaces-modulo">${c.equipo ? `<a class="enlace" href="${c.pagina}#${c.ancla}-${i + 1}">Ver el tema</a>` : ''}${urlLeccion(id, i) ? `<a class="enlace" href="${urlLeccion(id, i)}">${c.equipo ? 'Guía de la emprendedora' : 'Abrir la guía'} →</a>` : ''}</span></span></label></li>`).join('')}
                             </ol>
+                            ${c.equipo ? '<p class="privado">Video, material de estudio y cuestionario: se abren al activarse el acceso del equipo.</p>' : ''}
                         </div>
                     </article>`;
                 }).join('')}
@@ -1114,8 +1113,8 @@
             }));
             const bc = $('#btn-continuar');
             if (bc) bc.addEventListener('click', () => {
-                // Si la lección pendiente tiene su página, «Continuar» lleva directo a ella
-                const url = urlLeccion(sig.id, sig.i);
+                // «Continuar» lleva directo a la guía (emprendedoras) o al tema del curso (equipo)
+                const url = urlContinuar(sig.id, sig.i);
                 if (url) { location.href = url; return; }
                 ir('cursos', false);
                 const n = $(`input[data-curso="${sig.id}"][data-i="${sig.i}"]`);

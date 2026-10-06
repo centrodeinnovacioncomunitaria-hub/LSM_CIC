@@ -622,3 +622,27 @@ td small { color: var(--musgo); }
 .leccion-grid > * { min-width: 0; }
 @media (max-width: 960px) { .leccion-grid { grid-template-columns: minmax(0, 1fr); } }
 .guia p, .guia li, .guia td, .guia label, .recuadro { overflow-wrap: anywhere; }
+
+/* ===== Talleres y cursos del equipo ===== */
+@media (min-width: 961px) and (max-width: 1180px) { .nav { gap: 1.1rem; font-size: .9rem; } .submenu-btn { font-size: .9rem; } }
+.equipo-bloque { margin-top: 3rem; display: grid; grid-template-columns: 1.1fr .9fr; gap: 2rem; align-items: center; background: var(--crema); border: 1px solid var(--linea); border-radius: 1.75rem; padding: 2rem; }
+.equipo-bloque h3 { font-size: clamp(1.4rem, 3vw, 1.8rem); margin: .4rem 0 .6rem; }
+.equipo-bloque .botones { margin-top: 1.2rem; }
+.equipo-cursos { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.equipo-cursos a { display: flex; align-items: center; gap: .8rem; padding: .9rem 1rem; background: #fff; border-radius: 1rem; border: 1px solid var(--linea); text-decoration: none; }
+.equipo-cursos a:hover { box-shadow: var(--sombra); }
+.equipo-cursos .punto { width: .9rem; height: .9rem; border-radius: 50%; flex-shrink: 0; }
+.equipo-cursos b { display: block; }
+.equipo-cursos small { color: var(--musgo); font-weight: 600; }
+@media (max-width: 860px) { .equipo-bloque { grid-template-columns: 1fr; padding: 1.4rem; } }
+.privado { display: flex; gap: .5rem; align-items: center; margin-top: .9rem; font-size: .85rem; font-weight: 700; color: var(--musgo); }
+.privado svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+.curso .privado { padding: .7rem .8rem; background: var(--crema); border-radius: .8rem; }
+.enlaces-modulo { display: flex !important; flex-wrap: wrap; gap: .3rem 1rem; margin-top: .3rem; }
+.enlaces-modulo .enlace { font-size: .85rem; }
+.llevas .chip { font-size: .72rem; text-transform: none; letter-spacing: 0; }
+.nota-equipo { margin-top: .9rem; font-size: .88rem; }
+.nota-equipo a { font-weight: 700; color: var(--bosque); }
+.pie-rejilla { grid-template-columns: 1.4fr repeat(4, 1fr); }
+@media (max-width: 1024px) { .pie-rejilla { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 520px) { .pie-rejilla { grid-template-columns: 1fr; } }

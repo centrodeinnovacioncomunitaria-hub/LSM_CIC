@@ -2,10 +2,15 @@
 
 > Formación y acompañamiento para la autonomía económica de las mujeres emprendedoras del Caribe colombiano, en red con la Red de Mujeres del Caribe. Una Secretaría Técnica, 8 satélites y 24 dinamizadoras acompañan a 200 emprendedoras en 13 municipios de 7 departamentos.
 
-## Rutas de aprendizaje
-- [Ruta HACER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/hacer/): 6 semanas (12 h) de acompañamiento individual para ordenar costos, precios y ventas. Lecciones: https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/hacer/semana-1/ a semana-6/.
+## Talleres para emprendedoras (con inscripción)
+- [Ruta HACER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/hacer/): 6 sesiones individuales (12 h) en el negocio para ordenar costos, precios y ventas. Guías: https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/hacer/semana-1/ a semana-6/.
 - [Ruta SER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/ser/): 4 talleres grupales (16 h) de confianza, decisiones, liderazgo y ahorro colectivo. Guías: https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/ser/taller-1/ a taller-4/.
-- [Gestión del CIC](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/rutas/gestion-cic/): curso virtual de 5 módulos (≈ 2 h) para dinamizadoras y Secretaría Técnica.
+
+## Cursos del equipo (dinamizadoras y Secretaría Técnica)
+- [Cursos del equipo](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/): acceso con cédula para quienes están en la base de datos del equipo.
+- [Gestión del CIC](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/gestion-cic/): 5 módulos (≈ 2 h) sobre cómo funciona el centro.
+- [Acompañar la ruta HACER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/acompanar-hacer/): preparación de las 6 sesiones con las emprendedoras.
+- [Facilitar la ruta SER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/facilitar-ser/): preparación de los 4 talleres grupales.
 
 ## Otras páginas
 - [Biblioteca de recursos](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/recursos/): plantillas gratuitas de finanzas, ventas, formalización y marketing digital.
