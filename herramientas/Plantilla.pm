@@ -6,7 +6,8 @@ use strict;
 use warnings;
 use utf8;
 use Exporter 'import';
-our @EXPORT_OK = qw(simbolos nav pie);
+use File::Path qw(make_path);
+our @EXPORT_OK = qw(simbolos nav pie cabeza cuerpo_inicio final_pagina escribir attr);
 
 sub simbolos {
     return <<'HTML';
@@ -32,6 +33,7 @@ sub nav {
     my $talleres = $grupo->(qw(hacer ser talleres));
     my $cursos = $grupo->(qw(cursos gestion acompanar-hacer facilitar-ser));
     my $recursos = $grupo->('recursos');
+    my $cic = $grupo->(qw(el-cic como-funciona implementacion formacion glosario));
     return <<"HTML";
             <nav id="nav-publica" class="nav" aria-label="Principal">
                 <div class="submenu">
@@ -61,11 +63,14 @@ sub nav {
                     </ul>
                 </div>
                 <div class="submenu">
-                    <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-cic">Sobre el CIC $f</button>
+                    <button type="button" class="submenu-btn$cic" aria-expanded="false" aria-controls="sub-cic">Sobre el CIC $f</button>
                     <ul id="sub-cic" class="submenu-lista" hidden>
-                        <li><a href="${P}#sobre-cic"><span class="punto bg-menta"></span><span><b>Qué es el CIC</b><small>Modelo, cascada y pilares</small></span></a></li>
+                        <li><a href="${P}el-cic/"@{[ $cur->(q{el-cic}) ]}><span class="punto bg-menta"></span><span><b>Qué es el CIC</b><small>Modelo, objetivos y estructura en red</small></span></a></li>
+                        <li><a href="${P}el-cic/como-funciona/"@{[ $cur->(q{como-funciona}) ]}><span class="punto bg-durazno"></span><span><b>Cómo funciona</b><small>Pilares, financiamiento y desarrollo del ser</small></span></a></li>
+                        <li><a href="${P}el-cic/implementacion/"@{[ $cur->(q{implementacion}) ]}><span class="punto bg-coral"></span><span><b>Implementación y seguimiento</b><small>Fases, indicadores y hoja de ruta 2026-2030</small></span></a></li>
+                        <li><a href="${P}el-cic/formacion/"@{[ $cur->(q{formacion}) ]}><span class="punto bg-lavanda"></span><span><b>Proceso formativo</b><small>Formación en cascada, 62 horas y constancias</small></span></a></li>
                         <li><a href="${P}#territorio"><span class="punto bg-mantequilla"></span><span><b>Territorio</b><small>8 satélites · 13 municipios</small></span></a></li>
-                        <li><a href="${P}#aliados"><span class="punto bg-coral"></span><span><b>Aliados</b><small>Quiénes hacen posible el CIC</small></span></a></li>
+                        <li><a class="todas" href="${P}el-cic/glosario/"@{[ $cur->(q{glosario}) ]}>Glosario de términos y siglas</a></li>
                     </ul>
                 </div>
                 <div class="submenu">
@@ -104,7 +109,7 @@ sub pie {
                 </div>
                 <div>
                     <h2>El CIC</h2>
-                    <ul><li><a href="${P}#sobre-cic">Qué es el CIC</a></li><li><a href="${P}#territorio">Territorio</a></li><li><a href="${P}#aliados">Aliados</a></li></ul>
+                    <ul><li><a href="${P}el-cic/">Qué es el CIC</a></li><li><a href="${P}el-cic/como-funciona/">Cómo funciona</a></li><li><a href="${P}el-cic/implementacion/">Implementación</a></li><li><a href="${P}el-cic/formacion/">Proceso formativo</a></li><li><a href="${P}el-cic/glosario/">Glosario</a></li><li><a href="${P}#aliados">Aliados</a></li></ul>
                 </div>
                 <div>
                     <h2>Ayuda</h2>
@@ -119,5 +124,71 @@ sub pie {
     </footer>
 HTML
 }
+
+# Escribe un archivo en UTF-8, creando las carpetas que falten.
+sub escribir { my ($f, $x) = @_; make_path($f =~ s{/[^/]+$}{}r); open(my $fh, q{>:encoding(UTF-8)}, $f) or die "No pude escribir $f
+"; print $fh $x; close $fh; print "$f
+" }
+# Escapa un texto para usarlo dentro de un atributo HTML.
+sub attr { my $t = shift; $t =~ s/&/&amp;/g; $t =~ s/"/&quot;/g; $t =~ s/</&lt;/g; return $t }
+
+# Cabeza HTML de una página interna: titulo, desc, url, P, og, jsonld y noindex.
+sub cabeza {
+    my (%o) = @_;
+    my $P = $o{P};
+    my $robots = $o{noindex} ? qq{\n    <meta name="robots" content="noindex">} : '';
+    my $jsonld = $o{jsonld} ? qq{    <script type="application/ld+json">\n$o{jsonld}    </script>\n} : '';
+    return <<"HTML";
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>$o{titulo}</title>
+    <meta name="description" content="@{[ attr($o{desc}) ]}">
+    <link rel="canonical" href="$o{url}">$robots
+    <meta name="theme-color" content="#2E4A3E">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="es_CO">
+    <meta property="og:site_name" content="Centro de Innovación Comunitaria (CIC)">
+    <meta property="og:title" content="@{[ attr($o{og} // $o{titulo}) ]}">
+    <meta property="og:description" content="@{[ attr($o{desc}) ]}">
+    <meta property="og:url" content="$o{url}">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='12 12 96 96'%3E%3Cpath d='M60,104 C30,100 14,78 18,44 C44,50 58,70 60,104 Z' fill='%239ED0B7'/%3E%3Cpath d='M60,104 C90,100 106,78 102,44 C76,50 62,70 60,104 Z' fill='%23F2B592'/%3E%3Ccircle cx='60' cy='30' r='12' fill='%23EE9884'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght\@6..12,400;6..12,600;6..12,700&family=Quicksand:wght\@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="${P}assets/cic.css">
+$jsonld    <script>document.documentElement.classList.add('js');</script>
+</head>
+HTML
+}
+
+# Apertura del cuerpo: símbolos SVG, enlace para saltar y cabecera con el menú.
+sub cuerpo_inicio {
+    my ($P, $actual) = @_;
+    return "<body>\n" . simbolos() . <<"HTML";
+
+    <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+    <header class="cabecera">
+        <div class="contenedor">
+            <a href="$P" class="logo" aria-label="CIC · Centro de Innovación Comunitaria, inicio">
+                <svg aria-hidden="true"><use href="#isotipo"/></svg>
+                <span><span class="logo-palabra">cic</span><span class="logo-sub">Centro de Innovación Comunitaria</span></span>
+            </a>
+@{[ nav($P, $actual) ]}            <div class="acciones">
+                <a class="btn btn-primario btn-pequeno" href="${P}#ingresar">Ingresar <span aria-hidden="true">›</span></a>
+                <button type="button" id="menu-btn" class="menu-btn" aria-controls="nav-publica" aria-expanded="false" aria-label="Abrir menú">
+                    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+HTML
+}
+
+# Pie, guion del sitio y cierre de la página.
+sub final_pagina { my $P = shift; return "\n" . pie($P) . qq{\n    <script src="${P}assets/sitio.js"></script>\n</body>\n</html>\n} }
 
 1;

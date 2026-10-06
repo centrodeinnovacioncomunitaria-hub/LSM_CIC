@@ -12,7 +12,14 @@
 - [Acompañar la ruta HACER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/acompanar-hacer/): preparación de las 6 sesiones con las emprendedoras.
 - [Facilitar la ruta SER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/facilitar-ser/): preparación de los 4 talleres grupales.
 
+## El CIC (modelo oficial)
+- [Qué es el CIC](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/el-cic/): software social, objetivos, población, estructura centro-satélite (Secretaría Técnica, 8 satélites, base comunitaria) y focalización territorial.
+- [Cómo funciona](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/el-cic/como-funciona/): acompañamiento integral, acceso a mercados, financiamiento en cuatro niveles (UMC de máximo 19 personas), seis dimensiones del ecosistema y el pilar transversal del desarrollo del ser.
+- [Implementación y seguimiento](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/el-cic/implementacion/): fases 0 a 4 del ciclo de seis meses, indicadores y metas, riesgos y hoja de ruta 2026-2030.
+- [Proceso formativo](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/el-cic/formacion/): formación en cascada, Diseño Centrado en las Personas, 19 temáticas en 7 macrotemas, 62 horas (28 por emprendedora), evaluación y constancias.
+- [Glosario](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/el-cic/glosario/): términos, siglas y referencias.
+- Fuentes: Modelo Metodológico CIC (documento 6.5) y Documento técnico y metodológico de los procesos formativos (documento 6.4, agosto de 2026), Red de Mujeres del Caribe.
+
 ## Otras páginas
 - [Biblioteca de recursos](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/recursos/): plantillas gratuitas de finanzas, ventas, formalización y marketing digital.
-- [Sobre el CIC](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/#sobre-cic): modelo en cascada y cinco pilares.
 - [Centro de ayuda](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/#ayuda): ingreso, constancias y contacto.

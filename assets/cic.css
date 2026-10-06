@@ -248,7 +248,7 @@ details.desplegable[open] summary::after { content: '–'; }
 .lateral { display: grid; gap: 1rem; }
 .lateral h3 { font-size: 1.2rem; margin-bottom: .5rem; }
 .lateral p { color: var(--musgo); font-size: .93rem; }
-@media (max-width: 900px) { .ayuda { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .ayuda { grid-template-columns: minmax(0, 1fr); } }
 
 /* Formularios */
 .campo { width: 100%; border: 1.5px solid rgba(46, 74, 62, .25); border-radius: .9rem; padding: .7rem .9rem; background: #fff; font-size: 1rem; min-height: 2.9rem; }
@@ -646,3 +646,45 @@ td small { color: var(--musgo); }
 .pie-rejilla { grid-template-columns: 1.4fr repeat(4, 1fr); }
 @media (max-width: 1024px) { .pie-rejilla { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 520px) { .pie-rejilla { grid-template-columns: 1fr; } }
+
+/* ===== El CIC: páginas del modelo (generadas por herramientas/generar_el_cic.pl) ===== */
+.subnav-cic { margin-top: 1.2rem; }
+.subnav-cic ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem; }
+.subnav-cic a { display: block; white-space: nowrap; text-decoration: none; font-weight: 700; font-size: .9rem; padding: .55rem 1.05rem; border-radius: 999px; background: #fff; border: 1px solid var(--linea); transition: background .2s; }
+.subnav-cic a:hover { background: var(--menta); }
+.subnav-cic a[aria-current] { background: var(--bosque); border-color: var(--bosque); color: #fff; }
+.pagina-cic .bloque { scroll-margin-top: 5rem; }
+.lista-limpia { list-style: none; padding: 0; margin: 1.4rem 0 0; }
+.tarjeta-num h3 { font-size: 1.15rem; margin: .9rem 0 .45rem; }
+.tarjeta-num p { color: var(--musgo); font-size: .93rem; }
+.tarjeta-num .numero { font-size: .95rem; }
+a.enlace-tarjeta { display: block; text-decoration: none; transition: transform .25s, box-shadow .25s; }
+a.enlace-tarjeta:hover { box-shadow: var(--sombra); }
+.js a.enlace-tarjeta.aparece.visible:hover { transform: translateY(-3px); }
+.tabla-cic { margin-top: 1.4rem; }
+.tabla-cic table { min-width: 44rem; }
+#hoja-de-ruta .tabla-cic table { min-width: 66rem; }
+.tabla-cic thead th { background: var(--bosque); color: #fff; letter-spacing: .03em; text-transform: none; font-size: .84rem; }
+.tabla-cic tbody th { font: 700 .95rem/1.3 var(--titulo); color: var(--bosque); text-transform: none; letter-spacing: 0; padding: .8rem .9rem .8rem 1.3rem; border-top: 1px solid var(--linea); vertical-align: top; }
+.tabla-cic caption { caption-side: bottom; text-align: left; padding: .75rem 1.3rem .9rem; font-size: .84rem; color: var(--musgo); border-top: 1px solid var(--linea); }
+.tabla-cic td small { display: block; margin-top: .2rem; }
+.riesgo h3 { font-size: 1.2rem; margin-bottom: .5rem; }
+.riesgo p { color: var(--musgo); font-size: .93rem; }
+.riesgo .mitiga { margin-top: .8rem; color: var(--bosque); background: rgba(158, 208, 183, .3); border-radius: .9rem; padding: .7rem .9rem; }
+.columnas-2 { grid-template-columns: 1fr 1fr; column-gap: 1.6rem; }
+@media (max-width: 760px) { .columnas-2 { grid-template-columns: 1fr; } }
+.codigos { list-style: none; margin: .8rem 0 0; padding: 0; display: grid; gap: .45rem; font-size: .93rem; }
+.codigos b { display: inline-block; min-width: 3.1rem; color: var(--coralp); }
+.refs { margin: 0; padding-left: 1.1rem; display: grid; gap: .45rem; font-size: .9rem; color: var(--musgo); }
+.letras { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1.4rem 0 1.2rem; }
+.letras a { width: 2.4rem; height: 2.4rem; display: grid; place-items: center; border-radius: 50%; background: #fff; border: 1px solid var(--linea); font: 700 .95rem var(--titulo); text-decoration: none; }
+.letras a:hover { background: var(--menta); }
+.glosario { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0; }
+.glosario > div { background: #fff; border: 1px solid var(--linea); border-radius: 1.2rem; padding: 1.1rem 1.3rem; scroll-margin-top: 6rem; }
+.glosario > div:target { box-shadow: 0 0 0 3px var(--coralp); }
+.glosario dt { font: 700 1.1rem var(--titulo); color: var(--bosque); }
+.glosario dd { margin: .35rem 0 0; color: var(--musgo); font-size: .93rem; }
+@media (max-width: 760px) { .glosario { grid-template-columns: 1fr; } }
+.fuente-cic { margin-top: 2.4rem; padding-top: 1.1rem; border-top: 1px solid var(--linea); font-size: .87rem; color: var(--musgo); max-width: 60rem; }
+.pagina-cic .otra-ruta p { color: var(--bosque); font-size: .93rem; }
+@media (prefers-reduced-motion: reduce) { a.enlace-tarjeta, .js a.enlace-tarjeta.aparece.visible:hover { transition: none; transform: none; } }

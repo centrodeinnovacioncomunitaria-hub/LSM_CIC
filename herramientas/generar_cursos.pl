@@ -10,13 +10,10 @@ use warnings;
 use utf8;
 use FindBin;
 use lib $FindBin::Bin;
-use File::Path qw(make_path);
-use Plantilla qw(simbolos nav pie);
+use Plantilla qw(simbolos nav pie cabeza cuerpo_inicio final_pagina escribir attr);
 binmode STDOUT, ':encoding(UTF-8)';
 
 my $BASE = 'https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC';
-sub escribir { my ($f, $x) = @_; make_path($f =~ s{/[^/]+$}{}r); open(my $fh, '>:encoding(UTF-8)', $f) or die "No pude escribir $f\n"; print $fh $x; close $fh; print "$f\n" }
-sub attr { my $t = shift; $t =~ s/&/&amp;/g; $t =~ s/"/&quot;/g; $t =~ s/</&lt;/g; return $t }
 
 # ---------------------------------------------------------------- Datos de los cursos
 my %CURSOS = (
@@ -174,62 +171,6 @@ my %CURSOS = (
 );
 my @ORDEN = ('gestion-cic', 'acompanar-hacer', 'facilitar-ser');
 
-# ---------------------------------------------------------------- Piezas de página
-sub cabeza {
-    my (%o) = @_;
-    my $P = $o{P};
-    my $robots = $o{noindex} ? qq{\n    <meta name="robots" content="noindex">} : '';
-    my $jsonld = $o{jsonld} ? qq{    <script type="application/ld+json">\n$o{jsonld}    </script>\n} : '';
-    return <<"HTML";
-<!DOCTYPE html>
-<html lang="es-CO">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>$o{titulo}</title>
-    <meta name="description" content="@{[ attr($o{desc}) ]}">
-    <link rel="canonical" href="$o{url}">$robots
-    <meta name="theme-color" content="#2E4A3E">
-    <meta property="og:type" content="website">
-    <meta property="og:locale" content="es_CO">
-    <meta property="og:site_name" content="Centro de Innovación Comunitaria (CIC)">
-    <meta property="og:title" content="@{[ attr($o{og} // $o{titulo}) ]}">
-    <meta property="og:description" content="@{[ attr($o{desc}) ]}">
-    <meta property="og:url" content="$o{url}">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='12 12 96 96'%3E%3Cpath d='M60,104 C30,100 14,78 18,44 C44,50 58,70 60,104 Z' fill='%239ED0B7'/%3E%3Cpath d='M60,104 C90,100 106,78 102,44 C76,50 62,70 60,104 Z' fill='%23F2B592'/%3E%3Ccircle cx='60' cy='30' r='12' fill='%23EE9884'/%3E%3C/svg%3E">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght\@6..12,400;6..12,600;6..12,700&family=Quicksand:wght\@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="${P}assets/cic.css">
-$jsonld    <script>document.documentElement.classList.add('js');</script>
-</head>
-HTML
-}
-
-sub cuerpo_inicio {
-    my ($P, $actual) = @_;
-    return "<body>\n" . simbolos() . <<"HTML";
-
-    <a class="saltar" href="#contenido">Saltar al contenido</a>
-
-    <header class="cabecera">
-        <div class="contenedor">
-            <a href="$P" class="logo" aria-label="CIC · Centro de Innovación Comunitaria, inicio">
-                <svg aria-hidden="true"><use href="#isotipo"/></svg>
-                <span><span class="logo-palabra">cic</span><span class="logo-sub">Centro de Innovación Comunitaria</span></span>
-            </a>
-@{[ nav($P, $actual) ]}            <div class="acciones">
-                <a class="btn btn-primario btn-pequeno" href="${P}#ingresar">Ingresar <span aria-hidden="true">›</span></a>
-                <button type="button" id="menu-btn" class="menu-btn" aria-controls="nav-publica" aria-expanded="false" aria-label="Abrir menú">
-                    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                </button>
-            </div>
-        </div>
-    </header>
-HTML
-}
-
-sub final_pagina { my $P = shift; return "\n" . pie($P) . qq{\n    <script src="${P}assets/sitio.js"></script>\n</body>\n</html>\n} }
 
 sub botones_ingreso {
     my ($P, $clase) = @_;

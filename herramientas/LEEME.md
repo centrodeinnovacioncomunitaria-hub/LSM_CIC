@@ -12,8 +12,13 @@ El portal tiene dos espacios:
 | `perl herramientas/generar_lecciones.pl ../material_cursos` | Genera las 10 guías de las emprendedoras desde las «Guías de la emprendedora» del Drive y copia sus descargas a `/descargas`. |
 | `perl herramientas/generar_cursos.pl` | Genera `cursos/` y las páginas de los tres cursos del equipo. |
 | `perl herramientas/aplicar_plantilla.pl` | Aplica el menú y el pie al inicio, la biblioteca y las páginas de las rutas. |
+| `perl herramientas/generar_el_cic.pl` | Genera la sección institucional `el-cic/` (Qué es el CIC, Cómo funciona, Implementación y seguimiento, Proceso formativo y Glosario) con los datos de los documentos oficiales 6.5 y 6.4 de la Red. |
 
-`Plantilla.pm` tiene el menú principal y el pie de todas las páginas: si cambia el menú, se edita ahí y se ejecutan los tres scripts.
+`Plantilla.pm` tiene las piezas comunes de todas las páginas: símbolos, menú principal, pie, cabeza HTML (`cabeza`), apertura del cuerpo (`cuerpo_inicio`) y cierre (`final_pagina`). Si cambia el menú o el pie, se edita ahí y se ejecutan los cuatro scripts.
+
+## Cuando la Secretaría Técnica publique una nueva versión del modelo
+
+Los documentos 6.5 y 6.4 son iterativos. Al recibir una versión nueva: se actualizan los datos en `generar_el_cic.pl` (cada página está en su propio bloque, en el mismo orden que el documento), se ejecuta el script y se revisan las cifras que también aparecen en el inicio (`index.html`: sección «Sobre el CIC», territorio y preguntas frecuentes) y en `llms.txt`.
 
 `material_cursos` es la carpeta *Material Plataforma* del Drive descargada en `Desktop\2HO\CIC\material_cursos`, con `hacer/semana-1 … semana-6`, `ser/taller-1 … taller-4` y `gestion`.
 
