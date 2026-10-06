@@ -6,3 +6,6 @@ privado*/
 directorio_equipo_cic.sql
 .env
 supabase/.temp/
+
+# Las plantillas públicas de las rutas sí se publican
+!descargas/**/*.xlsx
