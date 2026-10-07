@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/cic.css?v=20261014">
+    <link rel="stylesheet" href="../assets/cic.css?v=20261015">
     <style>
         .admin-cab { background: var(--bosque); color: #fff; padding: 1.2rem 0; }
         .admin-cab .contenedor { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -30,6 +30,8 @@
         .estado-ok { color: #2f7a4f; font-weight: 700; }
         .estado-falta { color: var(--coralp); font-weight: 700; }
         .fila-btn { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .3rem; }
+        .bienvenida-admin { border: 2px solid var(--mantequilla); }
+        .pdf-admin { list-style: none; margin: 0 0 .6rem; padding: 0; display: grid; gap: .2rem; font-size: .9rem; color: var(--musgo); }
         @media (max-width: 760px) { .unidad-admin { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -70,8 +72,8 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="../config.js?v=20261014"></script>
-    <script src="../assets/datos-cic.js?v=20261014"></script>
+    <script src="../config.js?v=20261015"></script>
+    <script src="../assets/datos-cic.js?v=20261015"></script>
     <script>
     (() => {
         'use strict';
@@ -184,8 +186,22 @@
         const enlaceVideo = (v) => !v ? '' : v.drive_id ? `https://drive.google.com/file/d/${v.drive_id}/view` : `https://youtu.be/${v.youtube_id}`;
 
         function pintarCursos() {
+            const bv = contenido.bienvenida;
             $('#tab-cursos').innerHTML = `
-                <p class="vista-intro">Pega el enlace de cada video de Google Drive (compártelo como «Cualquier persona con el enlace · Lector») y su duración en minutos: la evaluación se habilita cuando la persona lleva al menos el 90 % de ese tiempo con el video abierto. En el material, escribe una línea por archivo: <b>Nombre | enlace</b>.</p>
+                <section class="curso-admin bienvenida-admin" aria-labelledby="t-bv">
+                    <div class="unidad-admin" data-bienvenida>
+                        <h4 id="t-bv"><span class="codigo">BIENVENIDA</span> Video de bienvenida · obligatorio <small class="${bv ? 'estado-ok' : 'estado-falta'}">${bv ? 'publicado: ya se exige antes del curso Gestión del CIC' : 'falta: mientras no haya video, el curso Gestión se abre sin este paso'}</small></h4>
+                        <p class="texto-suave" style="grid-column:1/-1;margin:0">Todas las secretarias y dinamizadoras deben ver este video de presentación (al menos el 90 % de su duración) para desbloquear el curso Gestión del CIC.</p>
+                        <form class="form-bienvenida" novalidate>
+                            <label class="etiqueta" for="v-bv">Enlace de Google Drive (o YouTube)</label>
+                            <input class="campo" id="v-bv" name="url" type="url" placeholder="https://drive.google.com/file/d/…/view" value="${esc(enlaceVideo(bv))}">
+                            <label class="etiqueta" for="d-bv">Duración (minutos)</label>
+                            <input class="campo" id="d-bv" name="duracion" type="number" min="1" max="300" value="${esc(bv ? bv.duracion_min || '' : '')}">
+                            <div class="fila-btn"><button type="submit" class="btn btn-primario btn-pequeno">Guardar video de bienvenida</button>${bv ? '<button type="button" class="btn btn-borde btn-pequeno" data-quitar-bienvenida>Quitar</button>' : ''}</div>
+                        </form>
+                    </div>
+                </section>
+                <p class="vista-intro">Pega el enlace de cada video de Google Drive (compártelo como «Cualquier persona con el enlace · Lector») y su duración en minutos: la evaluación se habilita cuando la persona lleva al menos el 90 % de ese tiempo con el video abierto. Las guías en PDF ya están cargadas en la plataforma; si quieres sumar otro material, escribe una línea por archivo: <b>Nombre | enlace</b>.</p>
                 ${Object.entries(contenido.cursos).map(([id, c]) => {
                     const conVideo = c.unidades.filter((u) => u.video).length;
                     return `<details class="curso-admin" ${id === 'gestion' ? 'open' : ''}>
@@ -202,7 +218,8 @@
                                 <div class="fila-btn"><button type="submit" class="btn btn-primario btn-pequeno">Guardar video</button>${u.video ? '<button type="button" class="btn btn-borde btn-pequeno" data-quitar-video>Quitar</button>' : ''}</div>
                             </form>
                             <form class="form-material" novalidate>
-                                <b>Material ${u.material.length ? `<span class="estado-ok">· ${u.material.length} archivo(s)</span>` : '<span class="estado-falta">· falta</span>'}</b>
+                                ${(u.archivos || []).length ? `<b>PDF de la plataforma <span class="estado-ok">· ${u.archivos.length}</span></b><ul class="pdf-admin">${u.archivos.map((n) => `<li>📄 ${esc(n)}</li>`).join('')}</ul>` : ''}
+                                <b>Enlaces adicionales ${u.material.length ? `<span class="estado-ok">· ${u.material.length} enlace(s)</span>` : '<span class="texto-suave">· opcional</span>'}</b>
                                 <label class="etiqueta" for="m-${esc(u.codigo)}">Una línea por archivo: Nombre | enlace</label>
                                 <textarea class="campo" id="m-${esc(u.codigo)}" name="material" rows="4" placeholder="Guía de estudio | https://drive.google.com/…">${esc(lineasMaterial(u.material))}</textarea>
                                 <div class="fila-btn"><button type="submit" class="btn btn-primario btn-pequeno">Guardar material</button></div>
@@ -215,6 +232,18 @@
         $('#tab-cursos').addEventListener('submit', async (ev) => {
             ev.preventDefault();
             const f = ev.target, caja = f.closest('.unidad-admin');
+            if (f.classList.contains('form-bienvenida')) {
+                const b = $('button[type="submit"]', f), duracion = Number(f.duracion.value);
+                try {
+                    if (!f.url.value.trim()) throw new Error('Pega el enlace del video de bienvenida.');
+                    if (!duracion) throw new Error('Escribe la duración del video en minutos.');
+                    b.disabled = true;
+                    await llamar('guardar-video', { video: { codigo: 'BIENVENIDA', titulo: 'Bienvenida al Centro de Innovación Comunitaria', url: f.url.value.trim(), duracion_min: duracion, audiencia: 'equipo', curso: 'bienvenida', unidad: 1 } });
+                    aviso('Video de bienvenida guardado: desde ahora es obligatorio antes del curso Gestión del CIC.');
+                    await recargar();
+                } catch (e) { aviso(e.message); b.disabled = false; }
+                return;
+            }
             const curso = caja.dataset.curso, unidad = Number(caja.dataset.unidad);
             const c = contenido.cursos[curso];
             const b = $('button[type="submit"]', f);
@@ -234,6 +263,11 @@
             } catch (e) { aviso(e.message); b.disabled = false; }
         });
         $('#tab-cursos').addEventListener('click', async (ev) => {
+            if (ev.target.closest('[data-quitar-bienvenida]')) {
+                if (!confirm('¿Quitar el video de bienvenida? El curso Gestión se abrirá sin este paso. El archivo sigue en Drive.')) return;
+                try { await llamar('quitar-video', { codigo: 'BIENVENIDA' }); aviso('Video de bienvenida quitado.'); await recargar(); } catch (e) { aviso(e.message); }
+                return;
+            }
             const b = ev.target.closest('[data-quitar-video]');
             if (!b) return;
             const caja = b.closest('.unidad-admin');

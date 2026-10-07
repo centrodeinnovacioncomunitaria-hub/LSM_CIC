@@ -2,6 +2,20 @@
 window.CIC_DATOS = {
   "hacer":[
     {
+      "descargas":[
+        {
+          "etiqueta":"Guía de la semana 1",
+          "id":"hacer-1-guia",
+          "kb":339,
+          "tipo":"PDF"
+        },
+        {
+          "etiqueta":"Plantilla A3 · Registro diario",
+          "id":"hacer-1-a3",
+          "kb":24,
+          "tipo":"Excel"
+        }
+      ],
       "haras":[
         "Contar tu negocio con cinco preguntas sencillas",
         "Empezar tu registro diario de ingresos y gastos",
@@ -14,6 +28,14 @@ window.CIC_DATOS = {
       "titulo":"Cuéntame tu negocio"
     },
     {
+      "descargas":[
+        {
+          "etiqueta":"Guía de la semana 2",
+          "id":"hacer-2-guia",
+          "kb":394,
+          "tipo":"PDF"
+        }
+      ],
       "haras":[
         "Llenar tu Canvas de la Esquina",
         "Explorar nuevas fuentes de ingreso",
@@ -26,6 +48,14 @@ window.CIC_DATOS = {
       "titulo":"Mi negocio puede ganar de otra forma"
     },
     {
+      "descargas":[
+        {
+          "etiqueta":"Guía de la semana 3",
+          "id":"hacer-3-guia",
+          "kb":373,
+          "tipo":"PDF"
+        }
+      ],
       "haras":[
         "Llenar tu matriz de tendencias",
         "Revisar cómo te fue con el cambio que probaste",
@@ -38,6 +68,26 @@ window.CIC_DATOS = {
       "titulo":"Mirar más allá de mi cuadra"
     },
     {
+      "descargas":[
+        {
+          "etiqueta":"Guía de la semana 4",
+          "id":"hacer-4-guia",
+          "kb":455,
+          "tipo":"PDF"
+        },
+        {
+          "etiqueta":"Plantilla A8 · Costos, precio y punto de equilibrio",
+          "id":"hacer-4-a8",
+          "kb":18,
+          "tipo":"Excel"
+        },
+        {
+          "etiqueta":"Plantilla A9 · Flujo de caja, PyG y bolsillos",
+          "id":"hacer-4-a9",
+          "kb":18,
+          "tipo":"Excel"
+        }
+      ],
       "haras":[
         "Hacer el ejercicio de los dos bolsillos",
         "Calcular tus costos y tu nuevo precio",
@@ -50,6 +100,20 @@ window.CIC_DATOS = {
       "titulo":"El bolsillo separado"
     },
     {
+      "descargas":[
+        {
+          "etiqueta":"Guía de la semana 5",
+          "id":"hacer-5-guia",
+          "kb":424,
+          "tipo":"PDF"
+        },
+        {
+          "etiqueta":"Plantilla A11 · Mi CRM",
+          "id":"hacer-5-a11",
+          "kb":17,
+          "tipo":"Excel"
+        }
+      ],
       "haras":[
         "Hacer tu plan comercial de una página",
         "Anotar al menos cinco clientes posibles en Mi CRM",
@@ -62,6 +126,20 @@ window.CIC_DATOS = {
       "titulo":"Cómo vender más"
     },
     {
+      "descargas":[
+        {
+          "etiqueta":"Guía de la semana 6",
+          "id":"hacer-6-guia",
+          "kb":446,
+          "tipo":"PDF"
+        },
+        {
+          "etiqueta":"Plantilla A12 · Plan de inversión",
+          "id":"hacer-6-a12",
+          "kb":14,
+          "tipo":"Excel"
+        }
+      ],
       "haras":[
         "Revisar tu flujo de caja y tus ganancias",
         "Hacer tu plan de inversión",
@@ -158,9 +236,9 @@ window.CIC_DATOS = {
       "descargas":[
         {
           "etiqueta":"Guía del taller 1",
-          "kb":168,
-          "ruta":"descargas/ser/taller-1/CIC_SER1_Guia_Emprendedora.docx",
-          "tipo":"Word"
+          "id":"ser-1-guia",
+          "kb":471,
+          "tipo":"PDF"
         }
       ],
       "haras":[
@@ -178,9 +256,9 @@ window.CIC_DATOS = {
       "descargas":[
         {
           "etiqueta":"Guía del taller 2",
-          "kb":21,
-          "ruta":"descargas/ser/taller-2/CIC_SER2_Guia_Emprendedora.docx",
-          "tipo":"Word"
+          "id":"ser-2-guia",
+          "kb":374,
+          "tipo":"PDF"
         }
       ],
       "haras":[
@@ -198,9 +276,9 @@ window.CIC_DATOS = {
       "descargas":[
         {
           "etiqueta":"Guía del taller 3",
-          "kb":22,
-          "ruta":"descargas/ser/taller-3/CIC_SER3_Guia_Emprendedora.docx",
-          "tipo":"Word"
+          "id":"ser-3-guia",
+          "kb":378,
+          "tipo":"PDF"
         }
       ],
       "haras":[
@@ -218,9 +296,9 @@ window.CIC_DATOS = {
       "descargas":[
         {
           "etiqueta":"Guía del taller 4",
-          "kb":21,
-          "ruta":"descargas/ser/taller-4/CIC_SER4_Guia_Emprendedora.docx",
-          "tipo":"Word"
+          "id":"ser-4-guia",
+          "kb":377,
+          "tipo":"PDF"
         }
       ],
       "haras":[

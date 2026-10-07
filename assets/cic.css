@@ -1277,3 +1277,27 @@ h2 em { background-image: linear-gradient(transparent 62%, rgba(244, 225, 161, .
 .js .carrusel > li.visible:hover, .js .aliado-tarjeta.visible:hover { transform: translateY(-6px); }
 .js .escalera li.visible:hover { transform: translateX(6px); }
 .foro-heroe > .hojas-flotantes, .foro-heroe > .patron-hojas { position: absolute; inset: 0; }
+
+/* ---------- Aliados con logo: misma caja para todos, el logo se ajusta sin deformarse ---------- */
+.aliado-logo { display: flex; align-items: center; justify-content: center; height: 7.5rem; padding: 1.1rem 1.4rem; border-radius: 1rem; background: var(--crema); border: 1px solid var(--linea); }
+.aliado-logo img { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
+.aliado-logo-oscuro { background: #1f3a5c; border-color: #1f3a5c; }
+.aliado-info { display: flex; flex-direction: column; align-items: flex-start; }
+.aliado-tarjeta { padding: 1.2rem; }
+@media (max-width: 520px) { .aliado-logo { height: 6.5rem; } }
+
+/* ---------- Descargas y archivos como botones (PDF que entrega el servidor) ---------- */
+button.descarga, button.archivo { width: 100%; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+button.archivo { background: #fff; }
+button.descarga:disabled, button.archivo:disabled { opacity: .6; cursor: progress; }
+.descarga-bloqueada { position: relative; }
+.descarga-bloqueada small { color: var(--musgo); }
+.descarga-candado { width: 1.3rem; height: 1.3rem; margin-left: auto; flex-shrink: 0; color: var(--coralp); }
+.archivo-icono.archivo-pdf, .archivo-icono.archivo-xls { width: 2.4rem; height: 2.4rem; border-radius: .6rem; display: grid; place-items: center; font: 700 .75rem var(--titulo); flex-shrink: 0; }
+.archivo-pdf { background: var(--coral, #f2a38a); }
+.archivo-xls { background: var(--menta); }
+
+/* ---------- Video de bienvenida (obligatorio antes del curso Gestión) ---------- */
+.bienvenida { border: 2px solid var(--mantequilla); }
+.bienvenida-texto { margin-bottom: 1rem; }
+.bienvenida-texto h3 { margin: .5rem 0 .4rem; }

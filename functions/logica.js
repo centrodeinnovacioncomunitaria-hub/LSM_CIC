@@ -84,7 +84,8 @@ const publico = (id, p) => ({
   creado_en: p.creado_en || null, debe_cambiar_clave: false,
 });
 
-function crearLogica({ db, cuentas, ahora = () => new Date() }) {
+function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archivos: {}, material: {} }, leerArchivo = () => null }) {
+  const CATALOGO = catalogo;
   const hoy = () => ahora().toISOString();
   const enMinutos = (m) => new Date(ahora().getTime() + m * 60000).toISOString();
   const col = (n) => db.collection(n);
@@ -309,7 +310,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
     const visibles = p.rol === 'emprendedora' ? todos.filter((v) => v.audiencia === 'emprendedoras' && (!v.satelite || v.satelite === p.satelite)) : todos;
     return { videos: visibles.map(({ _id, ...v }) => v).sort((a, b) => a.codigo.localeCompare(b.codigo)) };
   }
-  const RE_VIDEO = /^(GES-M[1-4]|STF-U[1-6]|HAC-S[1-6]|SER-T[1-4]|GRAB-SER[1-4]-[A-Z]{3,5}-[0-9]{8})$/;
+  const RE_VIDEO = /^(BIENVENIDA|GES-M[1-4]|STF-U[1-6]|HAC-S[1-6]|SER-T[1-4]|GRAB-SER[1-4]-[A-Z]{3,5}-[0-9]{8})$/;
   async function guardarVideo(token, b) {
     const p = await usuarioDelToken(token);
     if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Solo la administración de la plataforma publica videos.');
@@ -343,7 +344,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
     if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Esta sección es solo para la administración de la plataforma.');
     const [videos, material, preguntas] = await Promise.all([lista(col('videos')), lista(col('material')), lista(col('preguntas'))]);
     const porCodigo = Object.fromEntries(videos.map(({ _id, ...v }) => [v.codigo, v]));
-    const mat = Object.fromEntries(material.map((m) => [m._id, m.archivos || []]));
+    const mat = Object.fromEntries(material.filter((m) => { const [c, u] = m._id.split('_'); return enlacesVigentes(m, CURSOS[c] && u !== 'general' ? idsMaterial(c, Number(u)).some((k) => CATALOGO.archivos[k]) : false); }).map((m) => [m._id, m.archivos || []]));
     const bancos = {};
     for (const q of preguntas) { const k = `${q.curso}_${q.unidad}`; bancos[k] = (bancos[k] || 0) + 1; }
     const cursos = Object.fromEntries(Object.entries(CURSOS).map(([id, c]) => [id, {
@@ -352,10 +353,11 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
       unidades: Array.from({ length: c.unidades }, (_, i) => ({
         unidad: i + 1, codigo: `${c.prefijo}${i + 1}`, video: porCodigo[`${c.prefijo}${i + 1}`] || null,
         material: mat[`${id}_${i + 1}`] || [], preguntas: bancos[`${id}_${i + 1}`] || 0,
+        archivos: idsMaterial(id, i + 1).filter((k) => CATALOGO.archivos[k]).map((k) => CATALOGO.archivos[k].nombre),
       })),
     }]));
     const grabaciones = videos.filter((v) => v.audiencia === 'emprendedoras').map(({ _id, ...v }) => v).sort((a, b) => a.codigo.localeCompare(b.codigo));
-    return { cursos, grabaciones };
+    return { cursos, grabaciones, bienvenida: porCodigo.BIENVENIDA || null };
   }
   async function adminGuardarMaterial(token, b) {
     const p = await usuarioDelToken(token);
@@ -520,7 +522,11 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
       if (!evidenciaDe(ctx, curso, u - 1)) return `Se abre cuando envíes la ${CURSOS[curso].evidencia === 'actividad' ? 'actividad' : 'verificación de la sesión'} de la unidad ${u - 1}.`;
       return null;
     }
-    if (curso === 'gestion') return ctx.hitos.has('compromiso') ? null : 'Se abre cuando confirmes tu compromiso como parte del equipo.';
+    if (curso === 'gestion') {
+      const bv = estadoBienvenida(ctx);
+      if (bv.requerida && !bv.hecha) return 'Se abre cuando veas el video de bienvenida.';
+      return ctx.hitos.has('compromiso') ? null : 'Se abre cuando confirmes tu compromiso como parte del equipo.';
+    }
     if (!ctx.constancias.some((c) => c.curso === 'gestion')) return 'Se abre cuando apruebes el curso Gestión del CIC.';
     if (curso === 'formacion-secretaria') return null;
     // La Secretaría abre las rutas al terminar su formación; las dinamizadoras, con la transferencia.
@@ -558,7 +564,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
     for (const c of Object.keys(CURSOS).filter((k) => CURSOS[k].roles.includes(perfil.rol))) {
       cursos[c] = Array.from({ length: CURSOS[c].unidades }, (_, i) => estadoUnidad(perfil, ctx, c, i + 1));
     }
-    return { cursos, hitos: ctx.hitosLista, constancias: ctx.constancias, reglas: { preguntas: PREGUNTAS_POR_INTENTO, nota_minima: NOTA_MINIMA, intentos: INTENTOS_POR_RONDA } };
+    return { cursos, bienvenida: estadoBienvenida(ctx), hitos: ctx.hitosLista, constancias: ctx.constancias, reglas: { preguntas: PREGUNTAS_POR_INTENTO, nota_minima: NOTA_MINIMA, intentos: INTENTOS_POR_RONDA } };
   }
 
   async function miProgreso(token) {
@@ -613,17 +619,72 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
     return resumen(perfil, await contexto(perfil.id));
   }
 
-  // Material de estudio: enlaces guardados en la colección «material» (documentos curso_unidad y curso_general).
+  // Material de estudio de una unidad: los PDF del catálogo (los entrega esta función) y, si la administración
+  // agregó alguno, enlaces de la colección «material» (documentos curso_unidad y curso_general).
   // Solo se entregan si la unidad está abierta.
+  const idsMaterial = (curso, unidad) => [...((CATALOGO.material || {})[`${curso}_${unidad}`] || []), ...((CATALOGO.material || {})[`${curso}_general`] || [])];
+  // Los enlaces de Drive que se cargaron al inicio (sin «actualizado_por») quedan reemplazados por los PDF del catálogo;
+  // los que la administración guarde desde admin/ se muestran siempre como material adicional.
+  const enlacesVigentes = (m, hayCatalogo) => !!m && (!hayCatalogo || !!m.actualizado_por);
   async function material(token, b) {
     const { perfil, curso, unidad } = await equipoAbierto(token, b);
-    const archivos = [];
+    const archivos = idsMaterial(curso, unidad).filter((id) => CATALOGO.archivos[id]).map((id) => ({ id, nombre: CATALOGO.archivos[id].nombre, tipo: CATALOGO.archivos[id].tipo }));
     for (const id of [`${curso}_${unidad}`, `${curso}_general`]) {
       const m = await datos(col('material').doc(id));
+      if (!enlacesVigentes(m, archivos.length)) continue;
       for (const a of (m && m.archivos) || []) if (a && /^https:\/\//.test(a.url || '')) archivos.push({ nombre: String(a.nombre || 'Material'), url: a.url });
     }
     if (archivos.length && b.marcar !== false) await guardarProgreso(perfil.id, curso, unidad, { material_en: hoy() });
     return { archivos };
+  }
+  const paquete = (id) => {
+    const a = CATALOGO.archivos[id];
+    const contenido = leerArchivo(a.archivo);
+    if (!contenido) throw new Falla(503, 'sin_archivo', 'Este archivo todavía no está disponible. Avísale a la Secretaría Técnica.');
+    const nombreArchivo = `CIC_${a.nombre.replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_|_$/g, '')}.${a.tipo.toLowerCase()}`;
+    return { nombre: a.nombre, archivo: nombreArchivo, tipo: a.tipo, base64: contenido.toString('base64') };
+  };
+  // Un archivo del material de la unidad (abrirlo cuenta como repasar el material)
+  async function archivoMaterial(token, b) {
+    const { perfil, curso, unidad } = await equipoAbierto(token, b);
+    const id = String(b.id || '');
+    if (!idsMaterial(curso, unidad).includes(id) || !CATALOGO.archivos[id]) throw new Falla(404, 'no_existe', 'Ese archivo no es de esta unidad.');
+    const p = paquete(id);
+    await guardarProgreso(perfil.id, curso, unidad, { material_en: hoy() });
+    return p;
+  }
+  // Guías y plantillas de las emprendedoras: solo con cuenta (cualquier perfil)
+  async function guia(token, b) {
+    await usuarioDelToken(token);
+    const a = CATALOGO.archivos[String(b.id || '')];
+    if (!a || a.publico !== 'emprendedoras') throw new Falla(404, 'no_existe', 'No encontramos esa guía.');
+    return paquete(String(b.id));
+  }
+
+  // ---------- Video de bienvenida: obligatorio antes del curso Gestión del CIC ----------
+  const VIDEO_BIENVENIDA = 'BIENVENIDA';
+  const estadoBienvenida = (ctx) => {
+    const v = ctx.videos.get(VIDEO_BIENVENIDA);
+    const f = filaDe(ctx, 'bienvenida', 1) || {};
+    const segundos = v && v.duracion_min ? Math.round(v.duracion_min * 60 * 0.9) : 120;
+    const faltan = f.video_inicio ? Math.max(0, segundos - Math.floor((ahora() - new Date(f.video_inicio)) / 1000)) : segundos;
+    return { requerida: !!v, hecha: ctx.hitos.has('bienvenida'), iniciada: !!f.video_inicio, segundos, faltan };
+  };
+  async function bienvenida(token, b) {
+    const perfil = await usuarioDelToken(token);
+    if (perfil.rol === 'emprendedora') throw new Falla(403, 'permiso', 'Este paso es para el equipo del CIC.');
+    const ctx = await contexto(perfil.id);
+    const e = estadoBienvenida(ctx);
+    if (!e.requerida) throw new Falla(400, 'sin_video', 'El video de bienvenida todavía no está publicado.');
+    if (b.paso === 'iniciar') {
+      if (!e.iniciada) await guardarProgreso(perfil.id, 'bienvenida', 1, { video_inicio: hoy() });
+    } else if (!e.hecha) {
+      if (!e.iniciada) throw new Falla(400, 'video_tiempo', 'Primero reproduce el video de bienvenida.');
+      if (e.faltan > 0) throw new Falla(400, 'video_tiempo', `Termina de ver el video: faltan ${Math.floor(e.faltan / 60)} min ${String(e.faltan % 60).padStart(2, '0')} s.`, { faltan: e.faltan });
+      await guardarProgreso(perfil.id, 'bienvenida', 1, { video_en: hoy() });
+      await col('hitos').doc(`${perfil.id}_bienvenida`).set({ persona: perfil.id, hito: 'bienvenida', fecha: hoy(), marcado_por: perfil.id });
+    }
+    return resumen(perfil, await contexto(perfil.id));
   }
 
   // Abre un intento: las 10 preguntas del banco oficial, en orden aleatorio y con las opciones barajadas, sin la respuesta correcta.
@@ -810,6 +871,9 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
         case 'mi-progreso': r = await miProgreso(token); break;
         case 'marcar': r = await marcar(token, b); break;
         case 'iniciar-video': r = await iniciarVideo(token, b); break;
+        case 'bienvenida': r = await bienvenida(token, b); break;
+        case 'archivo-material': r = await archivoMaterial(token, b); break;
+        case 'guia': r = await guia(token, b); break;
         case 'admin-contenido': r = await adminContenido(token); break;
         case 'admin-guardar-material': r = await adminGuardarMaterial(token, b); break;
         // Foro

@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261014">
+    <link rel="stylesheet" href="assets/cic.css?v=20261015">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -100,7 +100,7 @@
                     </ul>
                 </div>
                 <a href="recursos/">Recursos</a>
-                <a href="el-cic/">El CIC</a>
+                <a href="#inicio">El CIC</a>
                 <a href="foro/">Foro</a>
                 <div class="submenu">
                     <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-cursos">Equipo <svg aria-hidden="true"><use href="#flecha"/></svg></button>
@@ -470,10 +470,10 @@
                     </div>
                 </div>
                 <ul class="aliados-tarjetas lista-limpia escalonado">
-                    <li class="aliado-tarjeta aparece"><span class="aliado-monograma bg-menta" aria-hidden="true">RMC</span><div><span class="chip">Base comunitaria</span><h3>Red de Mujeres del Caribe</h3><p>Más de 30 años de trayectoria y nodos en los siete departamentos.</p></div></li>
-                    <li class="aliado-tarjeta aparece"><span class="aliado-monograma bg-durazno" aria-hidden="true">AP</span><div><span class="chip">Ejecuta</span><h3>APRODEFA</h3><p>Implementa el modelo con la Red de Mujeres del Caribe.</p></div></li>
-                    <li class="aliado-tarjeta aparece"><span class="aliado-monograma bg-mantequilla" aria-hidden="true">FI</span><div><span class="chip">Financia</span><h3>Fondo de Igualdad</h3><p>El proyecto hace parte del Convenio 432.</p></div></li>
-                    <li class="aliado-tarjeta aparece"><span class="aliado-monograma bg-lavanda" aria-hidden="true">EA</span><div><span class="chip">Acompaña</span><h3>Emprende Ahora</h3><p>Acompaña el diseño metodológico y la formación del equipo.</p></div></li>
+                    <li class="aliado-tarjeta aparece"><span class="aliado-logo"><img src="assets/aliados/red-mujeres-caribe.png" alt="Logo de la Red de Mujeres del Caribe" width="354" height="305" loading="lazy"></span><div class="aliado-info"><span class="chip">Base comunitaria</span><h3>Red de Mujeres del Caribe</h3><p>Más de 30 años de trayectoria y nodos en los siete departamentos.</p></div></li>
+                    <li class="aliado-tarjeta aparece"><span class="aliado-logo"><img src="assets/aliados/aprodefa.png" alt="Logo de APRODEFA" width="167" height="167" loading="lazy"></span><div class="aliado-info"><span class="chip">Ejecuta</span><h3>APRODEFA</h3><p>Implementa el modelo con la Red de Mujeres del Caribe.</p></div></li>
+                    <li class="aliado-tarjeta aparece"><span class="aliado-logo aliado-logo-oscuro"><img src="assets/aliados/fonigualdad.png" alt="Logo de FonIgualdad" width="640" height="148" loading="lazy"></span><div class="aliado-info"><span class="chip">Financia</span><h3>FonIgualdad</h3><p>El proyecto hace parte del Convenio 432 del Fondo de Igualdad.</p></div></li>
+                    <li class="aliado-tarjeta aparece"><span class="aliado-logo"><img src="assets/aliados/padf.png" alt="Logo de PADF, Fundación Panamericana para el Desarrollo" width="640" height="200" loading="lazy"></span><div class="aliado-info"><span class="chip">Aliado</span><h3>PADF</h3><p>Fundación Panamericana para el Desarrollo.</p></div></li>
                 </ul>
             </div>
         </section>
@@ -703,10 +703,10 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261014"></script>
-    <script src="assets/datos-cic.js?v=20261014"></script>
-    <script src="assets/sitio.js?v=20261014"></script>
-    <script src="assets/cursos-equipo.js?v=20261014"></script>
+    <script src="./config.js?v=20261015"></script>
+    <script src="assets/datos-cic.js?v=20261015"></script>
+    <script src="assets/sitio.js?v=20261015"></script>
+    <script src="assets/cursos-equipo.js?v=20261015"></script>
     <script>
     (() => {
         'use strict';
@@ -1166,12 +1166,36 @@
 
         // ---------- Mi semana (emprendedoras) ----------
         const semanaActual = () => Math.min(6, Math.max(1, Number(perfil.semana_actual) || 1));
-        const botonesDescarga = (lista) => lista.map((d) => `
-            <a class="descarga" href="${esc(d.ruta)}" download>
-                <span class="descarga-icono ${d.tipo === 'Excel' ? 'bg-menta' : 'bg-agua'}" aria-hidden="true">${d.tipo === 'Excel' ? 'XLS' : 'DOC'}</span>
+        // Guías en PDF y plantillas de Excel: las entrega el servidor solo con la sesión abierta
+        const botonesDescarga = (lista) => (lista || []).map((d) => `
+            <button type="button" class="descarga" data-guia="${esc(d.id)}">
+                <span class="descarga-icono ${d.tipo === 'Excel' ? 'bg-menta' : 'bg-coral'}" aria-hidden="true">${d.tipo === 'Excel' ? 'XLS' : 'PDF'}</span>
                 <span><b>${esc(d.etiqueta)}</b><small>${esc(d.tipo)} · ${esc(d.kb)} KB</small></span>
                 <span class="descarga-flecha" aria-hidden="true">↓</span>
-            </a>`).join('');
+            </button>`).join('');
+        // Abre un PDF en una pestaña nueva (o descarga el Excel) a partir de lo que entrega el servidor
+        function abrirArchivo(r, ventana) {
+            const bin = atob(r.base64);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            const tipo = r.tipo === 'PDF' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            const url = URL.createObjectURL(new Blob([bytes], { type: tipo }));
+            if (r.tipo === 'PDF' && ventana) { ventana.location.href = url; }
+            else { if (ventana) ventana.close(); const a = document.createElement('a'); a.href = url; a.download = r.archivo; document.body.appendChild(a); a.click(); a.remove(); }
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        }
+        window.CICAbrirArchivo = abrirArchivo;
+        document.addEventListener('click', async (e) => {
+            const b = e.target.closest('[data-guia]');
+            if (!b) return;
+            if (DEMO) { aviso('En la demostración no se descargan archivos: en la plataforma real se abre la guía en PDF.'); return; }
+            const ventana = b.querySelector('.descarga-icono').textContent === 'PDF' ? window.open('', '_blank') : null;
+            if (ventana) ventana.document.write('<p style="font-family:sans-serif;padding:2rem">Abriendo la guía…</p>');
+            b.disabled = true;
+            try { abrirArchivo(await llamar('guia', { id: b.dataset.guia }, true), ventana); }
+            catch (err) { if (ventana) ventana.close(); aviso(err.message); }
+            finally { b.disabled = false; }
+        });
         async function miDinamizadora() {
             if (DEMO) return { nombre: 'Tu dinamizadora (ejemplo)', cargo: 'Acompañamiento y fortalecimiento económico', celular: '' };
             try { return (await llamar('mi-dinamizadora', {}, true)).dinamizadora; } catch (e) { return null; }
@@ -1206,7 +1230,7 @@
                     </aside>
                 </div>
                 <h3 class="vista-subtitulo">Descarga la guía de tu próximo taller</h3>
-                <p class="vista-intro">Es un archivo de Word: puedes llenarlo sin internet o imprimirlo.</p>
+                <p class="vista-intro">Está en PDF: puedes guardarla en tu celular o imprimirla.</p>
                 <div class="descargas descargas-grandes">${botonesDescarga(t.descargas)}</div>
                 <h3 class="vista-subtitulo">Grabaciones de los talleres virtuales</h3>
                 <div id="mis-grabaciones"><p class="vista-intro" role="status">Cargando…</p></div>
@@ -1214,7 +1238,11 @@
                 <div class="toda-ruta">
                     ${DATOS.ser.map((x) => `<details class="desplegable" ${x.n === t.n ? 'open' : ''}><summary>Taller ${x.n} · ${esc(x.titulo)} <span class="chip ${x.n === t.n ? 'bg-durazno' : 'bg-lavanda'}">${x.n === t.n ? 'El próximo' : x.n < t.n ? 'Hecho' : esc(x.modalidad)}</span></summary><p class="texto-suave">${esc(x.resumen)}</p><div class="descargas">${botonesDescarga(x.descargas)}</div></details>`).join('')}
                 </div>
-                <p class="nota">Las sesiones semanales en tu negocio las haces con tu dinamizadora: ella te lleva las herramientas de cada semana.</p>`;
+                <h3 class="vista-subtitulo">Guías y plantillas de la ruta HACER</h3>
+                <p class="vista-intro">Las sesiones semanales en tu negocio las haces con tu dinamizadora. Aquí tienes la guía de cada semana en PDF y las plantillas de Excel para llenar.</p>
+                <div class="toda-ruta">
+                    ${DATOS.hacer.map((x) => `<details class="desplegable" ${x.n === semanaActual() ? 'open' : ''}><summary>Semana ${x.n} · ${esc(x.titulo)} ${x.n === semanaActual() ? '<span class="chip bg-durazno">Tu semana</span>' : ''}</summary><p class="texto-suave">${esc(x.resumen)}</p><div class="descargas">${botonesDescarga(x.descargas)}</div></details>`).join('')}
+                </div>`;
             // Dinamizadora y grabaciones llegan del servidor
             const d = await miDinamizadora();
             const wa = d && whatsapp(d.celular);

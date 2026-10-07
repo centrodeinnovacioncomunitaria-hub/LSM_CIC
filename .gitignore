@@ -23,3 +23,7 @@ herramientas/firebase/node_modules/
 firebase-debug*.log
 banco_preguntas*.json
 directorio*.json
+
+# Guías y material en PDF: los entrega la Cloud Function, nunca la página pública
+functions/archivos/
+herramientas/archivos/convertir.json

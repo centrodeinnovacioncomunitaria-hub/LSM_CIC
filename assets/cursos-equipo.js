@@ -197,8 +197,10 @@
         const cons = new Set((estado.constancias || []).map((x) => x.curso));
         const hechos = (c) => (estado.cursos[c] || []).filter((x) => x.estado === 'aprobada').length;
         const rutas = ['Acompañar HACER y facilitar SER', cons.has('acompanar-hacer') && cons.has('facilitar-ser'), `${hechos('acompanar-hacer')}/6 semanas · ${hechos('facilitar-ser')}/4 talleres`];
+        const bv = estado.bienvenida || {};
         const pasos = [
             ['Activar tu cuenta', true, 'Contraseña propia'],
+            ...(bv.requerida ? [['Video de bienvenida', !!bv.hecha, bv.hecha ? 'Visto' : 'Obligatorio']] : []),
             ['Compromiso', h.has('compromiso'), h.has('compromiso') ? 'Confirmado' : 'Pendiente'],
             ['Gestión del CIC', cons.has('gestion'), `${hechos('gestion')} de ${UNIDADES.gestion} módulos`],
             ...(C.perfil.rol === 'secretaria'
@@ -220,6 +222,58 @@
         </div>`;
     }
 
+    // ---------- Video de bienvenida: obligatorio antes del curso Gestión del CIC ----------
+    const bienvenidaPendiente = () => !!(estado.bienvenida && estado.bienvenida.requerida && !estado.bienvenida.hecha);
+    function tarjetaBienvenida() {
+        const bv = estado.bienvenida;
+        const v = porCodigo.BIENVENIDA;
+        const fuente = v.youtube_id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.youtube_id)}?rel=0&autoplay=1` : `https://drive.google.com/file/d/${encodeURIComponent(v.drive_id)}/preview`;
+        const portada = v.youtube_id ? `https://i.ytimg.com/vi/${esc(v.youtube_id)}/hqdefault.jpg` : `https://drive.google.com/thumbnail?id=${esc(v.drive_id)}&sz=w1280`;
+        return `<section class="tarjeta bienvenida" aria-labelledby="t-bienvenida">
+            <div class="bienvenida-texto">
+                <p class="eyebrow">Paso obligatorio · antes del curso Gestión del CIC</p>
+                <h3 id="t-bienvenida">Bienvenida al Centro de Innovación Comunitaria</h3>
+                <p class="texto-suave">Mira el video de presentación completo${v.duracion_min ? ` (unos ${esc(v.duracion_min)} minutos)` : ''}. Al terminar se habilita tu compromiso y, con él, el módulo 1.</p>
+            </div>
+            <div class="video-grande" data-fuente="${esc(fuente)}" data-titulo="${esc(v.titulo || 'Bienvenida al CIC')}">
+                ${bv.iniciada ? `<iframe src="${esc(fuente)}" title="${esc(v.titulo || 'Bienvenida al CIC')}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`
+                    : `<button type="button" class="video-grande-btn" data-bienvenida-play aria-label="Reproducir el video de bienvenida"><img src="${portada}" alt="" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'"><span class="video-boton" aria-hidden="true"></span><span class="video-grande-txt">Reproducir el video de bienvenida</span></button>`}
+            </div>
+            <div class="video-estado" id="bienvenida-estado" aria-live="polite">${bv.iniciada ? estadoReloj(bv.faltan, bv.segundos, 'tu compromiso') : '<p class="texto-suave">Toca el video para empezar.</p>'}</div>
+        </section>`;
+    }
+    const estadoReloj = (faltan, total, que) => `<p class="reloj-video"><span class="reloj-barra"><span style="width:${100 - Math.round(faltan / total * 100)}%"></span></span> Mira el video completo: ${esc(que)} se habilita en <b data-faltan="${faltan}">${minSeg(faltan)}</b>.</p>`;
+    function enlazarBienvenida() {
+        if (!bienvenidaPendiente()) return;
+        const v = C.vista;
+        const correr = (faltan, total) => {
+            detenerReloj();
+            const b = v.querySelector('[data-faltan]');
+            const barra = v.querySelector('#bienvenida-estado .reloj-barra span');
+            const fin = Date.now() + faltan * 1000;
+            reloj = setInterval(async () => {
+                const f = Math.max(0, Math.ceil((fin - Date.now()) / 1000));
+                if (b) b.textContent = minSeg(f);
+                if (barra) barra.style.width = `${100 - Math.round(f / total * 100)}%`;
+                if (f > 0) return;
+                detenerReloj();
+                try { estado = await api('bienvenida', { paso: 'completar' }); C.aviso('¡Listo! Ya viste la bienvenida. Ahora confirma tu compromiso para abrir el módulo 1.'); }
+                catch (e) { try { estado = await api('mi-progreso'); } catch (x) { /* nada */ } }
+                pintarResumen();
+            }, 1000);
+        };
+        const play = v.querySelector('[data-bienvenida-play]');
+        if (play) play.addEventListener('click', async () => {
+            const caja = play.closest('.video-grande');
+            caja.innerHTML = `<iframe src="${esc(caja.dataset.fuente)}" title="${esc(caja.dataset.titulo)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+            try { estado = await api('bienvenida', { paso: 'iniciar' }); } catch (e) { C.aviso(e.message); return; }
+            const bv = estado.bienvenida;
+            v.querySelector('#bienvenida-estado').innerHTML = estadoReloj(bv.faltan, bv.segundos, 'tu compromiso');
+            correr(bv.faltan, bv.segundos);
+        });
+        else if (estado.bienvenida.iniciada) correr(estado.bienvenida.faltan, estado.bienvenida.segundos);
+    }
+
     // ---------- Resumen: un bloque por curso con sus módulos ----------
     function tarjetaCurso(id) {
         const c = C.CURSOS[id];
@@ -234,7 +288,7 @@
                 <div class="barra-avance" role="progressbar" aria-label="Avance en ${esc(c.titulo)}" aria-valuemin="0" aria-valuemax="${lista.length}" aria-valuenow="${hechos}"><span style="width:${(hechos / lista.length) * 100}%"></span></div>
                 <div class="botones" style="margin-top:.8rem;display:flex;flex-wrap:wrap;gap:.6rem">
                     ${siguiente ? `<button type="button" class="btn btn-primario" data-abrir-leccion="${esc(id)}" data-unidad="${siguiente.unidad}">${siguiente.estado === 'disponible' && !hechos ? 'Empezar' : 'Continuar'}: ${esc(nombreUnidad(id))} ${siguiente.unidad}</button>` : ''}
-                    ${cons ? `<button type="button" class="btn btn-claro" data-constancia="${esc(id)}">Descargar mi constancia</button>` : ''}
+                    ${cons ? `<button type="button" class="btn btn-claro" data-constancia="${esc(id)}">Descargar mi certificado</button>` : ''}
                 </div>
             </div>
             <ol class="modulos-lista">
@@ -263,7 +317,7 @@
             <h2>Mis cursos</h2>
             <p class="vista-intro">${C.perfil.rol === 'secretaria' ? 'Avanza en orden: Gestión del CIC, luego tu Formación de la Secretaría Técnica y, al terminarla, se abren las rutas HACER y SER para que las supervises.' : 'Avanza en orden: cada módulo se abre cuando apruebas el anterior.'} Toca un módulo para abrir su lección.${C.DEMO ? ' <b>Demostración:</b> tu avance se guarda solo en este dispositivo y las preguntas son de ejemplo, no las oficiales.' : ''}</p>
             ${recorrido()}
-            ${h.has('compromiso') ? '' : tarjetaCompromiso()}
+            ${bienvenidaPendiente() ? tarjetaBienvenida() : (h.has('compromiso') ? '' : tarjetaCompromiso())}
             ${Object.keys(estado.cursos).map(tarjetaCurso).join('')}
             ${C.DEMO ? '<p class="privado"><button type="button" class="boton-texto" id="demo-reiniciar">Reiniciar la demostración de los cursos</button></p>' : ''}`;
         const chk = v.querySelector('#acepto-compromiso');
@@ -274,6 +328,7 @@
                 try { estado = await api('hito', { hito: 'compromiso' }); C.aviso('Compromiso confirmado. Ya puedes empezar el módulo 1.'); abrirLeccion('gestion', 1); } catch (e) { C.aviso(e.message); }
             });
         }
+        enlazarBienvenida();
         const reiniciar = v.querySelector('#demo-reiniciar');
         if (reiniciar) reiniciar.addEventListener('click', () => { Demo.reiniciar(C.perfil); refrescar().catch(() => {}); C.aviso('La demostración de los cursos volvió al inicio.'); });
         v.querySelectorAll('[data-constancia]').forEach((b) => b.addEventListener('click', () => imprimirConstancia(b.dataset.constancia)));
@@ -428,12 +483,26 @@
             const r = await api('material', { ...datos, marcar: false });
             if (!leccion || leccion.curso !== datos.curso || leccion.unidad !== datos.unidad) return;
             caja.innerHTML = r.archivos && r.archivos.length
-                ? `<ul class="lista-archivos">${r.archivos.map((a) => `<li><a class="archivo" href="${esc(a.url)}" target="_blank" rel="noopener" data-archivo><span class="archivo-icono" aria-hidden="true">📄</span><span>${esc(a.nombre)}<small>Se abre en Google Drive</small></span></a></li>`).join('')}</ul>`
-                : `<p class="texto-suave">${C.DEMO ? 'En la demostración no hay archivos: en la plataforma real aquí aparece el material de estudio de la unidad.' : 'El material de esta unidad todavía no está cargado. Repasa el tema con el video y marca cuando termines.'}</p>`;
+                ? `<ul class="lista-archivos">${r.archivos.map((a) => a.id
+                    ? `<li><button type="button" class="archivo" data-archivo-id="${esc(a.id)}" data-tipo="${esc(a.tipo)}"><span class="archivo-icono archivo-${a.tipo === 'PDF' ? 'pdf' : 'xls'}" aria-hidden="true">${a.tipo === 'PDF' ? 'PDF' : 'XLS'}</span><span>${esc(a.nombre)}<small>${a.tipo === 'PDF' ? 'Se abre en PDF' : 'Plantilla de Excel para descargar'}</small></span></button></li>`
+                    : `<li><a class="archivo" href="${esc(a.url)}" target="_blank" rel="noopener" data-archivo><span class="archivo-icono" aria-hidden="true">📄</span><span>${esc(a.nombre)}<small>Se abre en Google Drive</small></span></a></li>`).join('')}</ul>`
+                : `<p class="texto-suave">${C.DEMO ? 'En la demostración no hay archivos: en la plataforma real aquí aparece el material de estudio de la unidad en PDF.' : 'El material de esta unidad todavía no está cargado. Repasa el tema con el video y marca cuando termines.'}</p>`;
+            const yaVisto = () => { const e = estado.cursos[datos.curso][datos.unidad - 1]; return e.material_visto && e.estado !== 'pausada'; };
             caja.querySelectorAll('[data-archivo]').forEach((a) => a.addEventListener('click', () => {
-                const e = estado.cursos[datos.curso][datos.unidad - 1];
-                if (!e.material_visto || e.estado === 'pausada') api('marcar', { ...datos, que: 'material' }).then((p) => { estado = p; if (leccion) pintarLeccion(); }).catch(() => {});
+                if (!yaVisto()) api('marcar', { ...datos, que: 'material' }).then((p) => { estado = p; if (leccion) pintarLeccion(); }).catch(() => {});
             }, { once: true }));
+            // Los PDF los entrega el servidor (la unidad debe estar abierta); abrir uno cuenta como repasar el material
+            caja.querySelectorAll('[data-archivo-id]').forEach((b) => b.addEventListener('click', async () => {
+                const ventana = b.dataset.tipo === 'PDF' ? window.open('', '_blank') : null;
+                if (ventana) ventana.document.write('<p style="font-family:sans-serif;padding:2rem">Abriendo el material…</p>');
+                b.disabled = true;
+                try {
+                    const r2 = await api('archivo-material', { ...datos, id: b.dataset.archivoId });
+                    window.CICAbrirArchivo(r2, ventana);
+                    if (!yaVisto()) { estado = await api('mi-progreso'); if (leccion) pintarLeccion(); }
+                } catch (x) { if (ventana) ventana.close(); C.aviso(x.message); }
+                finally { b.disabled = false; }
+            }));
         } catch (e) { caja.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; }
     }
 
@@ -495,7 +564,7 @@
                 const r = await api('entregar', { ...datos, texto, enlace });
                 estado = r.progreso;
                 pintarLeccion();
-                C.aviso(r.constancia ? '¡Completaste el curso! Ya puedes descargar tu constancia en «Mis cursos».' : 'Enviado. Ya puedes seguir con el siguiente módulo.');
+                C.aviso(r.constancia ? '¡Completaste el curso! Ya puedes descargar tu certificado en «Mis cursos».' : 'Enviado. Ya puedes seguir con el siguiente módulo.');
             } catch (x) { C.aviso(x.message); b.disabled = false; }
         });
         v.querySelectorAll('[data-abrir-leccion]').forEach((b) => b.addEventListener('click', () => {
@@ -558,24 +627,51 @@
         abrirLeccion(b.dataset.abrirLeccion, Number(b.dataset.unidad));
     });
 
-    // ---------- Constancia imprimible ----------
+    // ---------- Certificado imprimible (uno por curso aprobado) ----------
     function imprimirConstancia(curso) {
         const x = (estado.constancias || []).find((c) => c.curso === curso);
         if (!x) return;
         const fecha = new Date(x.emitida_en || Date.now()).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
         const url = new URL('./#verificar-' + x.codigo, location.href).href;
+        const logo = (archivo) => new URL('./assets/aliados/' + archivo, location.href).href;
+        const n = UNIDADES[curso] || 1;
+        const unidad = nombreUnidad(curso).toLowerCase();
+        const cedula = C.perfil.cedula ? `identificada con cédula de ciudadanía n.º <b>${esc(Number(C.perfil.cedula).toLocaleString('es-CO'))}</b>,` : '';
         const w = window.open('', '_blank');
-        if (!w) return C.aviso('Permite las ventanas emergentes para descargar tu constancia.');
-        w.document.write(`<!doctype html><html lang="es-CO"><head><meta charset="utf-8"><title>Constancia ${esc(x.codigo)}</title>
-            <style>body{font-family:'Nunito Sans',Arial,sans-serif;color:#2E4A3E;margin:0;display:grid;place-items:center;min-height:100vh;background:#FFF6EE}
-            .c{width:min(900px,92vw);background:#fff;border:3px solid #9ED0B7;border-radius:24px;padding:48px;text-align:center}
-            h1{font-family:Quicksand,Arial,sans-serif;font-size:38px;margin:.2em 0}.n{font-family:Quicksand,Arial,sans-serif;font-size:30px;font-weight:700;margin:.6em 0;color:#B04A36}
-            p{font-size:17px;line-height:1.6}.cod{font-family:monospace;font-size:16px;margin-top:2em;color:#4F6B5E}@media print{body{background:#fff}.c{border-color:#2E4A3E}button{display:none}}</style></head>
-            <body><div class="c"><p style="letter-spacing:.2em;text-transform:uppercase;font-size:13px;font-weight:700;color:#B04A36">Centro de Innovación Comunitaria · Red de Mujeres del Caribe</p>
-            <h1>Constancia de participación</h1><p>Se hace constar que</p><p class="n">${esc(C.perfil.nombre)}</p>
-            <p>aprobó el curso <b>${esc(C.CURSOS[curso].titulo)}</b> de la plataforma del CIC, con todos sus cuestionarios y evidencias.</p>
-            <p>${esc(fecha)}</p><p class="cod">Código ${esc(x.codigo)} · verifícalo en ${esc(url)}</p>
-            <button onclick="print()" style="margin-top:1.5em;padding:.8em 1.6em;border-radius:99px;border:0;background:#B04A36;color:#fff;font-size:16px;cursor:pointer">Imprimir o guardar en PDF</button></div></body></html>`);
+        if (!w) return C.aviso('Permite las ventanas emergentes para descargar tu certificado.');
+        w.document.write(`<!doctype html><html lang="es-CO"><head><meta charset="utf-8"><title>Certificado ${esc(x.codigo)}</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=Nunito+Sans:wght@400;700&display=swap" rel="stylesheet">
+            <style>@page{size:A4 landscape;margin:0}*{box-sizing:border-box}
+            body{font-family:'Nunito Sans',Arial,sans-serif;color:#2E4A3E;margin:0;display:grid;place-items:center;min-height:100vh;background:#FFF6EE;padding:24px}
+            .c{position:relative;width:min(1000px,100%);aspect-ratio:1.414;background:#fff;border-radius:18px;padding:44px 64px 36px;display:flex;flex-direction:column;align-items:center;text-align:center;box-shadow:0 10px 40px rgba(46,74,62,.12);overflow:hidden}
+            .c::before{content:"";position:absolute;inset:14px;border:2px solid #9ED0B7;border-radius:12px;pointer-events:none}
+            .c::after{content:"";position:absolute;inset:20px;border:1px solid #F4E1A1;border-radius:9px;pointer-events:none}
+            .marca{letter-spacing:.22em;text-transform:uppercase;font-size:12px;font-weight:700;color:#B04A36;margin:0}
+            h1{font-family:Quicksand,Arial,sans-serif;font-size:46px;margin:.15em 0 .05em;letter-spacing:.02em}
+            .sub{font-size:15px;margin:0 0 18px;color:#4F6B5E;text-transform:uppercase;letter-spacing:.14em}
+            p{font-size:17px;line-height:1.6;margin:.3em 0;max-width:760px}
+            .n{font-family:Quicksand,Arial,sans-serif;font-size:34px;font-weight:700;margin:.25em 0;color:#B04A36;border-bottom:2px solid #F4E1A1;padding:0 28px .1em}
+            .firmas{display:flex;gap:80px;justify-content:center;margin-top:auto;padding-top:18px}
+            .firma{width:230px;border-top:1.5px solid #2E4A3E;padding-top:6px;font-size:13px;line-height:1.4}
+            .logos{display:flex;align-items:center;justify-content:center;gap:28px;margin-top:18px}
+            .logos img{height:44px;width:auto;max-width:140px;object-fit:contain}
+            .logos .oscuro{background:#1f3a5c;border-radius:8px;padding:8px 12px;height:44px}
+            .cod{font-family:monospace;font-size:12px;margin-top:12px;color:#4F6B5E}
+            .acciones{margin-top:18px}button{padding:.8em 1.6em;border-radius:99px;border:0;background:#B04A36;color:#fff;font-size:16px;cursor:pointer;font-family:inherit}
+            @media print{body{background:#fff;padding:0;min-height:0}.c{box-shadow:none;border-radius:0;width:297mm;height:210mm;aspect-ratio:auto}.acciones{display:none}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+            @media (max-width:700px){.c{aspect-ratio:auto;padding:36px 28px}h1{font-size:32px}.n{font-size:26px}.firmas{gap:24px;flex-wrap:wrap}.logos{flex-wrap:wrap;gap:16px}}</style></head>
+            <body><div class="c">
+            <p class="marca">Centro de Innovación Comunitaria · CIC</p>
+            <h1>Certificado</h1><p class="sub">de aprobación</p>
+            <p>El Centro de Innovación Comunitaria (CIC) de la Red de Mujeres del Caribe y APRODEFA</p>
+            <p><b>hacen constar que</b></p>
+            <p class="n">${esc(C.perfil.nombre)}</p>
+            <p>${cedula} realizó y aprobó el curso <b>«${esc(C.CURSOS[curso].titulo)}»</b>, conformado por ${n} ${unidad}${n === 1 ? '' : /[rd]$/.test(unidad) ? 'es' : 's'}, con sus videos, materiales de estudio, evaluaciones y evidencias, en la plataforma de formación del CIC.</p>
+            <p>Se expide el ${esc(fecha)}.</p>
+            <div class="firmas"><div class="firma"><b>Coordinación del CIC</b><br>Red de Mujeres del Caribe</div><div class="firma"><b>Secretaría Técnica</b><br>Centro de Innovación Comunitaria</div></div>
+            <div class="logos"><img src="${logo('red-mujeres-caribe.png')}" alt="Red de Mujeres del Caribe"><img src="${logo('aprodefa.png')}" alt="APRODEFA"><img class="oscuro" src="${logo('fonigualdad.png')}" alt="FonIgualdad"><img src="${logo('padf.png')}" alt="PADF"></div>
+            <p class="cod">Código de verificación ${esc(x.codigo)} · ${esc(url)}</p>
+            </div><div class="acciones"><button onclick="print()">Imprimir o guardar en PDF</button></div></body></html>`);
         w.document.close();
     }
 

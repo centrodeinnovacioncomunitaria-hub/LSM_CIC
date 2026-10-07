@@ -20,7 +20,18 @@ const ORIGENES = defineString('CIC_ORIGENES', { default: 'https://cicredmujeresd
 
 const cuentas = crearCuentas(getAuth(), () => API_KEY.value(), () => SITIO.value());
 
-const logica = crearLogica({ db: getFirestore(), cuentas });
+// Guías y material en PDF: viven en functions/archivos (fuera de GitHub) y se entregan con permiso
+const path = require('path');
+const fs = require('fs');
+const catalogo = require('./archivos_catalogo.json');
+const CARPETA = path.join(__dirname, 'archivos');
+const leerArchivo = (ruta) => {
+  const f = path.resolve(CARPETA, String(ruta));
+  if (!f.startsWith(CARPETA + path.sep) || !fs.existsSync(f)) return null; // nunca fuera de la carpeta
+  return fs.readFileSync(f);
+};
+
+const logica = crearLogica({ db: getFirestore(), cuentas, catalogo, leerArchivo });
 
 exports.cicAcceso = onRequest({ region: 'us-central1', memory: '256MiB', maxInstances: 10 }, async (req, res) => {
   const permitidos = ORIGENES.value().split(',').map((s) => s.trim());

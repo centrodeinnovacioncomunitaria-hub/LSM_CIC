@@ -59,7 +59,8 @@ function cuentasFalsas() {
   const avanzar = (min) => { reloj = new Date(reloj.getTime() + min * 60000); };
   const db = firestoreFalso();
   const cuentas = cuentasFalsas();
-  const { atender } = crearLogica({ db, cuentas, ahora: () => reloj });
+  const catalogo = { archivos: { 'hacer-1-guia': { archivo: 'guias/hacer-1-guia.pdf', nombre: 'Guía de la semana 1', tipo: 'PDF', publico: 'emprendedoras' }, 'gestion-guia': { archivo: 'material/gestion.pdf', nombre: 'Guía de estudio', tipo: 'PDF', publico: 'equipo' }, 'ser-1-estudio': { archivo: 'material/ser-1.pdf', nombre: 'Estudio SER 1', tipo: 'PDF', publico: 'equipo' } }, material: { gestion_general: ['gestion-guia'], 'facilitar-ser_1': ['ser-1-estudio'] } };
+  const { atender } = crearLogica({ db, cuentas, ahora: () => reloj, catalogo, leerArchivo: (r) => Buffer.from('%PDF ' + r) });
   const pedir = async (accion, datos = {}, token = null) => atender({ accion, ...datos }, token);
   // Responde un intento con n respuestas correctas (las opciones llegan en orden aleatorio)
   const responder = (q, n) => q.preguntas.map((p, i) => (i < n ? p.opciones.indexOf('bien') : p.opciones.findIndex((o) => o !== 'bien')));
@@ -159,7 +160,7 @@ function cuentasFalsas() {
   assert.equal(p.cursos.gestion[0].estado, 'disponible');
   await falla('cuestionario', { curso: 'gestion', unidad: 1 }, tDina, 403);
   // Ver el material sin marcarlo (la lección lo muestra) no cuenta como repasado
-  assert.equal((await ok('material', { curso: 'gestion', unidad: 1, marcar: false }, tDina)).archivos.length, 1);
+  assert.equal((await ok('material', { curso: 'gestion', unidad: 1, marcar: false }, tDina)).archivos.length, 1); // solo la guía en PDF: el enlace cargado al inicio queda reemplazado
   assert.equal((await ok('mi-progreso', {}, tDina)).cursos.gestion[0].material_visto, false);
   assert.equal((await ok('material', { curso: 'gestion', unidad: 1 }, tDina)).archivos.length, 1);
   await falla('cuestionario', { curso: 'gestion', unidad: 1 }, tDina, 403); // falta el video
@@ -316,6 +317,38 @@ function cuentasFalsas() {
   await falla('foro-tema', { id: tema.id }, tRosa, 404);
   paso('Foro: solo con cuenta; temas del equipo ocultos a emprendedoras; límite de publicación; moderación');
 
+  // ---------- Guías en PDF y material con permiso ----------
+  await falla('guia', { id: 'hacer-1-guia' }, null, 401);
+  const g = await ok('guia', { id: 'hacer-1-guia' }, tRosa);
+  assert.equal(Buffer.from(g.base64, 'base64').toString(), '%PDF guias/hacer-1-guia.pdf');
+  assert.match(g.archivo, /\.pdf$/);
+  await falla('guia', { id: 'gestion-guia' }, tRosa, 404); // el material del equipo no se entrega como guía
+  const lista = await ok('material', { curso: 'gestion', unidad: 1, marcar: false }, tDina);
+  assert.ok(lista.archivos.some((a) => a.id === 'gestion-guia' && a.tipo === 'PDF'));
+  await ok('archivo-material', { curso: 'gestion', unidad: 1, id: 'gestion-guia' }, tDina);
+  await falla('archivo-material', { curso: 'gestion', unidad: 1, id: 'ser-1-estudio' }, tDina, 404);
+  await falla('archivo-material', { curso: 'gestion', unidad: 1, id: 'gestion-guia' }, tRosa, 403);
+  paso('Guías en PDF solo con cuenta; material del equipo solo con la unidad abierta');
+
+  // ---------- Video de bienvenida obligatorio antes de Gestión ----------
+  const tTres0 = cuentas.uidDe(tres.cuenta);
+  await falla('bienvenida', { paso: 'iniciar' }, tTres0, 400); // todavía no hay video
+  await ok('guardar-video', { video: { codigo: 'BIENVENIDA', titulo: 'Bienvenida al CIC', url: 'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view', duracion_min: 5, audiencia: 'equipo', curso: 'bienvenida', unidad: 1 } }, tAdmin);
+  await ok('hito', { hito: 'compromiso' }, tTres0);
+  p = await ok('mi-progreso', {}, tTres0);
+  assert.equal(p.bienvenida.requerida, true);
+  assert.match(p.cursos.gestion[0].motivo, /bienvenida/);
+  await falla('bienvenida', { paso: 'completar' }, tTres0, 400);
+  await ok('bienvenida', { paso: 'iniciar' }, tTres0);
+  avanzar(2);
+  await falla('bienvenida', { paso: 'completar' }, tTres0, 400); // 5 min de video: aún falta
+  avanzar(3);
+  p = await ok('bienvenida', { paso: 'completar' }, tTres0);
+  assert.equal(p.bienvenida.hecha, true);
+  assert.equal(p.cursos.gestion[0].estado, 'disponible');
+  await falla('bienvenida', { paso: 'iniciar' }, tRosa, 403);
+  paso('Video de bienvenida obligatorio (con tiempo mínimo) antes del curso Gestión del CIC');
+
   // ---------- Mi cuenta ----------
   await falla('cambiar-clave', { clave_actual: 'mala', clave_nueva: 'OtraClave2026' }, tDina, 401);
   await falla('cambiar-clave', { clave_actual: 'DinaClave2026', clave_nueva: '22222222' }, tDina, 400);
@@ -331,4 +364,4 @@ function cuentasFalsas() {
   paso('Mi cuenta: cambio de contraseña y correo nuevo para recuperar por enlace');
 
   console.log(`\nTodo bien: ${pasos} grupos de pruebas.`);
-})().catch((e) => { console.error('\n✗ FALLÓ:', e.message); process.exit(1); });
+})().catch((e) => { console.error('\n✗ FALLÓ:', e.message, (e.stack.match(/prueba\.js:\d+/) || [''])[0]); process.exit(1); });

@@ -1,0 +1,411 @@
+{
+ "archivos": {
+  "hacer-1-guia": {
+   "archivo": "guias/hacer-1-guia.pdf",
+   "nombre": "Guía de la semana 1",
+   "tipo": "PDF",
+   "publico": "emprendedoras"
+  },
+  "hacer-1-a3": {
+   "archivo": "guias/hacer-1-a3.xlsx",
+   "nombre": "Plantilla A3 · Registro diario",
+   "tipo": "XLSX",
+   "publico": "emprendedoras"
+  },
+  "hacer-2-guia": {
+   "archivo": "guias/hacer-2-guia.pdf",
+   "nombre": "Guía de la semana 2",
+   "tipo": "PDF",
+   "publico": "emprendedoras"
+  },
+  "hacer-3-guia": {
+   "archivo": "guias/hacer-3-guia.pdf",
+   "nombre": "Guía de la semana 3",
+   "tipo": "PDF",
+   "publico": "emprendedoras"
+  },
+  "hacer-4-guia": {
+   "archivo": "guias/hacer-4-guia.pdf",
+   "nombre": "Guía de la semana 4",
+   "tipo": "PDF",
+   "publico": "emprendedoras"
+  },
+  "hacer-4-a8": {
+   "archivo": "guias/hacer-4-a8.xlsx",
+   "nombre": "Plantilla A8 · Costos, precio y punto de equilibrio",
+   "tipo": "XLSX",
+   "publico": "emprendedoras"
+  },
+  "hacer-4-a9": {
+   "archivo": "guias/hacer-4-a9.xlsx",
+   "nombre": "Plantilla A9 · Flujo de caja, PyG y bolsillos",
+   "tipo": "XLSX",
+   "publico": "emprendedoras"
+  },
+  "hacer-5-guia": {
+   "archivo": "guias/hacer-5-guia.pdf",
+   "nombre": "Guía de la semana 5",
+   "tipo": "PDF",
+   "publico": "emprendedoras"
+  },
+  "hacer-5-a11": {
+   "archivo": "guias/hacer-5-a11.xlsx",
+   "nombre": "Plantilla A11 · Mi CRM",
+   "tipo": "XLSX",
+   "publico": "emprendedoras"
+  },
+  "hacer-6-guia": {
+   "archivo": "guias/hacer-6-guia.pdf",
+   "nombre": "Guía de la semana 6",
+   "tipo": "PDF",
+   "publico": "emprendedoras"
+  },
+  "hacer-6-a12": {
+   "archivo": "guias/hacer-6-a12.xlsx",
+   "nombre": "Plantilla A12 · Plan de inversión",
+   "tipo": "XLSX",
+   "publico": "emprendedoras"
+  },
+  "ser-1-guia": {
+   "archivo": "guias/ser-1-guia.pdf",
+   "nombre": "Guía del taller 1",
+   "tipo": "PDF",
+   "publico": "emprendedoras"
+  },
+  "ser-2-guia": {
+   "archivo": "guias/ser-2-guia.pdf",
+   "nombre": "Guía del taller 2",
+   "tipo": "PDF",
+   "publico": "emprendedoras"
+  },
+  "ser-3-guia": {
+   "archivo": "guias/ser-3-guia.pdf",
+   "nombre": "Guía del taller 3",
+   "tipo": "PDF",
+   "publico": "emprendedoras"
+  },
+  "ser-4-guia": {
+   "archivo": "guias/ser-4-guia.pdf",
+   "nombre": "Guía del taller 4",
+   "tipo": "PDF",
+   "publico": "emprendedoras"
+  },
+  "gestion-guia": {
+   "archivo": "material/gestion-guia-estudio.pdf",
+   "nombre": "Guía de estudio del curso Gestión del CIC",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "hacer-1-estudio": {
+   "archivo": "material/hacer-1-estudio.pdf",
+   "nombre": "Material de estudio para dinamizadoras · semana 1",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "hacer-1-herramientas": {
+   "archivo": "material/hacer-1-herramientas.pdf",
+   "nombre": "Herramientas de la semana 1",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "hacer-2-estudio": {
+   "archivo": "material/hacer-2-estudio.pdf",
+   "nombre": "Material de estudio para dinamizadoras · semana 2",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "hacer-2-herramientas": {
+   "archivo": "material/hacer-2-herramientas.pdf",
+   "nombre": "Herramientas de la semana 2",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "hacer-3-estudio": {
+   "archivo": "material/hacer-3-estudio.pdf",
+   "nombre": "Material de estudio para dinamizadoras · semana 3",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "hacer-3-herramientas": {
+   "archivo": "material/hacer-3-herramientas.pdf",
+   "nombre": "Herramientas de la semana 3",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "hacer-4-estudio": {
+   "archivo": "material/hacer-4-estudio.pdf",
+   "nombre": "Material de estudio para dinamizadoras · semana 4",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "hacer-4-herramientas": {
+   "archivo": "material/hacer-4-herramientas.pdf",
+   "nombre": "Herramientas de la semana 4",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "hacer-5-estudio": {
+   "archivo": "material/hacer-5-estudio.pdf",
+   "nombre": "Material de estudio para dinamizadoras · semana 5",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "hacer-5-herramientas": {
+   "archivo": "material/hacer-5-herramientas.pdf",
+   "nombre": "Herramientas de la semana 5",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "hacer-6-estudio": {
+   "archivo": "material/hacer-6-estudio.pdf",
+   "nombre": "Material de estudio para dinamizadoras · semana 6",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "hacer-6-herramientas": {
+   "archivo": "material/hacer-6-herramientas.pdf",
+   "nombre": "Herramientas de la semana 6",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "ser-1-estudio": {
+   "archivo": "material/ser-1-estudio.pdf",
+   "nombre": "Material de estudio (guía de facilitación) · taller 1",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "ser-1-herramientas": {
+   "archivo": "material/ser-1-herramientas.pdf",
+   "nombre": "Herramientas del taller 1",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "ser-1-diapositivas": {
+   "archivo": "material/ser-1-diapositivas.pdf",
+   "nombre": "Diapositivas del taller 1",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "ser-2-estudio": {
+   "archivo": "material/ser-2-estudio.pdf",
+   "nombre": "Material de estudio (guía de facilitación) · taller 2",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "ser-2-herramientas": {
+   "archivo": "material/ser-2-herramientas.pdf",
+   "nombre": "Herramientas del taller 2",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "ser-2-diapositivas": {
+   "archivo": "material/ser-2-diapositivas.pdf",
+   "nombre": "Diapositivas del taller 2",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "ser-3-estudio": {
+   "archivo": "material/ser-3-estudio.pdf",
+   "nombre": "Material de estudio (guía de facilitación) · taller 3",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "ser-3-herramientas": {
+   "archivo": "material/ser-3-herramientas.pdf",
+   "nombre": "Herramientas del taller 3",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "ser-3-diapositivas": {
+   "archivo": "material/ser-3-diapositivas.pdf",
+   "nombre": "Diapositivas del taller 3",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "ser-4-estudio": {
+   "archivo": "material/ser-4-estudio.pdf",
+   "nombre": "Material de estudio (guía de facilitación) · taller 4",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "ser-4-herramientas": {
+   "archivo": "material/ser-4-herramientas.pdf",
+   "nombre": "Herramientas del taller 4",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "ser-4-diapositivas": {
+   "archivo": "material/ser-4-diapositivas.pdf",
+   "nombre": "Diapositivas del taller 4",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "formacion-1-1": {
+   "archivo": "material/formacion-1-1.pdf",
+   "nombre": "Guía de estudio · Método Insight",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "formacion-1-2": {
+   "archivo": "material/formacion-1-2.pdf",
+   "nombre": "Presentación · The Insight Method Blueprint",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "formacion-2-1": {
+   "archivo": "material/formacion-2-1.pdf",
+   "nombre": "Guía de estudio · Oportunidad significativa emergente",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "formacion-2-2": {
+   "archivo": "material/formacion-2-2.pdf",
+   "nombre": "Presentación · Mastering Strategic Evolution",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "formacion-3-1": {
+   "archivo": "material/formacion-3-1.pdf",
+   "nombre": "Guía de estudio · Modelo de negocio Canvas",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "formacion-3-2": {
+   "archivo": "material/formacion-3-2.pdf",
+   "nombre": "Presentación · Business Model Blueprint",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "formacion-4-1": {
+   "archivo": "material/formacion-4-1.pdf",
+   "nombre": "Guía de estudio · MVP y Lean Startup",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "formacion-4-2": {
+   "archivo": "material/formacion-4-2.pdf",
+   "nombre": "Presentación · Diseño y validación del MVP",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "formacion-5-1": {
+   "archivo": "material/formacion-5-1.pdf",
+   "nombre": "Guía de estudio · Gestión financiera",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "formacion-5-2": {
+   "archivo": "material/formacion-5-2.pdf",
+   "nombre": "Presentación · Gestión financiera estratégica",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "formacion-5-3": {
+   "archivo": "material/formacion-5-3.pdf",
+   "nombre": "Presentación · Strategic Financial Autonomy",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "formacion-6-1": {
+   "archivo": "material/formacion-6-1.pdf",
+   "nombre": "Guía metodológica del facilitador",
+   "tipo": "PDF",
+   "publico": "equipo"
+  },
+  "formacion-6-2": {
+   "archivo": "material/formacion-6-2.pdf",
+   "nombre": "Presentación · The Supernova Consultant",
+   "tipo": "PDF",
+   "publico": "equipo"
+  }
+ },
+ "material": {
+  "gestion_general": [
+   "gestion-guia"
+  ],
+  "acompanar-hacer_1": [
+   "hacer-1-estudio",
+   "hacer-1-herramientas",
+   "hacer-1-guia",
+   "hacer-1-a3"
+  ],
+  "acompanar-hacer_2": [
+   "hacer-2-estudio",
+   "hacer-2-herramientas",
+   "hacer-2-guia"
+  ],
+  "acompanar-hacer_3": [
+   "hacer-3-estudio",
+   "hacer-3-herramientas",
+   "hacer-3-guia"
+  ],
+  "acompanar-hacer_4": [
+   "hacer-4-estudio",
+   "hacer-4-herramientas",
+   "hacer-4-guia",
+   "hacer-4-a8",
+   "hacer-4-a9"
+  ],
+  "acompanar-hacer_5": [
+   "hacer-5-estudio",
+   "hacer-5-herramientas",
+   "hacer-5-guia",
+   "hacer-5-a11"
+  ],
+  "acompanar-hacer_6": [
+   "hacer-6-estudio",
+   "hacer-6-herramientas",
+   "hacer-6-guia",
+   "hacer-6-a12"
+  ],
+  "facilitar-ser_1": [
+   "ser-1-estudio",
+   "ser-1-herramientas",
+   "ser-1-guia",
+   "ser-1-diapositivas"
+  ],
+  "facilitar-ser_2": [
+   "ser-2-estudio",
+   "ser-2-herramientas",
+   "ser-2-guia",
+   "ser-2-diapositivas"
+  ],
+  "facilitar-ser_3": [
+   "ser-3-estudio",
+   "ser-3-herramientas",
+   "ser-3-guia",
+   "ser-3-diapositivas"
+  ],
+  "facilitar-ser_4": [
+   "ser-4-estudio",
+   "ser-4-herramientas",
+   "ser-4-guia",
+   "ser-4-diapositivas"
+  ],
+  "formacion-secretaria_1": [
+   "formacion-1-1",
+   "formacion-1-2"
+  ],
+  "formacion-secretaria_2": [
+   "formacion-2-1",
+   "formacion-2-2"
+  ],
+  "formacion-secretaria_3": [
+   "formacion-3-1",
+   "formacion-3-2"
+  ],
+  "formacion-secretaria_4": [
+   "formacion-4-1",
+   "formacion-4-2"
+  ],
+  "formacion-secretaria_5": [
+   "formacion-5-1",
+   "formacion-5-2",
+   "formacion-5-3"
+  ],
+  "formacion-secretaria_6": [
+   "formacion-6-1",
+   "formacion-6-2"
+  ]
+ }
+}

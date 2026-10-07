@@ -16,19 +16,28 @@ binmode STDOUT, ':encoding(UTF-8)';
 
 my $BASE = 'https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC';
 
-# Tamaño legible de cada descarga (y aviso si falta el archivo).
-# Solo la ruta SER (talleres) tiene descargas públicas: el material de HACER lo entrega la dinamizadora.
-for my $d (map { @{ $_->{descargas} } } @SER) {
-    my $bytes = -s $d->{ruta} or die "Falta la descarga $d->{ruta}\n";
-    $d->{kb} = int($bytes / 1024 + .5);
+# Guías (PDF) y plantillas (Excel) de las emprendedoras: salen del catálogo privado (functions/archivos_catalogo.json).
+# No se publican en la página: se descargan desde la plataforma al ingresar (la Cloud Function las entrega con sesión).
+my $catalogo = do { local $/; open my $fh, '<:raw', "$FindBin::Bin/../functions/archivos_catalogo.json" or die "Falta functions/archivos_catalogo.json: corre node herramientas/archivos/catalogo.js\n"; JSON::PP->new->utf8->decode(<$fh>) };
+sub guias_de {
+    my ($prefijo) = @_;
+    my @ids = sort { ($a =~ /guia$/ ? 0 : 1) <=> ($b =~ /guia$/ ? 0 : 1) || $a cmp $b }
+        grep { /^\Q$prefijo\E-/ && $catalogo->{archivos}{$_}{publico} eq 'emprendedoras' } keys %{ $catalogo->{archivos} };
+    return [map {
+        my $a = $catalogo->{archivos}{$_};
+        my $bytes = -s "$FindBin::Bin/../functions/archivos/$a->{archivo}";
+        { id => $_, etiqueta => $a->{nombre}, tipo => ($a->{tipo} eq 'XLSX' ? 'Excel' : 'PDF'), kb => ($bytes ? int($bytes / 1024 + .5) : 0) }
+    } @ids];
 }
+$_->{descargas} = guias_de("hacer-$_->{n}") for @HACER;
+$_->{descargas} = guias_de("ser-$_->{n}") for @SER;
 sub tamano { my $kb = shift; return $kb >= 1024 ? sprintf('%.1f MB', $kb / 1024) =~ s/\./,/r : "$kb KB" }
 
 sub botones_descarga {
     my ($P, $lista) = @_;
     return join "\n", map {
-        my $icono = $_->{tipo} eq 'Excel' ? 'bg-menta' : 'bg-agua';
-        qq{                            <a class="descarga" href="$P$_->{ruta}" download><span class="descarga-icono $icono" aria-hidden="true">@{[ $_->{tipo} eq 'Excel' ? 'XLS' : 'DOC' ]}</span><span><b>$_->{etiqueta}</b><small>$_->{tipo} · @{[ tamano($_->{kb}) ]}</small></span><span class="descarga-flecha" aria-hidden="true">↓</span></a>}
+        my $icono = $_->{tipo} eq 'Excel' ? 'bg-menta' : 'bg-coral';
+        qq{                            <a class="descarga descarga-bloqueada" href="${P}#ingresar-emprendedora"><span class="descarga-icono $icono" aria-hidden="true">@{[ $_->{tipo} eq 'Excel' ? 'XLS' : 'PDF' ]}</span><span><b>$_->{etiqueta}</b><small>$_->{tipo} · @{[ tamano($_->{kb}) ]} · ingresa para descargar</small></span><svg class="descarga-candado" aria-hidden="true"><use href="#candado"/></svg></a>}
     } @$lista;
 }
 
@@ -45,7 +54,7 @@ sub tarjeta {
                         <p>$t{resumen}</p>
                         <p class="semana-sub">Qué vas a hacer</p>
                         <ul class="lista-check">$haras</ul>
-@{[ @{ $t{descargas} } ? qq{                        <p class="semana-sub">Descarga</p>\n                        <div class="descargas">\n} . botones_descarga($P, $t{descargas}) . qq{\n                        </div>} : qq{                        <p class="semana-extra">Las herramientas de esta semana te las entrega tu dinamizadora en la sesión.</p>} ]}$extra
+@{[ @{ $t{descargas} } ? qq{                        <p class="semana-sub">Guías para descargar <span class="chip">Con tu cuenta</span></p>\n                        <div class="descargas">\n} . botones_descarga($P, $t{descargas}) . qq{\n                        </div>} : qq{                        <p class="semana-extra">Las herramientas de esta semana te las entrega tu dinamizadora en la sesión.</p>} ]}$extra
                     </article>
 HTML
 }
@@ -177,7 +186,7 @@ pagina_ruta(
         my $s = $_;
         my $t = $s->{ser} ? $SER[$s->{ser} - 1] : undef;
         tarjeta('../../', id => "semana-$s->{n}", color => 'bg-durazno', marca => $s->{n}, meta => "Semana $s->{n} · $s->{tema}", titulo => $s->{titulo},
-            resumen => $s->{resumen}, haras => $s->{haras}, descargas => [],
+            resumen => $s->{resumen}, haras => $s->{haras}, descargas => $s->{descargas},
             extra => $t ? qq{Esta semana también: <a class="enlace" href="../ser/#taller-$t->{n}">Taller SER $t->{n} · $t->{titulo}</a> (@{[ lc $t->{modalidad} ]}).} : '')
     } @HACER),
 );
@@ -232,7 +241,7 @@ redireccion("rutas/ser/taller-$_->{n}/index.html", "../#taller-$_->{n}", "Taller
 my $json = JSON::PP->new->canonical->indent->indent_length(2);
 my $datos = {
     satelites => [map { { id => $_->{id}, codigo => $_->{codigo}, nombre => $_->{nombre}, departamento => $_->{departamento}, municipios => [map { $_->[0] } @{ $_->{municipios} }] } } @SATELITES],
-    hacer => [map { { n => $_->{n}, titulo => $_->{titulo}, tema => $_->{tema}, resumen => $_->{resumen}, haras => $_->{haras}, ser => $_->{ser} } } @HACER],
+    hacer => [map { { n => $_->{n}, titulo => $_->{titulo}, tema => $_->{tema}, resumen => $_->{resumen}, haras => $_->{haras}, ser => $_->{ser}, descargas => $_->{descargas} } } @HACER],
     ser   => [map { { n => $_->{n}, titulo => $_->{titulo}, semana => $_->{semana}, modalidad => $_->{modalidad}, resumen => $_->{resumen}, haras => $_->{haras}, descargas => $_->{descargas} } } @SER],
 };
 escribir('assets/datos-cic.js', "// Generado por herramientas/generar_rutas.pl a partir de herramientas/Datos.pm. No editar a mano.\nwindow.CIC_DATOS = " . $json->encode($datos) . ";\n");
