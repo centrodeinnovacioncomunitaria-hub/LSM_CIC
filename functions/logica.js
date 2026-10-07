@@ -298,6 +298,11 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
     return { ok: true, perfil: publico(p.id, { ...p, ...cambios }) };
   }
 
+  // Administradora: rol aparte que solo gestiona el contenido (videos y material) desde admin/.
+  const esAdmin = (p) => p.rol === 'administradora';
+  const idYoutube = (u) => { const m = String(u || '').match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/); return m ? m[1] : null; };
+  const idDrive = (u) => { const m = String(u || '').match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:.*&)?id=)([\w-]{20,})/); return m ? m[1] : null; };
+
   async function verVideos(token) {
     const p = await usuarioDelToken(token);
     const todos = await lista(col('videos'));
@@ -307,12 +312,12 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
   const RE_VIDEO = /^(GES-M[1-5]|STF-U[1-6]|HAC-S[1-6]|SER-T[1-4]|GRAB-SER[1-4]-[A-Z]{3,5}-[0-9]{8})$/;
   async function guardarVideo(token, b) {
     const p = await usuarioDelToken(token);
-    if (p.rol !== 'secretaria') throw new Falla(403, 'permiso', 'Solo la Secretaría Técnica publica videos.');
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Solo la administración de la plataforma publica videos.');
     const v = b.video || {};
     const codigo = String(v.codigo || '');
     if (!RE_VIDEO.test(codigo)) throw new Falla(400, 'codigo', 'El código del video no es válido.');
-    const youtube_id = /^[\w-]{11}$/.test(v.youtube_id || '') ? v.youtube_id : null;
-    const drive_id = /^[\w-]{20,}$/.test(v.drive_id || '') ? v.drive_id : null;
+    const youtube_id = /^[\w-]{11}$/.test(v.youtube_id || '') ? v.youtube_id : idYoutube(v.url);
+    const drive_id = youtube_id ? null : (/^[\w-]{20,}$/.test(v.drive_id || '') ? v.drive_id : idDrive(v.url));
     if (!youtube_id && !drive_id) throw new Falla(400, 'video', 'Pega el enlace del video de YouTube o de Google Drive.');
     const fila = {
       codigo, titulo: texto(v.titulo, 140) || codigo, youtube_id, drive_id,
@@ -327,9 +332,43 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
   }
   async function quitarVideo(token, b) {
     const p = await usuarioDelToken(token);
-    if (p.rol !== 'secretaria') throw new Falla(403, 'permiso', 'Solo la Secretaría Técnica quita videos.');
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Solo la administración de la plataforma quita videos.');
     await col('videos').doc(String(b.codigo || '')).delete();
     return { ok: true };
+  }
+
+  // Panel de administración: contenido de cada unidad (video y material), grabaciones y tamaño de los bancos
+  async function adminContenido(token) {
+    const p = await usuarioDelToken(token);
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Esta sección es solo para la administración de la plataforma.');
+    const [videos, material, preguntas] = await Promise.all([lista(col('videos')), lista(col('material')), lista(col('preguntas'))]);
+    const porCodigo = Object.fromEntries(videos.map(({ _id, ...v }) => [v.codigo, v]));
+    const mat = Object.fromEntries(material.map((m) => [m._id, m.archivos || []]));
+    const bancos = {};
+    for (const q of preguntas) { const k = `${q.curso}_${q.unidad}`; bancos[k] = (bancos[k] || 0) + 1; }
+    const cursos = Object.fromEntries(Object.entries(CURSOS).map(([id, c]) => [id, {
+      nombre: c.nombre, prefijo: c.prefijo, cuestionario: c.cuestionario,
+      general: mat[`${id}_general`] || [],
+      unidades: Array.from({ length: c.unidades }, (_, i) => ({
+        unidad: i + 1, codigo: `${c.prefijo}${i + 1}`, video: porCodigo[`${c.prefijo}${i + 1}`] || null,
+        material: mat[`${id}_${i + 1}`] || [], preguntas: bancos[`${id}_${i + 1}`] || 0,
+      })),
+    }]));
+    const grabaciones = videos.filter((v) => v.audiencia === 'emprendedoras').map(({ _id, ...v }) => v).sort((a, b) => a.codigo.localeCompare(b.codigo));
+    return { cursos, grabaciones };
+  }
+  async function adminGuardarMaterial(token, b) {
+    const p = await usuarioDelToken(token);
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Solo la administración de la plataforma carga el material.');
+    const curso = String(b.curso || '');
+    if (!CURSOS[curso]) throw new Falla(400, 'curso', 'Ese curso no existe.');
+    const unidad = b.unidad === 'general' ? 'general' : Number(b.unidad);
+    if (unidad !== 'general' && (!Number.isInteger(unidad) || unidad < 1 || unidad > CURSOS[curso].unidades)) throw new Falla(400, 'curso', 'Esa unidad no existe.');
+    const archivos = (Array.isArray(b.archivos) ? b.archivos : []).slice(0, 15).map((a) => ({ nombre: texto(a && a.nombre, 120) || 'Material', url: String((a && a.url) || '').trim() }));
+    const malo = archivos.find((a) => !/^https:\/\/\S+$/.test(a.url));
+    if (malo) throw new Falla(400, 'url', `El enlace de «${malo.nombre}» debe empezar por https:// (por ejemplo, un archivo de Google Drive).`);
+    await col('material').doc(`${curso}_${unidad}`).set({ archivos, actualizado_por: p.id, actualizado_en: hoy() });
+    return { ok: true, archivos };
   }
 
   // Dinamizadora de una emprendedora: la asignada o la de «acompañamiento» de su satélite.
@@ -377,13 +416,21 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
       hitos: new Set(hitos.map((h) => h.hito)),
       hitosLista: hitos.map((h) => ({ hito: h.hito, fecha: h.fecha })),
       constancias: constancias.map((c) => ({ codigo: c._id, curso: c.curso, emitida_en: c.emitida_en })),
-      videos: new Set(videos.map((v) => v.codigo)),
+      videos: new Map(videos.map((v) => [v.codigo, v])),
     };
   }
   const filaDe = (ctx, curso, u) => ctx.progreso.find((p) => p.curso === curso && p.unidad === u);
   const evidenciaDe = (ctx, curso, u) => ctx.evidencias.find((e) => e.curso === curso && e.unidad === u && e.tipo === CURSOS[curso].evidencia);
   const tieneVideo = (ctx, curso, u) => ctx.videos.has(`${CURSOS[curso].prefijo}${u}`);
   const aprobada = (ctx, curso, u) => !!(filaDe(ctx, curso, u) || {}).aprobado_en;
+  // El video cuenta como visto cuando pasó al menos el 90 % de su duración desde que se abrió en la lección.
+  // Si la unidad entró en pausa, hay que volver a verlo: cuenta desde una apertura posterior a la pausa.
+  const segundosVideo = (ctx, curso, u) => { const v = ctx.videos.get(`${CURSOS[curso].prefijo}${u}`); return v && v.duracion_min ? Math.round(v.duracion_min * 60 * 0.9) : 120; };
+  const inicioValido = (f) => (f.video_inicio && (!f.bloqueado_en || f.video_inicio > f.bloqueado_en) ? f.video_inicio : null);
+  const faltaVideo = (ctx, curso, u, f) => {
+    const i = inicioValido(f);
+    return i ? Math.max(0, segundosVideo(ctx, curso, u) - Math.floor((ahora() - new Date(i)) / 1000)) : segundosVideo(ctx, curso, u);
+  };
 
   // Qué falta para abrir una unidad (null = abierta)
   function requisito(perfil, ctx, curso, u) {
@@ -417,7 +464,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
     return {
       unidad: u, estado, motivo: falta,
       tiene_video: video, sin_cuestionario: !conCuestionario,
-      video_visto: !!f.video_en, material_visto: !!f.material_en,
+      video_visto: !!f.video_en && (!f.bloqueado_en || f.video_en > f.bloqueado_en), material_visto: !!f.material_en,
+      video_iniciado: !!inicioValido(f), video_segundos: segundosVideo(ctx, curso, u), video_faltan: video ? faltaVideo(ctx, curso, u, f) : 0,
       intentos: f.intentos || 0, intentos_max: INTENTOS_POR_RONDA, ronda: f.ronda || 1,
       mejor_nota: f.mejor_nota ?? null, aprobado_en: f.aprobado_en || null,
       puede_cuestionario: conCuestionario && !falta && !f.aprobado_en && !f.bloqueado_en && (f.intentos || 0) < INTENTOS_POR_RONDA && listo,
@@ -453,12 +501,26 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
     await col('progreso').doc(idProgreso(persona, curso, unidad)).set({ persona, curso, unidad, ...cambios, actualizado_en: hoy() }, { merge: true });
   }
 
+  // La persona reprodujo el video en la lección: empieza a contar el tiempo mínimo.
+  async function iniciarVideo(token, b) {
+    const { perfil, ctx, curso, unidad } = await equipoAbierto(token, b);
+    if (!tieneVideo(ctx, curso, unidad)) throw new Falla(400, 'sin_video', 'Esta unidad todavía no tiene video.');
+    if (!inicioValido(filaDe(ctx, curso, unidad) || {})) await guardarProgreso(perfil.id, curso, unidad, { video_inicio: hoy() });
+    return resumen(perfil, await contexto(perfil.id));
+  }
+
   // Marca el video o el material como vistos. Si la unidad estaba en pausa y ya repasó ambos, se reabre.
   async function marcar(token, b) {
     const { perfil, ctx, curso, unidad } = await equipoAbierto(token, b);
     const que = String(b.que ?? '');
     if (que !== 'video' && que !== 'material') throw new Falla(400, 'que', 'Indica si viste el video o el material.');
     const f = filaDe(ctx, curso, unidad) || {};
+    if (que === 'video') {
+      if (!tieneVideo(ctx, curso, unidad)) throw new Falla(400, 'sin_video', 'Esta unidad todavía no tiene video.');
+      if (!inicioValido(f)) throw new Falla(400, 'video_tiempo', 'Primero reproduce el video en la lección.');
+      const falta = faltaVideo(ctx, curso, unidad, f);
+      if (falta > 0) throw new Falla(400, 'video_tiempo', `Termina de ver el video: faltan ${Math.floor(falta / 60)} min ${String(falta % 60).padStart(2, '0')} s.`, { faltan: falta });
+    }
     const t = hoy();
     const cambios = que === 'video' ? { video_en: t } : { material_en: t };
     if (f.bloqueado_en) {
@@ -480,7 +542,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
       const m = await datos(col('material').doc(id));
       for (const a of (m && m.archivos) || []) if (a && /^https:\/\//.test(a.url || '')) archivos.push({ nombre: String(a.nombre || 'Material'), url: a.url });
     }
-    if (archivos.length) await guardarProgreso(perfil.id, curso, unidad, { material_en: hoy() });
+    if (archivos.length && b.marcar !== false) await guardarProgreso(perfil.id, curso, unidad, { material_en: hoy() });
     return { archivos };
   }
 
@@ -590,7 +652,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
   // Panel de la Secretaría: avance de todo el equipo y evidencias por revisar.
   async function equipo(token) {
     const quien = await usuarioDelToken(token);
-    if (quien.rol !== 'secretaria') throw new Falla(403, 'permiso', 'Solo la Secretaría Técnica ve el avance del equipo.');
+    if (quien.rol !== 'secretaria' && !esAdmin(quien)) throw new Falla(403, 'permiso', 'Solo la Secretaría Técnica ve el avance del equipo.');
     const [dir, perf, prog, evid, hit, cons] = await Promise.all(['directorio', 'perfiles', 'progreso', 'evidencias', 'hitos', 'constancias'].map((n) => lista(col(n))));
     const delEquipo = perf.filter((p) => p.rol !== 'emprendedora');
     const cuentasPorCedula = new Map(delEquipo.map((p) => [p.cedula, p]));
@@ -658,6 +720,9 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
         // Cursos del equipo
         case 'mi-progreso': r = await miProgreso(token); break;
         case 'marcar': r = await marcar(token, b); break;
+        case 'iniciar-video': r = await iniciarVideo(token, b); break;
+        case 'admin-contenido': r = await adminContenido(token); break;
+        case 'admin-guardar-material': r = await adminGuardarMaterial(token, b); break;
         case 'material': r = await material(token, b); break;
         case 'cuestionario': r = await cuestionario(token, b); break;
         case 'responder': r = await responder(token, b); break;

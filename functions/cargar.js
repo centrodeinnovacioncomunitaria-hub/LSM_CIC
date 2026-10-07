@@ -9,6 +9,7 @@
 //   node cargar.js --llave ... --material ../../privado_NO_SUBIR/material.json
 //   node cargar.js --llave ... --invitar            (envía a cada persona del equipo el enlace para crear su contraseña)
 //   node cargar.js --llave ... --invitar 12345678   (solo a esa cédula)
+//   node cargar.js --llave ... --admin correo@dominio.com   (cuenta de administración para admin/)
 // Se pueden combinar. Volver a cargar reemplaza los datos (no duplica).
 'use strict';
 
@@ -104,6 +105,22 @@ async function vaciar(coleccion) {
     console.log(`Invitaciones: ${enviados} enviadas.`);
   }
 
-  if (!dir && !preguntas && !material && !invitar) console.log('Nada que hacer: usa --directorio, --preguntas, --material o --invitar.');
+  // Cuenta de administración (rol «administradora»): entra por admin/ con correo y contraseña.
+  // Se crea sin contraseña conocida y se le envía el enlace para crearla.
+  const adminCorreo = opcion('admin');
+  if (adminCorreo) {
+    if (adminCorreo === true || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(adminCorreo)) throw new Error('Uso: --admin correo@dominio.com');
+    if (!env.CIC_API_KEY) throw new Error('Primero pega la clave web en functions/.env (CIC_API_KEY).');
+    const auth = getAuth();
+    let uid;
+    try { uid = (await auth.getUserByEmail(adminCorreo)).uid; }
+    catch (e) { uid = (await auth.createUser({ email: adminCorreo, password: require('crypto').randomBytes(24).toString('base64url'), displayName: 'Administración CIC' })).uid; }
+    await db.collection('perfiles').doc(uid).set({ cedula: `admin-${uid.slice(0, 6)}`, nombre: 'Administración CIC', rol: 'administradora', correo: adminCorreo, cuenta_email: adminCorreo, creado_en: new Date().toISOString() }, { merge: true });
+    const cuentas = crearCuentas(auth, () => env.CIC_API_KEY, () => (env.CIC_SITIO || 'https://cicredmujeresdelcaribe.org/') + 'admin/');
+    await cuentas.enviarEnlace(adminCorreo);
+    console.log(`Administración: cuenta lista para ${adminCorreo.replace(/^(.)[^@]*/, '$1***')}; se envió el enlace para crear la contraseña.`);
+  }
+
+  if (!dir && !preguntas && !material && !invitar && !adminCorreo) console.log('Nada que hacer: usa --directorio, --preguntas, --material, --invitar o --admin.');
   process.exit(0);
 })().catch((e) => { console.error('Error:', e.message); process.exit(1); });

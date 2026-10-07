@@ -22,6 +22,7 @@
     // ================================================================ Motor de demostración
     // Imita la función del servidor con preguntas de ejemplo. Nada sale de este navegador.
     const Demo = (() => {
+        const SEG_DEMO = 15; // en la demostración el «video» dura 15 segundos
         const clave = (p) => `cic-demo-cursos-${p.cedula}`;
         const leer = (p) => { try { return JSON.parse(localStorage.getItem(clave(p))) || null; } catch (e) { return null; } };
         const guardar = (p, d) => { try { localStorage.setItem(clave(p), JSON.stringify(d)); } catch (e) { /* sin almacenamiento */ } };
@@ -51,10 +52,13 @@
             let e = 'disponible';
             if (falta) e = 'bloqueada'; else if (f.aprobado_en) e = 'aprobada'; else if (f.bloqueado_en) e = 'pausada';
             else if (f.video_en || f.material_en || f.intentos) e = 'en-curso';
+            const inicio = f.video_inicio && (!f.bloqueado_en || f.video_inicio > f.bloqueado_en) ? f.video_inicio : null;
             return {
-                unidad: u, estado: e, motivo: falta, tiene_video: tieneVideo, sin_cuestionario: SIN_CUESTIONARIO.has(c), video_visto: !!f.video_en, material_visto: !!f.material_en,
+                unidad: u, estado: e, motivo: falta, tiene_video: tieneVideo, sin_cuestionario: SIN_CUESTIONARIO.has(c),
+                video_visto: !!f.video_en && (!f.bloqueado_en || f.video_en > f.bloqueado_en), material_visto: !!f.material_en,
+                video_iniciado: !!inicio, video_segundos: SEG_DEMO, video_faltan: inicio ? Math.max(0, SEG_DEMO - Math.floor((Date.now() - new Date(inicio)) / 1000)) : SEG_DEMO,
                 intentos: f.intentos || 0, intentos_max: REGLAS.intentos, ronda: f.ronda || 1, mejor_nota: f.mejor_nota ?? null, aprobado_en: f.aprobado_en || null,
-                puede_cuestionario: !SIN_CUESTIONARIO.has(c) && !falta && !f.aprobado_en && !f.bloqueado_en && (f.intentos || 0) < REGLAS.intentos && !!f.material_en && (!tieneVideo || !!f.video_en),
+                puede_cuestionario: !SIN_CUESTIONARIO.has(c) && !falta && !f.aprobado_en && !f.bloqueado_en && (f.intentos || 0) < REGLAS.intentos && !!f.material_en && (!tieneVideo || (!!f.video_en && (!f.bloqueado_en || f.video_en > f.bloqueado_en))),
                 evidencia: ev,
             };
         }
@@ -87,8 +91,19 @@
             switch (accion) {
                 case 'mi-progreso': r = resumen(perfil, d, videos); break;
                 case 'hito': if (!d.hitos.includes(datos.hito)) d.hitos.push(datos.hito); r = resumen(perfil, d, videos); break;
+                case 'iniciar-video': {
+                    exigirAbierta();
+                    const e = estado(perfil, d, c, u, videos);
+                    if (!e.video_iniciado) fila().video_inicio = ahora();
+                    r = resumen(perfil, d, videos); break;
+                }
                 case 'marcar': {
                     exigirAbierta();
+                    if (datos.que === 'video') {
+                        const e = estado(perfil, d, c, u, videos);
+                        if (!e.video_iniciado) throw new Error('Primero reproduce el video en la lección.');
+                        if (e.video_faltan > 0) throw new Error(`Termina de ver el video: faltan ${e.video_faltan} s.`);
+                    }
                     const f = fila(), t = ahora();
                     f[datos.que === 'video' ? 'video_en' : 'material_en'] = t;
                     const conVideo = estado(perfil, d, c, u, videos).tiene_video;
@@ -155,23 +170,35 @@
         return { api, reiniciar: (p) => { try { localStorage.removeItem(clave(p)); } catch (e) { /* nada */ } } };
     })();
 
+
     // ================================================================ Vista «Mis cursos»
+    // Dos pantallas: el resumen de los cursos (con la lista de módulos) y la lección de cada módulo,
+    // que se abre en su propia página interna: video grande → material → evaluación → actividad.
     let C = null;        // contexto que entrega la página (perfil, api, esc, CURSOS…)
     let estado = null;   // último progreso recibido
     let porCodigo = {};  // videos publicados por código
+    let leccion = null;  // { curso, unidad } abierta, o null en el resumen
+    let reloj = null;    // cuenta regresiva del video
 
     const esc = (s) => C.esc(s);
     const api = (accion, datos = {}) => C.DEMO ? Demo.api(C.perfil, accion, datos, new Set(Object.keys(porCodigo))) : C.llamar(accion, datos, true);
     const nombreEvidencia = (c) => EVIDENCIA[c] === 'actividad' ? 'Actividad del módulo' : 'Verificación de la sesión';
+    const nombreUnidad = (c) => ({ gestion: 'Módulo', 'formacion-secretaria': 'Unidad', 'acompanar-hacer': 'Semana', 'facilitar-ser': 'Taller' }[c] || 'Unidad');
+    // De dónde salen las preguntas: el archivo de evaluación oficial (Drive «Productos Contrato»)
+    const fuenteEvaluacion = (c, u) => ({
+        gestion: 'Cuestionario oficial del módulo (guion del curso Gestión del CIC)',
+        'acompanar-hacer': `Evaluación oficial «CIC_S${u}_Evaluacion» · Parte A: cuestionario para dinamizadoras`,
+        'facilitar-ser': `Evaluación oficial «CIC_SER${u}_Evaluacion» · Parte A: cuestionario para dinamizadoras`,
+    }[c] || '');
+    const minSeg = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
     function recorrido() {
         const h = new Set((estado.hitos || []).map((x) => x.hito));
         const cons = new Set((estado.constancias || []).map((x) => x.curso));
         const hechos = (c) => (estado.cursos[c] || []).filter((x) => x.estado === 'aprobada').length;
         const rutas = ['Acompañar HACER y facilitar SER', cons.has('acompanar-hacer') && cons.has('facilitar-ser'), `${hechos('acompanar-hacer')}/6 semanas · ${hechos('facilitar-ser')}/4 talleres`];
-        const clave = !C.perfil.debe_cambiar_clave;
         const pasos = [
-            ['Activar tu cuenta', clave, clave ? 'Contraseña propia' : 'Cambia tu contraseña'],
+            ['Activar tu cuenta', true, 'Contraseña propia'],
             ['Compromiso', h.has('compromiso'), h.has('compromiso') ? 'Confirmado' : 'Pendiente'],
             ['Gestión del CIC', cons.has('gestion'), `${hechos('gestion')} de 5 módulos`],
             ...(C.perfil.rol === 'secretaria'
@@ -193,215 +220,305 @@
         </div>`;
     }
 
-    function pasoHecho(ok, txt) { return ok ? `<span class="paso-ok">✓ ${esc(txt)}</span>` : ''; }
-
-    function cuerpoUnidad(id, i, e) {
-        const c = C.CURSOS[id];
-        const cod = C.codigoModulo(id, i);
-        const vid = porCodigo[cod];
-        if (e.estado === 'bloqueada') return `<p class="nota">${esc(e.motivo)}</p>${c.pagina ? `<a class="btn btn-borde" href="${c.pagina}#${c.ancla}-${i + 1}">Ver de qué trata</a>` : ''}`;
-        if (e.sin_cuestionario) return cuerpoSinCuestionario(id, i, e);
-        const ev = e.evidencia;
-        const pausa = e.estado === 'pausada';
-        const intentosTxt = e.aprobado_en ? `Aprobado con ${e.mejor_nota} de ${REGLAS.preguntas}.`
-            : e.estado === 'pausada' ? 'Perdiste los dos intentos. Vuelve a ver el video y a repasar el material: el cuestionario se reabre solo.'
-            : e.intentos ? `Llevas ${e.intentos} de ${e.intentos_max} intentos${e.mejor_nota != null ? ` · mejor nota ${e.mejor_nota} de ${REGLAS.preguntas}` : ''}.`
-            : `${REGLAS.preguntas} preguntas · se aprueba con ${REGLAS.nota_minima} · ${e.intentos_max} intentos.`;
-        return `<ol class="pasos-modulo">
-            <li class="${e.video_visto || !e.tiene_video ? 'ok' : ''}">
-                <h4>1. Video</h4>
-                ${vid ? C.reproductor(vid) : '<p class="texto-suave">El video de este módulo todavía no está publicado. Puedes seguir con el material de estudio.</p>'}
-                ${vid ? (e.video_visto && !pausa ? pasoHecho(true, 'Video visto') : `<button type="button" class="btn btn-borde" data-marcar="video">${pausa ? 'Volví a ver el video' : 'Ya vi el video'}</button>`) : ''}
-            </li>
-            <li class="${e.material_visto ? 'ok' : ''}">
-                <h4>2. Material de estudio</h4>
-                <div class="botones">
-                    <button type="button" class="btn btn-borde" data-material>Abrir material de estudio</button>
-                    <a class="btn btn-borde" href="${c.pagina}#${c.ancla}-${i + 1}" target="_blank" rel="noopener">Ver el tema</a>
-                </div>
-                <div class="material-lista" aria-live="polite"></div>
-                ${e.material_visto && !pausa ? pasoHecho(true, 'Material repasado') : `<button type="button" class="${pausa ? 'btn btn-borde' : 'boton-texto'}" data-marcar="material">${pausa ? 'Volví a repasar el material' : 'Ya repasé el material'}</button>`}
-            </li>
-            <li class="${e.aprobado_en ? 'ok' : ''}">
-                <h4>3. Cuestionario</h4>
-                <p class="texto-suave">${esc(intentosTxt)}</p>
-                ${e.aprobado_en ? '' : `<button type="button" class="btn btn-primario" data-cuestionario ${e.puede_cuestionario ? '' : 'disabled aria-describedby="pista-' + id + i + '"'}>Presentar cuestionario${e.intentos ? ` · intento ${e.intentos + 1} de ${e.intentos_max}` : ''}</button>
-                ${e.puede_cuestionario ? '' : `<small class="ayuda-campo" id="pista-${id}${i}">${e.estado === 'pausada' ? 'Se reabre al repasar el video y el material.' : 'Se activa cuando veas el video y repases el material.'}</small>`}`}
-            </li>
-            <li class="${ev && ev.estado !== 'devuelta' ? 'ok' : ''}">
-                <h4>4. ${esc(nombreEvidencia(id))}</h4>
-                <p class="texto-suave">${EVIDENCIA[id] === 'actividad' ? 'Responde la actividad del módulo con tus palabras, o pega el enlace a tu documento o foto (Google Drive).' : 'Después de la sesión, cuenta cómo te fue y pega el enlace a las evidencias (lista de asistencia, fotos autorizadas, bitácora).'}</p>
-                ${ev ? `<p class="chip ${ev.estado === 'aprobada' ? 'bg-menta' : ev.estado === 'devuelta' ? 'bg-coral' : 'bg-mantequilla'}">${esc(EV_TXT[ev.estado])}</p>${ev.comentario ? `<p class="nota"><b>Comentario de la Secretaría:</b> ${esc(ev.comentario)}</p>` : ''}` : ''}
-                ${ev && ev.estado !== 'devuelta' ? '' : `<form class="form-evidencia" novalidate>
-                    <label class="etiqueta" for="ev-t-${id}-${i}">Tu respuesta</label>
-                    <textarea class="campo" id="ev-t-${id}-${i}" name="texto" rows="4" maxlength="4000">${esc(ev ? ev.texto || '' : '')}</textarea>
-                    <label class="etiqueta" for="ev-e-${id}-${i}">Enlace a tu evidencia (opcional)</label>
-                    <input class="campo" id="ev-e-${id}-${i}" name="enlace" type="url" inputmode="url" placeholder="https://drive.google.com/…" value="${esc(ev ? ev.enlace || '' : '')}">
-                    <button type="submit" class="btn btn-primario">Enviar</button>
-                </form>`}
-            </li>
-        </ol>`;
-    }
-
-    // Unidad que se aprueba al repasar el material y enviar la actividad (no tiene banco de preguntas)
-    function cuerpoSinCuestionario(id, i, e) {
-        const c = C.CURSOS[id];
-        const ev = e.evidencia;
-        return `<p class="texto-suave">${esc(c.modulos[i][1])}</p>
-        <ol class="pasos-modulo">
-            <li class="${e.material_visto ? 'ok' : ''}">
-                <h4>1. Guía de estudio y presentaciones</h4>
-                <button type="button" class="btn btn-borde" data-material>Abrir el material de la unidad</button>
-                <div class="material-lista" aria-live="polite"></div>
-                ${e.material_visto ? pasoHecho(true, 'Material repasado') : '<button type="button" class="boton-texto" data-marcar="material">Ya repasé el material</button>'}
-            </li>
-            <li class="${ev && ev.estado !== 'devuelta' ? 'ok' : ''}">
-                <h4>2. Actividad de la unidad</h4>
-                <p class="texto-suave">Escribe cómo aplicarías esta metodología en la transferencia a las dinamizadoras, o pega el enlace a tu documento. Al enviarla, la unidad queda aprobada y se abre la siguiente.</p>
-                ${ev ? `<p class="chip ${ev.estado === 'aprobada' ? 'bg-menta' : ev.estado === 'devuelta' ? 'bg-coral' : 'bg-mantequilla'}">${esc(EV_TXT[ev.estado])}</p>${ev.comentario ? `<p class="nota"><b>Comentario:</b> ${esc(ev.comentario)}</p>` : ''}` : ''}
-                ${ev && ev.estado !== 'devuelta' ? '' : (e.material_visto ? `<form class="form-evidencia" novalidate>
-                    <label class="etiqueta" for="ev-t-${id}-${i}">Tu respuesta</label>
-                    <textarea class="campo" id="ev-t-${id}-${i}" name="texto" rows="4" maxlength="4000">${esc(ev ? ev.texto || '' : '')}</textarea>
-                    <label class="etiqueta" for="ev-e-${id}-${i}">Enlace a tu documento (opcional)</label>
-                    <input class="campo" id="ev-e-${id}-${i}" name="enlace" type="url" inputmode="url" placeholder="https://drive.google.com/…" value="${esc(ev ? ev.enlace || '' : '')}">
-                    <button type="submit" class="btn btn-primario">Enviar y aprobar la unidad</button>
-                </form>` : '<small class="ayuda-campo">Se activa cuando repases el material.</small>')}
-            </li>
-        </ol>`;
-    }
-
+    // ---------- Resumen: un bloque por curso con sus módulos ----------
     function tarjetaCurso(id) {
         const c = C.CURSOS[id];
         const lista = estado.cursos[id];
         const hechos = lista.filter((x) => x.estado === 'aprobada').length;
         const cons = (estado.constancias || []).find((x) => x.curso === id);
-        const abierta = lista.find((x) => x.estado === 'en-curso' || x.estado === 'pausada' || x.estado === 'disponible');
+        const siguiente = lista.find((x) => x.estado !== 'aprobada' && x.estado !== 'bloqueada');
         return `<article class="curso curso-ancho" id="curso-${id}">
             <div class="curso-cab ${c.color}">
                 <h3>${esc(c.titulo)}</h3>
                 <p style="font-size:1rem;margin-top:.2rem">${esc(c.meta)} · ${hechos} de ${lista.length} aprobados</p>
                 <div class="barra-avance" role="progressbar" aria-label="Avance en ${esc(c.titulo)}" aria-valuemin="0" aria-valuemax="${lista.length}" aria-valuenow="${hechos}"><span style="width:${(hechos / lista.length) * 100}%"></span></div>
-                ${cons ? `<button type="button" class="btn btn-claro" data-constancia="${esc(id)}">Descargar mi constancia</button>` : ''}
+                <div class="botones" style="margin-top:.8rem;display:flex;flex-wrap:wrap;gap:.6rem">
+                    ${siguiente ? `<button type="button" class="btn btn-primario" data-abrir-leccion="${esc(id)}" data-unidad="${siguiente.unidad}">${siguiente.estado === 'disponible' && !hechos ? 'Empezar' : 'Continuar'}: ${esc(nombreUnidad(id))} ${siguiente.unidad}</button>` : ''}
+                    ${cons ? `<button type="button" class="btn btn-claro" data-constancia="${esc(id)}">Descargar mi constancia</button>` : ''}
+                </div>
             </div>
-            <ol class="unidades">
-            ${c.modulos.map(([titulo], i) => {
+            <ol class="modulos-lista">
+            ${c.modulos.map(([titulo, sub], i) => {
                 const e = lista[i];
                 const s = ESTADOS[e.estado];
-                return `<li class="unidad ${s.clase}" data-curso="${esc(id)}" data-unidad="${i + 1}">
-                    <details ${abierta && abierta.unidad === i + 1 ? 'open' : ''}>
-                        <summary>
-                            <span class="unidad-icono" aria-hidden="true">${s.icono}</span>
-                            <span class="unidad-titulo"><span class="codigo">${esc(C.codigoModulo(id, i))}</span> ${esc(titulo)}<small>${esc(s.txt)}${e.estado === 'aprobada' && !e.sin_cuestionario ? ` · ${e.mejor_nota} de ${REGLAS.preguntas}` : ''}${e.estado === 'bloqueada' ? ` · ${e.motivo}` : ''}</small></span>
-                        </summary>
-                        <div class="unidad-cuerpo">${cuerpoUnidad(id, i, e)}</div>
-                    </details>
-                </li>`;
+                const bloq = e.estado === 'bloqueada';
+                return `<li><button type="button" class="modulo-fila ${s.clase}" data-abrir-leccion="${esc(id)}" data-unidad="${i + 1}" ${bloq ? 'aria-disabled="true"' : ''}>
+                    <span class="unidad-icono" aria-hidden="true">${s.icono}</span>
+                    <span class="modulo-texto"><span class="codigo">${esc(C.codigoModulo(id, i))}</span> <b>${esc(titulo)}</b>
+                        <small>${esc(s.txt)}${e.estado === 'aprobada' && !e.sin_cuestionario ? ` · ${e.mejor_nota} de ${REGLAS.preguntas}` : ''}${bloq ? ` · ${esc(e.motivo)}` : ''}</small></span>
+                    ${porCodigo[C.codigoModulo(id, i)] ? '<span class="chip modulo-chip" aria-label="Tiene video">▶ Video</span>' : ''}
+                    <span class="modulo-flecha" aria-hidden="true">${bloq ? '' : '›'}</span>
+                </button></li>`;
             }).join('')}
             </ol>
         </article>`;
     }
 
-    function pintarVista() {
+    function pintarResumen() {
+        leccion = null;
+        detenerReloj();
         const v = C.vista;
         const h = new Set((estado.hitos || []).map((x) => x.hito));
-        const lista = Object.keys(estado.cursos);
         v.innerHTML = `
             <h2>Mis cursos</h2>
-            <p class="vista-intro">${C.perfil.rol === 'secretaria' ? 'Avanza en orden: Gestión del CIC, luego tu Formación de la Secretaría Técnica y, al terminarla, se abren las rutas HACER y SER para que las supervises.' : 'Avanza en orden: cada módulo se abre cuando apruebas el anterior.'}${C.DEMO ? ' <b>Demostración:</b> tu avance se guarda solo en este dispositivo y las preguntas son de ejemplo.' : ''}</p>
+            <p class="vista-intro">${C.perfil.rol === 'secretaria' ? 'Avanza en orden: Gestión del CIC, luego tu Formación de la Secretaría Técnica y, al terminarla, se abren las rutas HACER y SER para que las supervises.' : 'Avanza en orden: cada módulo se abre cuando apruebas el anterior.'} Toca un módulo para abrir su lección.${C.DEMO ? ' <b>Demostración:</b> tu avance se guarda solo en este dispositivo y las preguntas son de ejemplo, no las oficiales.' : ''}</p>
             ${recorrido()}
-            ${C.perfil.debe_cambiar_clave ? '<div class="tarjeta compromiso"><h3>Primero, tu contraseña</h3><p>Tu contraseña todavía es tu número de cédula. Cámbiala en «Mi cuenta» para abrir tus cursos.</p><button type="button" class="btn btn-primario" data-ir="cuenta">Cambiar mi contraseña</button></div>' : (h.has('compromiso') ? '' : tarjetaCompromiso())}
-            ${lista.map(tarjetaCurso).join('')}
+            ${h.has('compromiso') ? '' : tarjetaCompromiso()}
+            ${Object.keys(estado.cursos).map(tarjetaCurso).join('')}
             ${C.DEMO ? '<p class="privado"><button type="button" class="boton-texto" id="demo-reiniciar">Reiniciar la demostración de los cursos</button></p>' : ''}`;
-        enlazar();
-    }
-
-    async function refrescar(nuevo) {
-        if (nuevo) estado = nuevo; else estado = await api('mi-progreso');
-        const abiertos = [...C.vista.querySelectorAll('.unidad details[open]')].map((d) => d.closest('.unidad').dataset.curso + d.closest('.unidad').dataset.unidad);
-        pintarVista();
-        abiertos.forEach((k) => { const el = C.vista.querySelector(`.unidad[data-curso="${k.replace(/\d+$/, '')}"][data-unidad="${k.match(/\d+$/)[0]}"] details`); if (el) el.open = true; });
-    }
-
-    function enlazar() {
-        const v = C.vista;
         const chk = v.querySelector('#acepto-compromiso');
         if (chk) {
             chk.addEventListener('change', () => { v.querySelector('#btn-compromiso').disabled = !chk.checked; });
             v.querySelector('#btn-compromiso').addEventListener('click', async (ev) => {
                 ev.currentTarget.disabled = true;
-                try { await refrescar(await api('hito', { hito: 'compromiso' })); C.aviso('Compromiso confirmado. Ya puedes empezar el módulo 1.'); } catch (e) { C.aviso(e.message); }
+                try { estado = await api('hito', { hito: 'compromiso' }); C.aviso('Compromiso confirmado. Ya puedes empezar el módulo 1.'); abrirLeccion('gestion', 1); } catch (e) { C.aviso(e.message); }
             });
         }
         const reiniciar = v.querySelector('#demo-reiniciar');
         if (reiniciar) reiniciar.addEventListener('click', () => { Demo.reiniciar(C.perfil); refrescar().catch(() => {}); C.aviso('La demostración de los cursos volvió al inicio.'); });
-
-        v.querySelectorAll('.unidad').forEach((li) => {
-            const datos = { curso: li.dataset.curso, unidad: Number(li.dataset.unidad) };
-            li.querySelectorAll('[data-marcar]').forEach((b) => b.addEventListener('click', async () => {
-                b.disabled = true;
-                try { await refrescar(await api('marcar', { ...datos, que: b.dataset.marcar })); } catch (e) { C.aviso(e.message); b.disabled = false; }
-            }));
-            const mat = li.querySelector('[data-material]');
-            if (mat) mat.addEventListener('click', async () => {
-                const caja = li.querySelector('.material-lista');
-                mat.disabled = true;
-                try {
-                    const r = await api('material', datos);
-                    caja.innerHTML = r.archivos && r.archivos.length
-                        ? `<ul class="lista-archivos">${r.archivos.map((a) => `<li><a class="enlace" href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.nombre)}</a></li>`).join('')}</ul><small class="ayuda-campo">Los enlaces vencen en una hora.</small>`
-                        : `<p class="texto-suave">${C.DEMO ? 'En la demostración no hay archivos: en la plataforma real aquí aparece el material de estudio de la unidad.' : 'El material de esta unidad todavía no está cargado. Mientras tanto, repasa el tema en «Ver el tema».'}</p>`;
-                    if (r.archivos && r.archivos.length) refrescar().catch(() => {});
-                } catch (e) { C.aviso(e.message); } finally { mat.disabled = false; }
-            });
-            const cue = li.querySelector('[data-cuestionario]');
-            if (cue) cue.addEventListener('click', () => abrirCuestionario(datos, cue));
-            const form = li.querySelector('.form-evidencia');
-            if (form) form.addEventListener('submit', async (ev) => {
-                ev.preventDefault();
-                const b = form.querySelector('button[type="submit"]');
-                b.disabled = true;
-                try {
-                    const r = await api('entregar', { ...datos, texto: form.texto.value.trim(), enlace: form.enlace.value.trim() });
-                    await refrescar(r.progreso);
-                    C.aviso(r.constancia ? '¡Completaste el curso! Ya puedes descargar tu constancia.' : 'Enviado. La Secretaría Técnica lo revisará.');
-                } catch (e) { C.aviso(e.message); b.disabled = false; }
-            });
-        });
         v.querySelectorAll('[data-constancia]').forEach((b) => b.addEventListener('click', () => imprimirConstancia(b.dataset.constancia)));
     }
 
-    // ---------- Cuestionario en un diálogo ----------
-    function dialogo() {
-        let d = document.getElementById('dlg-cuestionario');
-        if (!d) {
-            d = document.createElement('dialog');
-            d.id = 'dlg-cuestionario';
-            d.className = 'dialogo-cuestionario';
-            d.setAttribute('aria-labelledby', 'cue-titulo');
-            document.body.appendChild(d);
-            d.addEventListener('click', (e) => { if (e.target.closest('[data-cerrar-cue]')) d.close(); });
-        }
-        return d;
+    // ---------- Lección de un módulo ----------
+    function abrirLeccion(curso, unidad, sinHistorial) {
+        const e = (estado.cursos[curso] || [])[unidad - 1];
+        if (!e) return;
+        if (e.estado === 'bloqueada') { C.aviso(e.motivo); return; }
+        leccion = { curso, unidad };
+        if (!sinHistorial) history.pushState({ cicLeccion: leccion }, '', location.pathname + location.search + '#leccion');
+        pintarLeccion();
+        window.scrollTo(0, Math.max(0, C.vista.getBoundingClientRect().top + window.scrollY - 90)); // arriba de la lección, bajo el menú
+        const t = C.vista.querySelector('#leccion-titulo');
+        if (t) t.focus({ preventScroll: true });
     }
-    async function abrirCuestionario(datos, boton) {
+    function volverAlResumen() {
+        if (history.state && history.state.cicLeccion) history.back();
+        else pintarResumen();
+    }
+
+    function pintarLeccion(cuestionario) {
+        detenerReloj();
+        const { curso, unidad } = leccion;
+        const c = C.CURSOS[curso];
+        const lista = estado.cursos[curso];
+        const e = lista[unidad - 1];
+        const i = unidad - 1;
+        const vid = porCodigo[C.codigoModulo(curso, i)];
+        const pausa = e.estado === 'pausada';
+        const ev = e.evidencia;
+        const conVideo = !!vid;
+        // Pasos y si están completos
+        const pasos = e.sin_cuestionario
+            ? [['material', 'Material', e.material_visto], ['actividad', 'Actividad', !!ev && ev.estado !== 'devuelta']]
+            : [['video', 'Video', !conVideo || e.video_visto], ['material', 'Material', e.material_visto], ['evaluacion', 'Evaluación', !!e.aprobado_en], ['actividad', nombreEvidencia(curso).split(' ')[0], !!ev && ev.estado !== 'devuelta']];
+        const siguiente = lista[unidad];
+        const anterior = lista[unidad - 2];
+
+        C.vista.innerHTML = `<div class="leccion">
+            <nav class="leccion-migas" aria-label="Ruta"><button type="button" class="boton-texto" data-volver>← Mis cursos</button><span aria-hidden="true">›</span><span>${esc(c.titulo)}</span></nav>
+            <div class="leccion-rejilla">
+                <div class="leccion-principal">
+                    <p class="eyebrow">${esc(C.codigoModulo(curso, i))} · ${esc(nombreUnidad(curso))} ${unidad} de ${lista.length}</p>
+                    <h2 id="leccion-titulo" tabindex="-1">${esc(c.modulos[i][0].replace(/^[^·]+·\s*/, ''))}</h2>
+                    ${pausa ? '<p class="nota nota-pausa"><b>Módulo en pausa.</b> Usaste los dos intentos de la evaluación. Vuelve a ver el video y a repasar el material: la evaluación se reabre sola con dos intentos nuevos.</p>' : ''}
+                    <ol class="leccion-pasos" aria-label="Pasos de la lección">${pasos.map(([k, t, ok], n) => `<li class="${ok ? 'hecho' : ''}"><a href="#paso-${k}" data-ir-paso="${k}"><span aria-hidden="true">${ok ? '✓' : n + 1}</span> ${esc(t)}</a></li>`).join('')}</ol>
+
+                    ${e.sin_cuestionario ? '' : `<section class="leccion-bloque" id="paso-video" aria-labelledby="t-video">
+                        <h3 id="t-video"><span class="paso-n">1</span> Video de la lección</h3>
+                        ${vid ? reproductorGrande(vid, e) : '<p class="tarjeta vacio">El video de este módulo todavía no está publicado. Puedes avanzar con el material de estudio: la evaluación se habilita al repasarlo.</p>'}
+                    </section>`}
+
+                    <section class="leccion-bloque" id="paso-material" aria-labelledby="t-material">
+                        <h3 id="t-material"><span class="paso-n">${e.sin_cuestionario ? 1 : 2}</span> Material de estudio</h3>
+                        ${e.sin_cuestionario ? `<p class="texto-suave">${esc(c.modulos[i][1])}</p>` : ''}
+                        <div class="material-lista" aria-live="polite"><p class="texto-suave" role="status">Cargando el material…</p></div>
+                        ${e.material_visto && !pausa ? '<p class="paso-ok">✓ Material repasado</p>' : `<button type="button" class="btn btn-borde" data-marcar="material">${pausa ? 'Volví a repasar el material' : 'Ya repasé el material'}</button>`}
+                    </section>
+
+                    ${e.sin_cuestionario ? '' : `<section class="leccion-bloque" id="paso-evaluacion" aria-labelledby="t-evaluacion">
+                        <h3 id="t-evaluacion"><span class="paso-n">3</span> Evaluación</h3>
+                        <p class="fuente-evaluacion">${esc(fuenteEvaluacion(curso, unidad))}</p>
+                        <ul class="reglas-evaluacion">
+                            <li><b>${REGLAS.preguntas} preguntas</b> al azar del banco oficial, en orden aleatorio.</li>
+                            <li>Se aprueba con <b>${REGLAS.nota_minima} de ${REGLAS.preguntas}</b>. Tienes <b>${e.intentos_max} intentos</b>.</li>
+                            <li>Si no apruebas en los dos, vuelves a ver el video y el material y se reabre.</li>
+                        </ul>
+                        <div id="caja-cuestionario">${cuestionario || bloqueEvaluacion(e, conVideo)}</div>
+                    </section>`}
+
+                    <section class="leccion-bloque" id="paso-actividad" aria-labelledby="t-actividad">
+                        <h3 id="t-actividad"><span class="paso-n">${e.sin_cuestionario ? 2 : 4}</span> ${esc(nombreEvidencia(curso))}</h3>
+                        ${bloqueActividad(curso, i, e)}
+                    </section>
+
+                    <div class="leccion-nav">
+                        ${anterior ? `<button type="button" class="btn btn-borde" data-abrir-leccion="${esc(curso)}" data-unidad="${unidad - 1}">← ${esc(nombreUnidad(curso))} ${unidad - 1}</button>` : '<span></span>'}
+                        ${siguiente ? `<button type="button" class="btn btn-primario" data-abrir-leccion="${esc(curso)}" data-unidad="${unidad + 1}" ${siguiente.estado === 'bloqueada' ? `disabled title="${esc(siguiente.motivo)}"` : ''}>${esc(nombreUnidad(curso))} ${unidad + 1} →</button>` : '<button type="button" class="btn btn-primario" data-volver>Volver a mis cursos</button>'}
+                    </div>
+                    ${siguiente && siguiente.estado === 'bloqueada' ? `<p class="ayuda-campo" style="text-align:right">${esc(siguiente.motivo)}</p>` : ''}
+                </div>
+
+                <aside class="leccion-lateral" aria-label="Módulos del curso">
+                    <p class="eyebrow">${esc(c.titulo)}</p>
+                    <div class="barra-avance" role="progressbar" aria-label="Avance" aria-valuemin="0" aria-valuemax="${lista.length}" aria-valuenow="${lista.filter((x) => x.estado === 'aprobada').length}"><span style="width:${lista.filter((x) => x.estado === 'aprobada').length / lista.length * 100}%"></span></div>
+                    <ol>${c.modulos.map(([t], n) => {
+                        const x = lista[n];
+                        const s = ESTADOS[x.estado];
+                        return `<li><button type="button" class="lateral-modulo ${s.clase} ${n === i ? 'actual' : ''}" data-abrir-leccion="${esc(curso)}" data-unidad="${n + 1}" ${n === i ? 'aria-current="page"' : ''} ${x.estado === 'bloqueada' ? 'aria-disabled="true"' : ''}>
+                            <span class="unidad-icono" aria-hidden="true">${s.icono}</span><span>${esc(t)}<small>${esc(s.txt)}</small></span></button></li>`;
+                    }).join('')}</ol>
+                </aside>
+            </div>
+        </div>`;
+        enlazarLeccion(e, vid);
+        cargarMaterial();
+    }
+
+    // Video grande: se carga al tocarlo y desde ese momento corre el tiempo mínimo que controla el servidor
+    function reproductorGrande(v, e) {
+        const fuente = v.youtube_id
+            ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.youtube_id)}?rel=0&autoplay=1`
+            : `https://drive.google.com/file/d/${encodeURIComponent(v.drive_id)}/preview`;
+        const portada = v.youtube_id ? `https://i.ytimg.com/vi/${esc(v.youtube_id)}/hqdefault.jpg` : `https://drive.google.com/thumbnail?id=${esc(v.drive_id)}&sz=w1280`;
+        const visto = e.video_visto && e.estado !== 'pausada';
+        return `<div class="video-grande" data-fuente="${esc(fuente)}" data-titulo="${esc(v.titulo)}">
+                ${visto || e.video_iniciado ? `<iframe src="${esc(fuente)}" title="${esc(v.titulo)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe>`
+                    : `<button type="button" class="video-grande-btn" data-reproducir aria-label="Reproducir el video: ${esc(v.titulo)}"><img src="${portada}" alt="" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'"><span class="video-boton" aria-hidden="true"></span><span class="video-grande-txt">Reproducir el video${v.duracion_min ? ` · ${esc(v.duracion_min)} min` : ''}</span></button>`}
+            </div>
+            <div class="video-estado" aria-live="polite">${visto ? '<p class="paso-ok">✓ Video visto</p>'
+                : e.video_iniciado ? `<p class="reloj-video"><span class="reloj-barra"><span style="width:${100 - Math.round(e.video_faltan / e.video_segundos * 100)}%"></span></span> Mira el video completo: la evaluación se habilita en <b data-faltan="${e.video_faltan}">${minSeg(e.video_faltan)}</b>.</p>`
+                : `<p class="texto-suave">Toca el video para empezar. La evaluación se habilita cuando lo hayas visto completo${v.duracion_min ? ` (unos ${esc(v.duracion_min)} minutos)` : ''}.</p>`}</div>`;
+    }
+
+    function bloqueEvaluacion(e, conVideo) {
+        if (e.aprobado_en) return `<p class="paso-ok">✓ Aprobada con ${e.mejor_nota} de ${REGLAS.preguntas}</p>`;
+        const falta = [];
+        if (conVideo && !e.video_visto) falta.push('ver el video completo');
+        if (!e.material_visto) falta.push('repasar el material');
+        const intentos = e.intentos ? `<p class="texto-suave">Llevas ${e.intentos} de ${e.intentos_max} intentos${e.mejor_nota != null ? ` · mejor nota ${e.mejor_nota} de ${REGLAS.preguntas}` : ''}.</p>` : '';
+        if (!e.puede_cuestionario) return `${intentos}<button type="button" class="btn btn-primario" disabled>Empezar la evaluación</button><p class="ayuda-campo">Se habilita cuando termines de ${falta.join(' y ') || 'repasar el video y el material'}.</p>`;
+        return `${intentos}<button type="button" class="btn btn-primario" data-cuestionario>Empezar la evaluación${e.intentos ? ` · intento ${e.intentos + 1} de ${e.intentos_max}` : ''}</button>`;
+    }
+
+    function bloqueActividad(curso, i, e) {
+        const ev = e.evidencia;
+        const lista = estado.cursos[curso];
+        const desc = e.sin_cuestionario ? 'Escribe cómo aplicarías esta metodología en la transferencia a las dinamizadoras, o pega el enlace a tu documento. Al enviarla, la unidad queda aprobada y se abre la siguiente.'
+            : EVIDENCIA[curso] === 'actividad' ? 'Responde la actividad del módulo con tus palabras, o pega el enlace a tu documento o foto en Google Drive.'
+            : `Es la Parte B de la evaluación oficial: después de la sesión con la emprendedora, cuenta cómo te fue (preguntas de salida) y pega el enlace a tus evidencias en Google Drive (lista de asistencia, fotos autorizadas, bitácora). La Secretaría Técnica la revisa.`;
+        const habilitada = e.sin_cuestionario ? e.material_visto : !!e.aprobado_en;
+        const estadoEv = ev ? `<p class="chip ${ev.estado === 'aprobada' ? 'bg-menta' : ev.estado === 'devuelta' ? 'bg-coral' : 'bg-mantequilla'}">${esc(EV_TXT[ev.estado])}</p>${ev.comentario ? `<p class="nota"><b>Comentario de la Secretaría:</b> ${esc(ev.comentario)}</p>` : ''}` : '';
+        if (ev && ev.estado !== 'devuelta') return `<p class="texto-suave">${esc(desc)}</p>${estadoEv}${lista[i + 1] && lista[i + 1].estado !== 'bloqueada' ? '<p class="paso-ok">✓ Siguiente módulo abierto</p>' : ''}`;
+        if (!habilitada) return `<p class="texto-suave">${esc(desc)}</p><p class="ayuda-campo">Se habilita cuando ${e.sin_cuestionario ? 'repases el material' : 'apruebes la evaluación'}.</p>`;
+        return `<p class="texto-suave">${esc(desc)}</p>${estadoEv}
+            <form class="form-evidencia" novalidate>
+                <label class="etiqueta" for="ev-t">Tu respuesta</label>
+                <textarea class="campo" id="ev-t" name="texto" rows="5" maxlength="4000">${esc(ev ? ev.texto || '' : '')}</textarea>
+                <label class="etiqueta" for="ev-e">Enlace a tu evidencia en Google Drive ${EVIDENCIA[curso] === 'verificacion' ? '' : '(opcional)'}</label>
+                <input class="campo" id="ev-e" name="enlace" type="url" inputmode="url" placeholder="https://drive.google.com/…" value="${esc(ev ? ev.enlace || '' : '')}">
+                <button type="submit" class="btn btn-primario">${e.sin_cuestionario ? 'Enviar y aprobar la unidad' : 'Enviar'}</button>
+            </form>`;
+    }
+
+    async function cargarMaterial() {
+        const caja = C.vista.querySelector('.material-lista');
+        if (!caja || !leccion) return;
+        const datos = { ...leccion };
+        try {
+            const r = await api('material', { ...datos, marcar: false });
+            if (!leccion || leccion.curso !== datos.curso || leccion.unidad !== datos.unidad) return;
+            caja.innerHTML = r.archivos && r.archivos.length
+                ? `<ul class="lista-archivos">${r.archivos.map((a) => `<li><a class="archivo" href="${esc(a.url)}" target="_blank" rel="noopener" data-archivo><span class="archivo-icono" aria-hidden="true">📄</span><span>${esc(a.nombre)}<small>Se abre en Google Drive</small></span></a></li>`).join('')}</ul>`
+                : `<p class="texto-suave">${C.DEMO ? 'En la demostración no hay archivos: en la plataforma real aquí aparece el material de estudio de la unidad.' : 'El material de esta unidad todavía no está cargado. Repasa el tema con el video y marca cuando termines.'}</p>`;
+            caja.querySelectorAll('[data-archivo]').forEach((a) => a.addEventListener('click', () => {
+                const e = estado.cursos[datos.curso][datos.unidad - 1];
+                if (!e.material_visto || e.estado === 'pausada') api('marcar', { ...datos, que: 'material' }).then((p) => { estado = p; if (leccion) pintarLeccion(); }).catch(() => {});
+            }, { once: true }));
+        } catch (e) { caja.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; }
+    }
+
+    function detenerReloj() { if (reloj) { clearInterval(reloj); reloj = null; } }
+    function arrancarReloj() {
+        detenerReloj();
+        const b = C.vista.querySelector('[data-faltan]');
+        if (!b) return;
+        let faltan = Number(b.dataset.faltan);
+        const total = estado.cursos[leccion.curso][leccion.unidad - 1].video_segundos;
+        const barra = C.vista.querySelector('.reloj-barra span');
+        const fin = Date.now() + faltan * 1000;
+        reloj = setInterval(async () => {
+            faltan = Math.max(0, Math.ceil((fin - Date.now()) / 1000));
+            b.textContent = minSeg(faltan);
+            if (barra) barra.style.width = `${100 - Math.round(faltan / total * 100)}%`;
+            if (faltan > 0) return;
+            detenerReloj();
+            try { estado = await api('marcar', { ...leccion, que: 'video' }); C.aviso('Video completado: ya puedes presentar la evaluación cuando repases el material.'); }
+            catch (e) { try { estado = await api('mi-progreso'); } catch (x) { /* nada */ } }
+            if (leccion) pintarLeccion();
+        }, 1000);
+    }
+
+    function enlazarLeccion(e, vid) {
+        const v = C.vista;
+        const datos = { ...leccion };
+        v.querySelectorAll('[data-volver]').forEach((b) => b.addEventListener('click', volverAlResumen));
+        v.querySelectorAll('[data-ir-paso]').forEach((a) => a.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            const s = v.querySelector(`#paso-${a.dataset.irPaso}`);
+            if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }));
+        const rep = v.querySelector('[data-reproducir]');
+        if (rep) rep.addEventListener('click', async () => {
+            const caja = rep.closest('.video-grande');
+            caja.innerHTML = `<iframe src="${esc(caja.dataset.fuente)}" title="${esc(caja.dataset.titulo)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+            try { estado = await api('iniciar-video', datos); } catch (x) { C.aviso(x.message); return; }
+            const est = estado.cursos[datos.curso][datos.unidad - 1];
+            v.querySelector('.video-estado').innerHTML = `<p class="reloj-video"><span class="reloj-barra"><span style="width:${100 - Math.round(est.video_faltan / est.video_segundos * 100)}%"></span></span> Mira el video completo: la evaluación se habilita en <b data-faltan="${est.video_faltan}">${minSeg(est.video_faltan)}</b>.</p>`;
+            arrancarReloj();
+        });
+        if (e.video_iniciado && !(e.video_visto && e.estado !== 'pausada')) arrancarReloj();
+        v.querySelectorAll('[data-marcar]').forEach((b) => b.addEventListener('click', async () => {
+            b.disabled = true;
+            try { estado = await api('marcar', { ...datos, que: b.dataset.marcar }); pintarLeccion(); }
+            catch (x) { C.aviso(x.message); b.disabled = false; }
+        }));
+        const cue = v.querySelector('[data-cuestionario]');
+        if (cue) cue.addEventListener('click', () => empezarCuestionario(cue));
+        const form = v.querySelector('.form-evidencia');
+        if (form) form.addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            const texto = form.texto.value.trim(), enlace = form.enlace.value.trim();
+            if (EVIDENCIA[datos.curso] === 'verificacion' && !enlace) { C.aviso('Pega el enlace de Google Drive con tus evidencias de la sesión.'); form.enlace.focus(); return; }
+            const b = form.querySelector('button[type="submit"]');
+            b.disabled = true;
+            try {
+                const r = await api('entregar', { ...datos, texto, enlace });
+                estado = r.progreso;
+                pintarLeccion();
+                C.aviso(r.constancia ? '¡Completaste el curso! Ya puedes descargar tu constancia en «Mis cursos».' : 'Enviado. Ya puedes seguir con el siguiente módulo.');
+            } catch (x) { C.aviso(x.message); b.disabled = false; }
+        });
+        v.querySelectorAll('[data-abrir-leccion]').forEach((b) => b.addEventListener('click', () => {
+            if (b.getAttribute('aria-disabled') === 'true') { const x = estado.cursos[b.dataset.abrirLeccion][Number(b.dataset.unidad) - 1]; C.aviso(x.motivo); return; }
+            abrirLeccion(b.dataset.abrirLeccion, Number(b.dataset.unidad));
+        }));
+    }
+
+    // ---------- Evaluación dentro de la lección ----------
+    async function empezarCuestionario(boton) {
         boton.disabled = true;
         let q;
-        try { q = await api('cuestionario', datos); } catch (e) { C.aviso(e.message); boton.disabled = false; return; }
-        const d = dialogo();
-        const titulo = C.CURSOS[datos.curso].modulos[datos.unidad - 1][0];
-        d.innerHTML = `<form class="dialogo" method="dialog" novalidate>
-            <button type="button" class="cerrar" data-cerrar-cue aria-label="Cerrar">×</button>
-            <p class="eyebrow">Cuestionario · intento ${q.intento} de ${q.de}</p>
-            <h2 id="cue-titulo" class="dialogo-titulo" style="font-size:1.5rem">${esc(titulo)}</h2>
-            <p class="texto-suave">Elige una respuesta en cada pregunta. Se aprueba con ${q.nota_minima} de ${q.preguntas.length}.</p>
+        try { q = await api('cuestionario', { ...leccion }); } catch (e) { C.aviso(e.message); boton.disabled = false; return; }
+        const caja = C.vista.querySelector('#caja-cuestionario');
+        caja.innerHTML = `<form class="cuestionario-inline" novalidate>
+            <p class="eyebrow">Intento ${q.intento} de ${q.de}${C.DEMO ? ' · preguntas de ejemplo (demostración)' : ''}</p>
             ${q.preguntas.map((p, i) => `<fieldset class="pregunta"><legend><span class="pregunta-num">${i + 1}</span> ${esc(p.enunciado)}</legend>
                 ${p.opciones.map((o, j) => `<label class="opcion"><input type="radio" name="p${i}" value="${j}" required><span>${esc(o)}</span></label>`).join('')}</fieldset>`).join('')}
             <p class="mensaje error" role="alert" hidden></p>
-            <button type="submit" class="btn btn-primario ancho">Enviar respuestas</button>
+            <button type="submit" class="btn btn-primario">Enviar respuestas</button>
         </form>`;
-        d.showModal();
-        d.querySelector('input').focus();
-        d.querySelector('form').addEventListener('submit', async (ev) => {
+        caja.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        caja.querySelector('form').addEventListener('submit', async (ev) => {
             ev.preventDefault();
             const f = ev.currentTarget;
             const resp = q.preguntas.map((_, i) => { const x = f.querySelector(`input[name="p${i}"]:checked`); return x ? Number(x.value) : null; });
@@ -411,22 +528,35 @@
             b.disabled = true; b.textContent = 'Calificando…';
             try {
                 const r = await api('responder', { id: q.id, respuestas: resp });
-                d.innerHTML = `<div class="dialogo resultado-cue">
-                    <button type="button" class="cerrar" data-cerrar-cue aria-label="Cerrar">×</button>
-                    <p class="resultado-nota ${r.aprobado ? 'aprobado' : 'no-aprobado'}">${r.nota}<small>/${r.de}</small></p>
-                    <h2 id="cue-titulo" class="dialogo-titulo" style="font-size:1.6rem">${r.aprobado ? '¡Aprobaste!' : r.pausado ? 'Esta vez no fue' : 'Casi: tienes otro intento'}</h2>
-                    <p>${r.aprobado ? (r.constancia ? '¡Terminaste los cuestionarios del curso! Si ya enviaste todas las evidencias, tu constancia está lista.' : 'Ahora envía la evidencia de esta unidad para abrir la siguiente.')
-                        : r.pausado ? 'Usaste los dos intentos. Vuelve a ver el video y a repasar el material: el cuestionario se reabre solo.'
-                        : 'Revisa las preguntas que fallaste antes de volver a intentarlo.'}</p>
-                    ${r.detalle.some((x) => !x.bien) ? `<h3 style="font-size:1.1rem;margin-top:1rem">Para repasar</h3><ul class="retro">${r.detalle.map((x, i) => x.bien ? '' : `<li><b>Pregunta ${i + 1}:</b> ${esc(x.retro)}</li>`).join('')}</ul>` : ''}
-                    <button type="button" class="btn btn-primario ancho" data-cerrar-cue>Volver a mis cursos</button>
+                estado = r.progreso;
+                const resultado = `<div class="resultado-inline ${r.aprobado ? 'aprobado' : 'no-aprobado'}">
+                    <p class="resultado-nota">${r.nota}<small>/${r.de}</small></p>
+                    <div><h4>${r.aprobado ? '¡Aprobaste la evaluación!' : r.pausado ? 'Esta vez no fue' : 'Casi: tienes otro intento'}</h4>
+                    <p>${r.aprobado ? 'Ahora envía la actividad de abajo para abrir el siguiente módulo.' : r.pausado ? 'Usaste los dos intentos. Vuelve a ver el video y a repasar el material: la evaluación se reabre sola.' : 'Repasa lo que fallaste y vuelve a intentarlo.'}</p></div>
+                    ${r.detalle.some((x) => !x.bien) ? `<div class="retro-caja"><b>Para repasar</b><ul class="retro">${r.detalle.map((x, i) => x.bien ? '' : `<li><b>Pregunta ${i + 1}:</b> ${esc(x.retro)}</li>`).join('')}</ul></div>` : ''}
                 </div>`;
-                d.querySelector('[data-cerrar-cue].btn').focus();
-                await refrescar(r.progreso);
+                pintarLeccion(resultado + bloqueEvaluacion(estado.cursos[leccion.curso][leccion.unidad - 1], !!porCodigo[C.codigoModulo(leccion.curso, leccion.unidad - 1)]).replace(/^<p class="paso-ok">[^<]*<\/p>/, ''));
+                C.vista.querySelector('#paso-evaluacion').scrollIntoView({ behavior: 'smooth', block: 'start' });
             } catch (e) { m.textContent = e.message; m.hidden = false; b.disabled = false; b.textContent = 'Enviar respuestas'; }
         });
-        d.addEventListener('close', () => { boton.disabled = false; }, { once: true });
     }
+
+    async function refrescar() {
+        estado = await api('mi-progreso');
+        if (leccion) pintarLeccion(); else pintarResumen();
+    }
+    // Botón «atrás» del navegador: de la lección vuelve al resumen
+    window.addEventListener('popstate', (ev) => {
+        if (!C || !estado) return;
+        if (ev.state && ev.state.cicLeccion) { leccion = ev.state.cicLeccion; pintarLeccion(); }
+        else if (leccion) pintarResumen();
+    });
+    document.addEventListener('click', (ev) => {
+        const b = ev.target.closest('#vista-cursos [data-abrir-leccion]');
+        if (!b || !C || leccion) return; // en la lección los botones ya tienen su propio manejador
+        if (b.getAttribute('aria-disabled') === 'true') { const x = estado.cursos[b.dataset.abrirLeccion][Number(b.dataset.unidad) - 1]; C.aviso(x.motivo); return; }
+        abrirLeccion(b.dataset.abrirLeccion, Number(b.dataset.unidad));
+    });
 
     // ---------- Constancia imprimible ----------
     function imprimirConstancia(curso) {
@@ -548,6 +678,8 @@
     window.CICCursos = {
         async pintar(vista, contexto) {
             C = { ...contexto, vista };
+            leccion = null;
+            detenerReloj();
             vista.innerHTML = '<p class="vista-intro" role="status">Cargando tus cursos…</p>';
             try { porCodigo = Object.fromEntries(((await C.traerVideos()) || []).filter((x) => x.audiencia === 'equipo').map((x) => [x.codigo, x])); } catch (e) { porCodigo = {}; }
             try { await refrescar(); } catch (e) { vista.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; }

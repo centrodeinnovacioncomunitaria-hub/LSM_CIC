@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Administración · CIC</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#2E4A3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/cic.css?v=20261012">
+    <style>
+        .admin-cab { background: var(--bosque); color: #fff; padding: 1.2rem 0; }
+        .admin-cab .contenedor { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .admin-cab b { font-family: var(--titulo); font-size: 1.3rem; }
+        .admin-cab small { display: block; opacity: .8; }
+        main { padding: 2rem 0 4rem; }
+        .admin-login { max-width: 26rem; margin: 2rem auto; }
+        .admin-tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem; }
+        .admin-tabs button { border: 1.5px solid var(--linea); background: #fff; border-radius: 999px; padding: .55rem 1.1rem; font-weight: 700; cursor: pointer; }
+        .admin-tabs button[aria-selected="true"] { background: var(--bosque); color: #fff; border-color: var(--bosque); }
+        .curso-admin { background: #fff; border: 1px solid var(--linea); border-radius: 1.4rem; margin-bottom: 1.4rem; overflow: hidden; }
+        .curso-admin > summary { cursor: pointer; padding: 1.1rem 1.3rem; font: 700 1.2rem var(--titulo); list-style: none; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .curso-admin > summary small { font: 600 .9rem var(--texto); color: var(--musgo); }
+        .unidad-admin { border-top: 1px solid var(--linea); padding: 1.1rem 1.3rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+        .unidad-admin h4 { grid-column: 1 / -1; font-size: 1.05rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+        .unidad-admin form { display: grid; gap: .4rem; align-content: start; }
+        .unidad-admin textarea { font-family: inherit; }
+        .estado-ok { color: #2f7a4f; font-weight: 700; }
+        .estado-falta { color: var(--coralp); font-weight: 700; }
+        .fila-btn { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .3rem; }
+        @media (max-width: 760px) { .unidad-admin { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <header class="admin-cab">
+        <div class="contenedor">
+            <div><b>Administración de la plataforma CIC</b><small>Videos, material de los cursos y grabaciones de los talleres</small></div>
+            <button type="button" id="salir" class="btn btn-borde-claro btn-pequeno" hidden>Cerrar sesión</button>
+        </div>
+    </header>
+
+    <main class="contenedor">
+        <p id="aviso-demo" class="nota" hidden>La plataforma está en modo demostración (sin Firebase configurado en config.js).</p>
+
+        <section id="vista-login" class="tarjeta admin-login" aria-labelledby="t-login">
+            <h1 id="t-login" style="font-size:1.6rem">Ingresar</h1>
+            <p class="texto-suave">Solo para la cuenta de administración. Las secretarias y dinamizadoras entran por la página principal.</p>
+            <form id="form-login" method="post" action="#" novalidate>
+                <label class="etiqueta" for="ad-correo">Correo</label>
+                <input class="campo" id="ad-correo" name="correo" type="email" autocomplete="username" required>
+                <label class="etiqueta" for="ad-clave">Contraseña</label>
+                <input class="campo" id="ad-clave" name="clave" type="password" autocomplete="current-password" required>
+                <p id="login-msj" class="mensaje" role="alert" hidden></p>
+                <button type="submit" class="btn btn-primario ancho" style="margin-top:1rem">Ingresar</button>
+                <button type="button" id="olvide" class="texto-boton" style="margin-top:.6rem">¿Olvidaste tu contraseña?</button>
+            </form>
+        </section>
+
+        <section id="vista-panel" hidden>
+            <div class="admin-tabs" role="tablist">
+                <button type="button" role="tab" aria-selected="true" data-tab="cursos">Videos y material de los cursos</button>
+                <button type="button" role="tab" aria-selected="false" data-tab="grabaciones">Grabaciones de talleres SER</button>
+            </div>
+            <div id="tab-cursos"></div>
+            <div id="tab-grabaciones" hidden></div>
+        </section>
+    </main>
+
+    <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
+
+    <script src="../config.js?v=20261012"></script>
+    <script src="../assets/datos-cic.js?v=20261012"></script>
+    <script>
+    (() => {
+        'use strict';
+        const $ = (s, r = document) => r.querySelector(s);
+        const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+        const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const CFG = window.CIC_CONFIG || {};
+        const FB = CFG.firebase || {};
+        const DATOS = window.CIC_DATOS || { satelites: [], hacer: [], ser: [] };
+        const FUNCION = CFG.funcionUrl || (FB.projectId ? `https://us-central1-${FB.projectId}.cloudfunctions.net/cicAcceso` : '');
+        let auth = null;
+        let contenido = null;
+
+        // Títulos de las unidades (los mismos de la plataforma)
+        const TITULOS = {
+            gestion: ['Introducción a la gestión de centros de innovación', 'El ecosistema emprendedor y el papel del CIC', 'Cómo opera el centro', 'La información del centro', 'Los pilares en acción'],
+            'formacion-secretaria': ['Método Insight', 'Oportunidad significativa emergente', 'Modelo de negocio Canvas', 'Producto mínimo viable y Lean Startup', 'Gestión financiera estratégica', 'Guía metodológica del facilitador'],
+            'acompanar-hacer': DATOS.hacer.map((s) => s.titulo),
+            'facilitar-ser': DATOS.ser.map((t) => t.titulo),
+        };
+        const NOMBRE_U = { gestion: 'Módulo', 'formacion-secretaria': 'Unidad', 'acompanar-hacer': 'Semana', 'facilitar-ser': 'Taller' };
+
+        let temporizador;
+        function aviso(t) { const a = $('#aviso'); a.textContent = t; a.hidden = false; clearTimeout(temporizador); temporizador = setTimeout(() => { a.hidden = true; }, 5000); }
+
+        const cargar = (src) => new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => mal(new Error('No se pudo conectar con el servicio de acceso.')); document.head.appendChild(s); });
+        async function conectar() {
+            if (auth) return auth;
+            await cargar('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
+            await cargar('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js');
+            const app = window.firebase.apps.length ? window.firebase.app() : window.firebase.initializeApp(FB);
+            auth = app.auth();
+            auth.languageCode = 'es';
+            return auth;
+        }
+        async function llamar(accion, datos = {}) {
+            const t = auth && auth.currentUser ? await auth.currentUser.getIdToken() : null;
+            const direcciones = [FUNCION, CFG.funcionAlterna].filter(Boolean);
+            let r, ultimo;
+            for (let i = 0; i < 4 && !r; i++) {
+                try { r = await fetch(direcciones[i % direcciones.length], { method: 'POST', headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) }, body: JSON.stringify({ accion, ...datos }) }); }
+                catch (e) { ultimo = e; await new Promise((ok) => setTimeout(ok, 1200)); }
+            }
+            if (!r) throw new Error('No pudimos comunicarnos con el servidor del CIC. Intenta de nuevo.');
+            const j = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(j.mensaje || 'No pudimos completar la solicitud.');
+            return j;
+        }
+
+        // ---------- Ingreso ----------
+        if (!(FB.apiKey && FB.projectId)) { $('#aviso-demo').hidden = false; $('#form-login button[type="submit"]').disabled = true; }
+        const msj = (t, ok) => { const m = $('#login-msj'); m.textContent = t; m.className = 'mensaje ' + (ok ? 'ok' : 'error'); m.hidden = !t; };
+        $('#form-login').addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            const f = ev.currentTarget, b = $('button[type="submit"]', f);
+            const correo = f.correo.value.trim(), clave = f.clave.value;
+            if (!correo || !clave) return msj('Escribe tu correo y tu contraseña.');
+            b.disabled = true; b.textContent = 'Un momento…';
+            try {
+                await conectar();
+                await auth.signInWithEmailAndPassword(correo, clave);
+                await entrar();
+            } catch (e) { msj(/password|credential|user/i.test(e.code || '') ? 'El correo o la contraseña no coinciden.' : e.message); }
+            finally { b.disabled = false; b.textContent = 'Ingresar'; }
+        });
+        $('#olvide').addEventListener('click', async () => {
+            const correo = $('#ad-correo').value.trim();
+            if (!correo) return msj('Escribe tu correo arriba y vuelve a tocar «¿Olvidaste tu contraseña?».');
+            try { await conectar(); await auth.sendPasswordResetEmail(correo); } catch (e) { /* misma respuesta siempre */ }
+            msj('Si ese correo es de una cuenta de administración, te llegó un enlace para crear una contraseña nueva.', true);
+        });
+        $('#salir').addEventListener('click', async () => { if (auth) await auth.signOut(); location.reload(); });
+
+        async function entrar() {
+            const { perfil } = await llamar('mi-perfil');
+            if (!perfil || perfil.rol !== 'administradora') { await auth.signOut(); throw new Error('Esta cuenta no tiene permisos de administración.'); }
+            $('#vista-login').hidden = true;
+            $('#vista-panel').hidden = false;
+            $('#salir').hidden = false;
+            await recargar();
+        }
+        (async () => {
+            if (!(FB.apiKey && FB.projectId)) return;
+            try {
+                await conectar();
+                const u = await new Promise((ok) => { const fin = auth.onAuthStateChanged((x) => { fin(); ok(x); }); });
+                if (u) await entrar();
+            } catch (e) { /* queda en el ingreso */ }
+        })();
+
+        // ---------- Pestañas ----------
+        $$('[data-tab]').forEach((b) => b.addEventListener('click', () => {
+            $$('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+            $('#tab-cursos').hidden = b.dataset.tab !== 'cursos';
+            $('#tab-grabaciones').hidden = b.dataset.tab !== 'grabaciones';
+        }));
+
+        async function recargar() {
+            contenido = await llamar('admin-contenido');
+            pintarCursos();
+            pintarGrabaciones();
+        }
+
+        // ---------- Videos y material de cada unidad ----------
+        const lineasMaterial = (archivos) => archivos.map((a) => `${a.nombre} | ${a.url}`).join('\n');
+        const leerMaterial = (txt) => txt.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => {
+            const i = l.lastIndexOf('|');
+            return i > 0 ? { nombre: l.slice(0, i).trim(), url: l.slice(i + 1).trim() } : { nombre: 'Material', url: l };
+        });
+        const enlaceVideo = (v) => !v ? '' : v.drive_id ? `https://drive.google.com/file/d/${v.drive_id}/view` : `https://youtu.be/${v.youtube_id}`;
+
+        function pintarCursos() {
+            $('#tab-cursos').innerHTML = `
+                <p class="vista-intro">Pega el enlace de cada video de Google Drive (compártelo como «Cualquier persona con el enlace · Lector») y su duración en minutos: la evaluación se habilita cuando la persona lleva al menos el 90 % de ese tiempo con el video abierto. En el material, escribe una línea por archivo: <b>Nombre | enlace</b>.</p>
+                ${Object.entries(contenido.cursos).map(([id, c]) => {
+                    const conVideo = c.unidades.filter((u) => u.video).length;
+                    return `<details class="curso-admin" ${id === 'gestion' ? 'open' : ''}>
+                        <summary><span>${esc(c.nombre)}</span><small>${conVideo} de ${c.unidades.length} videos · ${c.unidades.filter((u) => u.material.length).length} con material</small></summary>
+                        ${c.unidades.map((u) => `<div class="unidad-admin" data-curso="${esc(id)}" data-unidad="${u.unidad}">
+                            <h4><span class="codigo">${esc(u.codigo)}</span> ${esc(NOMBRE_U[id])} ${u.unidad} · ${esc((TITULOS[id] || [])[u.unidad - 1] || '')}
+                                ${c.cuestionario ? `<small class="${u.preguntas ? 'estado-ok' : 'estado-falta'}">${u.preguntas ? `${u.preguntas} preguntas en el banco` : 'sin preguntas cargadas'}</small>` : '<small class="texto-suave">sin cuestionario (se aprueba con la actividad)</small>'}</h4>
+                            <form class="form-video" novalidate>
+                                <b>Video ${u.video ? '<span class="estado-ok">· publicado</span>' : '<span class="estado-falta">· falta</span>'}</b>
+                                <label class="etiqueta" for="v-${esc(u.codigo)}">Enlace de Google Drive (o YouTube)</label>
+                                <input class="campo" id="v-${esc(u.codigo)}" name="url" type="url" placeholder="https://drive.google.com/file/d/…/view" value="${esc(enlaceVideo(u.video))}">
+                                <label class="etiqueta" for="d-${esc(u.codigo)}">Duración (minutos)</label>
+                                <input class="campo" id="d-${esc(u.codigo)}" name="duracion" type="number" min="1" max="300" value="${esc(u.video ? u.video.duracion_min || '' : '')}">
+                                <div class="fila-btn"><button type="submit" class="btn btn-primario btn-pequeno">Guardar video</button>${u.video ? '<button type="button" class="btn btn-borde btn-pequeno" data-quitar-video>Quitar</button>' : ''}</div>
+                            </form>
+                            <form class="form-material" novalidate>
+                                <b>Material ${u.material.length ? `<span class="estado-ok">· ${u.material.length} archivo(s)</span>` : '<span class="estado-falta">· falta</span>'}</b>
+                                <label class="etiqueta" for="m-${esc(u.codigo)}">Una línea por archivo: Nombre | enlace</label>
+                                <textarea class="campo" id="m-${esc(u.codigo)}" name="material" rows="4" placeholder="Guía de estudio | https://drive.google.com/…">${esc(lineasMaterial(u.material))}</textarea>
+                                <div class="fila-btn"><button type="submit" class="btn btn-primario btn-pequeno">Guardar material</button></div>
+                            </form>
+                        </div>`).join('')}
+                    </details>`;
+                }).join('')}`;
+        }
+
+        $('#tab-cursos').addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            const f = ev.target, caja = f.closest('.unidad-admin');
+            const curso = caja.dataset.curso, unidad = Number(caja.dataset.unidad);
+            const c = contenido.cursos[curso];
+            const b = $('button[type="submit"]', f);
+            b.disabled = true;
+            try {
+                if (f.classList.contains('form-video')) {
+                    const duracion = Number(f.duracion.value);
+                    if (!f.url.value.trim()) throw new Error('Pega el enlace del video.');
+                    if (!duracion) throw new Error('Escribe la duración del video en minutos.');
+                    await llamar('guardar-video', { video: { codigo: `${c.prefijo}${unidad}`, titulo: `${c.nombre} · ${NOMBRE_U[curso]} ${unidad}: ${(TITULOS[curso] || [])[unidad - 1] || ''}`, url: f.url.value.trim(), duracion_min: duracion, audiencia: 'equipo', curso, unidad } });
+                    aviso(`Video ${c.prefijo}${unidad} guardado.`);
+                } else {
+                    await llamar('admin-guardar-material', { curso, unidad, archivos: leerMaterial(f.material.value) });
+                    aviso(`Material de ${c.prefijo}${unidad} guardado.`);
+                }
+                await recargar();
+            } catch (e) { aviso(e.message); b.disabled = false; }
+        });
+        $('#tab-cursos').addEventListener('click', async (ev) => {
+            const b = ev.target.closest('[data-quitar-video]');
+            if (!b) return;
+            const caja = b.closest('.unidad-admin');
+            const codigo = `${contenido.cursos[caja.dataset.curso].prefijo}${caja.dataset.unidad}`;
+            if (!confirm(`¿Quitar el video ${codigo} de la plataforma? El archivo sigue en Drive.`)) return;
+            try { await llamar('quitar-video', { codigo }); aviso(`Video ${codigo} quitado.`); await recargar(); } catch (e) { aviso(e.message); }
+        });
+
+        // ---------- Grabaciones de los talleres virtuales (las ven las emprendedoras de ese satélite) ----------
+        function pintarGrabaciones() {
+            const virtuales = DATOS.ser.filter((t) => t.modalidad === 'Virtual');
+            $('#tab-grabaciones').innerHTML = `
+                <p class="vista-intro">Las grabaciones de los talleres virtuales aparecen en el panel de las emprendedoras del satélite elegido (o de todos).</p>
+                <form id="form-grab" class="tarjeta" novalidate style="display:grid;gap:.4rem;max-width:40rem">
+                    <label class="etiqueta" for="g-taller">Taller</label>
+                    <select class="campo" id="g-taller" name="taller">${virtuales.map((t) => `<option value="${t.n}">Taller SER ${t.n} · ${esc(t.titulo)}</option>`).join('')}</select>
+                    <label class="etiqueta" for="g-sat">Satélite</label>
+                    <select class="campo" id="g-sat" name="satelite"><option value="">Todos los satélites</option>${DATOS.satelites.map((s) => `<option value="${esc(s.id)}">${esc(s.nombre)}</option>`).join('')}</select>
+                    <label class="etiqueta" for="g-fecha">Fecha del taller</label>
+                    <input class="campo" id="g-fecha" name="fecha" type="date" required>
+                    <label class="etiqueta" for="g-url">Enlace de Google Drive (o YouTube)</label>
+                    <input class="campo" id="g-url" name="url" type="url" placeholder="https://drive.google.com/file/d/…/view" required>
+                    <label class="etiqueta" for="g-dur">Duración (minutos)</label>
+                    <input class="campo" id="g-dur" name="duracion" type="number" min="1" max="300">
+                    <button type="submit" class="btn btn-primario" style="margin-top:.6rem">Publicar grabación</button>
+                </form>
+                <h3 class="subtitulo-seccion">Publicadas</h3>
+                ${contenido.grabaciones.length ? `<ul class="lista-videos">${contenido.grabaciones.map((g) => `<li><span class="codigo">${esc(g.codigo)}</span><span><b>${esc(g.titulo)}</b><small>${esc(g.fecha || '')}</small></span><a class="enlace" href="${esc(enlaceVideo(g))}" target="_blank" rel="noopener">Ver</a><button type="button" class="boton-texto" data-quitar-grab="${esc(g.codigo)}">Quitar</button></li>`).join('')}</ul>` : '<p class="tarjeta vacio">Todavía no hay grabaciones.</p>'}`;
+        }
+        $('#tab-grabaciones').addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            const f = ev.target;
+            const t = DATOS.ser[Number(f.taller.value) - 1];
+            const sat = DATOS.satelites.find((s) => s.id === f.satelite.value);
+            if (!f.fecha.value || !f.url.value.trim()) return aviso('Escribe la fecha y pega el enlace de la grabación.');
+            const codigo = `GRAB-SER${t.n}-${sat ? sat.codigo : 'TODOS'}-${f.fecha.value.replace(/-/g, '')}`;
+            try {
+                await llamar('guardar-video', { video: { codigo, titulo: `Grabación · Taller SER ${t.n} · ${t.titulo}${sat ? ` · ${sat.nombre}` : ''}`, url: f.url.value.trim(), duracion_min: Number(f.duracion.value) || null, audiencia: 'emprendedoras', curso: 'grabaciones', unidad: t.n, satelite: sat ? sat.id : null, fecha: f.fecha.value } });
+                aviso(`Grabación ${codigo} publicada.`);
+                await recargar();
+            } catch (e) { aviso(e.message); }
+        });
+        $('#tab-grabaciones').addEventListener('click', async (ev) => {
+            const b = ev.target.closest('[data-quitar-grab]');
+            if (!b || !confirm(`¿Quitar la grabación ${b.dataset.quitarGrab}?`)) return;
+            try { await llamar('quitar-video', { codigo: b.dataset.quitarGrab }); aviso('Grabación quitada.'); await recargar(); } catch (e) { aviso(e.message); }
+        });
+    })();
+    </script>
+</body>
+</html>

@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261011">
+    <link rel="stylesheet" href="assets/cic.css?v=20261012">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -539,12 +539,10 @@
             <div class="pestanas" role="tablist" id="pestanas-plataforma" aria-label="Secciones de la plataforma">
                 <button type="button" class="pestana" role="tab" id="tab-cursos" aria-controls="vista-cursos" data-vista="cursos">Mis talleres</button>
                 <button type="button" class="pestana" role="tab" id="tab-seguimiento" aria-controls="vista-seguimiento" data-vista="seguimiento">Seguimiento</button>
-                <button type="button" class="pestana" role="tab" id="tab-videos" aria-controls="vista-videos" data-vista="videos" hidden>Videos</button>
                 <button type="button" class="pestana" role="tab" id="tab-cuenta" aria-controls="vista-cuenta" data-vista="cuenta">Mi cuenta</button>
             </div>
             <section id="vista-cursos" class="vista" role="tabpanel" aria-labelledby="tab-cursos"></section>
             <section id="vista-seguimiento" class="vista" role="tabpanel" aria-labelledby="tab-seguimiento" hidden></section>
-            <section id="vista-videos" class="vista" role="tabpanel" aria-labelledby="tab-videos" hidden></section>
             <section id="vista-cuenta" class="vista" role="tabpanel" aria-labelledby="tab-cuenta" hidden></section>
         </div>
     </main>
@@ -680,10 +678,10 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261011"></script>
-    <script src="assets/datos-cic.js?v=20261011"></script>
-    <script src="assets/sitio.js?v=20261011"></script>
-    <script src="assets/cursos-equipo.js?v=20261011"></script>
+    <script src="./config.js?v=20261012"></script>
+    <script src="assets/datos-cic.js?v=20261012"></script>
+    <script src="assets/sitio.js?v=20261012"></script>
+    <script src="assets/cursos-equipo.js?v=20261012"></script>
     <script>
     (() => {
         'use strict';
@@ -1045,16 +1043,14 @@
             $('#bienvenida-rol').textContent = [ROL[perfil.rol].nombre, sat ? `Satélite ${sat.nombre}` : perfil.departamento].filter(Boolean).join(' · ');
             $('#bienvenida-titulo').textContent = `Hola, ${primerNombre(perfil.nombre)}`;
             $('#bienvenida-texto').textContent = esEquipo()
-                ? (perfil.rol === 'secretaria' ? 'Tus cursos, el seguimiento de los 8 satélites y los videos de la plataforma.' : 'Tus cursos para acompañar las rutas HACER y SER, y las emprendedoras de tu satélite.')
+                ? (perfil.rol === 'secretaria' ? 'Tus cursos, el seguimiento de los 8 satélites y la revisión de evidencias del equipo.' : 'Tus cursos para acompañar las rutas HACER y SER, y las emprendedoras de tu satélite.')
                 : `Tu próximo taller es el SER ${proximoTaller().n}: «${proximoTaller().titulo}».`;
             $('#aviso-clave').hidden = !perfil.debe_cambiar_clave;
             $('#tab-cursos').textContent = esEquipo() ? 'Mis cursos' : 'Mis talleres';
             $('#tab-seguimiento').hidden = !esEquipo();
-            $('#tab-videos').hidden = perfil.rol !== 'secretaria';
             $('#continuar').hidden = true;
             if (esEquipo()) pintarCursos(); else pintarSemana();
             if (esEquipo()) pintarSeguimiento();
-            if (perfil.rol === 'secretaria') pintarVideos();
             pintarCuenta();
             ir('cursos', false);
             window.scrollTo(0, 0);
@@ -1078,7 +1074,7 @@
             aviso('Cerraste tu sesión.');
         });
 
-        const VISTAS = ['cursos', 'seguimiento', 'videos', 'cuenta'];
+        const VISTAS = ['cursos', 'seguimiento', 'cuenta'];
         const visibles = () => VISTAS.filter((v) => !$(`#tab-${v}`).hidden);
         function ir(vista, enfocar = true) {
             VISTAS.forEach((v) => {
@@ -1321,108 +1317,6 @@
                 const b = e.target.closest('[data-restablecer]');
                 if (b) window.CICCursos.generarCodigo(b.dataset.restablecer, b.dataset.nombre, contextoCursos(), b.dataset.celular);
             });
-        }
-
-        // ---------- Videos (Secretaría Técnica): publicar y quitar ----------
-        const TALLERES_GRABADOS = DATOS.ser.filter((t) => t.modalidad === 'Virtual');
-        function codigoVideo(f) {
-            if (f.tipo.value === 'equipo') return codigoModulo(f.curso.value, Number(f.unidad.value));
-            const sat = satelite(f.satelite.value);
-            return `GRAB-SER${f.taller.value}-${sat ? sat.codigo : 'TODOS'}-${(f.fecha.value || '').replace(/-/g, '')}`;
-        }
-        function tituloVideo(f) {
-            if (f.tipo.value === 'equipo') return `${CURSOS[f.curso.value].titulo} · ${CURSOS[f.curso.value].modulos[Number(f.unidad.value)][0]}`;
-            const t = DATOS.ser[Number(f.taller.value) - 1];
-            const sat = satelite(f.satelite.value);
-            return `Grabación · Taller SER ${t.n} · ${t.titulo}${sat ? ` · ${sat.nombre}` : ''}`;
-        }
-        async function pintarVideos() {
-            const v = $('#vista-videos');
-            let lista = [];
-            try { lista = await traerVideos(); } catch (e) { v.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; return; }
-            v.innerHTML = `
-                <h2>Videos de la plataforma</h2>
-                <p class="vista-intro">Sube el video a YouTube como «No listado» (o a Google Drive, compartido como «Cualquier persona con el enlace»), copia su enlace y pégalo aquí. El código se arma solo y sigue la convención de <a class="enlace" href="https://github.com/centrodeinnovacioncomunitaria-hub/LSM_CIC/blob/main/GUIA_VIDEOS.md" target="_blank" rel="noopener">la guía de videos</a>.</p>
-                <div class="rejilla r2" style="align-items:start">
-                    <form id="form-video" class="tarjeta" novalidate>
-                        <h3 style="font-size:1.2rem">Publicar un video</h3>
-                        <label class="etiqueta" for="vi-tipo">Para quién es</label>
-                        <select class="campo" id="vi-tipo" name="tipo"><option value="equipo">Curso del equipo (dinamizadoras y Secretaría)</option><option value="emprendedoras">Grabación de un taller (emprendedoras)</option></select>
-                        <div data-para="equipo">
-                            <div class="dos-campos">
-                                <div><label class="etiqueta" for="vi-curso">Curso</label><select class="campo" id="vi-curso" name="curso">${CURSOS_EQUIPO.map((id) => `<option value="${id}">${esc(CURSOS[id].titulo)}</option>`).join('')}</select></div>
-                                <div><label class="etiqueta" for="vi-unidad">Módulo</label><select class="campo" id="vi-unidad" name="unidad"></select></div>
-                            </div>
-                        </div>
-                        <div data-para="emprendedoras" hidden>
-                            <div class="dos-campos">
-                                <div><label class="etiqueta" for="vi-taller">Taller</label><select class="campo" id="vi-taller" name="taller">${TALLERES_GRABADOS.map((t) => `<option value="${t.n}">SER ${t.n} · ${esc(t.titulo)}</option>`).join('')}</select></div>
-                                <div><label class="etiqueta" for="vi-satelite">Satélite</label><select class="campo" id="vi-satelite" name="satelite"><option value="">Todos los satélites</option>${SATELITES.map((s) => `<option value="${s.id}">${esc(s.nombre)}</option>`).join('')}</select></div>
-                            </div>
-                            <label class="etiqueta" for="vi-fecha">Fecha del taller</label>
-                            <input class="campo" id="vi-fecha" name="fecha" type="date">
-                        </div>
-                        <label class="etiqueta" for="vi-url">Enlace de YouTube o de Google Drive</label>
-                        <input class="campo" id="vi-url" name="url" inputmode="url" placeholder="https://youtu.be/…" required>
-                        <div class="dos-campos">
-                            <div><label class="etiqueta" for="vi-duracion">Duración (minutos)</label><input class="campo" id="vi-duracion" name="duracion" inputmode="numeric" maxlength="3"></div>
-                            <div><span class="etiqueta">Código</span><p class="codigo-vista" id="vi-codigo"></p></div>
-                        </div>
-                        <p id="vi-mensaje" class="mensaje" role="alert" hidden></p>
-                        <button type="submit" class="btn btn-primario ancho">Publicar video</button>
-                    </form>
-                    <div>
-                        <h3 style="font-size:1.2rem;margin-bottom:.8rem">Publicados (${lista.length})</h3>
-                        ${lista.length ? `<ul class="lista-videos">${lista.map((x) => `<li><span class="codigo">${esc(x.codigo)}</span><span><b>${esc(x.titulo)}</b><small>${x.audiencia === 'equipo' ? 'Equipo' : 'Emprendedoras'}${x.duracion_min ? ` · ${esc(x.duracion_min)} min` : ''}</small></span><a class="enlace" href="${esc(verVideo(x))}" target="_blank" rel="noopener">Ver</a><button type="button" class="boton-texto" data-quitar="${esc(x.codigo)}">Quitar</button></li>`).join('')}</ul>` : '<p class="tarjeta vacio">Todavía no hay videos publicados.</p>'}
-                    </div>
-                </div>`;
-            const f = $('#form-video');
-            const unidades = () => { f.unidad.innerHTML = CURSOS[f.curso.value].modulos.map(([t], i) => `<option value="${i}">${esc(codigoModulo(f.curso.value, i))} · ${esc(t)}</option>`).join(''); };
-            const refrescar = () => {
-                $$('[data-para]', f).forEach((d) => { d.hidden = d.dataset.para !== f.tipo.value; });
-                $('#vi-codigo').textContent = codigoVideo(f);
-            };
-            unidades(); refrescar();
-            f.curso.addEventListener('change', () => { unidades(); refrescar(); });
-            f.addEventListener('change', refrescar);
-            f.addEventListener('submit', async (ev) => {
-                ev.preventDefault();
-                const m = $('#vi-mensaje');
-                const decir = (t, ok) => { m.textContent = t; m.className = 'mensaje ' + (ok ? 'ok' : 'error'); m.hidden = false; };
-                const yt = idYoutube(f.url.value);
-                const dr = yt ? null : idDrive(f.url.value);
-                if (!yt && !dr) return decir('Pega el enlace del video de YouTube (https://youtu.be/…) o de Google Drive (https://drive.google.com/file/d/…).');
-                if (f.tipo.value === 'emprendedoras' && !f.fecha.value) return decir('Escribe la fecha del taller.');
-                const fila = {
-                    codigo: codigoVideo(f), titulo: tituloVideo(f), youtube_id: yt, drive_id: dr,
-                    duracion_min: Number(soloDigitos(f.duracion.value)) || null,
-                    audiencia: f.tipo.value, curso: f.tipo.value === 'equipo' ? f.curso.value : 'grabaciones',
-                    unidad: f.tipo.value === 'equipo' ? Number(f.unidad.value) + 1 : Number(f.taller.value),
-                    satelite: f.tipo.value === 'emprendedoras' ? (f.satelite.value || null) : null,
-                    fecha: f.tipo.value === 'emprendedoras' ? f.fecha.value : null,
-                };
-                try {
-                    if (DEMO) {
-                        const l = (leer(sessionStorage, 'cic-demo-videos') || []).filter((x) => x.codigo !== fila.codigo);
-                        guardar(sessionStorage, 'cic-demo-videos', [...l, fila].sort((a, b) => a.codigo.localeCompare(b.codigo)));
-                    } else {
-                        await llamar('guardar-video', { video: fila }, true);
-                    }
-                    aviso(`Video ${fila.codigo} publicado.${DEMO ? ' (demostración: solo en esta pestaña)' : ''}`);
-                    pintarVideos();
-                    pintarCursos();
-                } catch (e) { decir(e.message); }
-            });
-            $$('[data-quitar]', v).forEach((b) => b.addEventListener('click', async () => {
-                if (!confirm(`¿Quitar el video ${b.dataset.quitar} de la plataforma? El archivo sigue existiendo en YouTube o Drive.`)) return;
-                try {
-                    if (DEMO) guardar(sessionStorage, 'cic-demo-videos', (leer(sessionStorage, 'cic-demo-videos') || []).filter((x) => x.codigo !== b.dataset.quitar));
-                    else await llamar('quitar-video', { codigo: b.dataset.quitar }, true);
-                    aviso(`Video ${b.dataset.quitar} quitado.`);
-                    pintarVideos();
-                    pintarCursos();
-                } catch (e) { aviso(e.message); }
-            }));
         }
 
         // ---------- Mi cuenta ----------

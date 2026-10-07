@@ -156,8 +156,19 @@ function cuentasFalsas() {
   p = await ok('hito', { hito: 'compromiso' }, tDina);
   assert.equal(p.cursos.gestion[0].estado, 'disponible');
   await falla('cuestionario', { curso: 'gestion', unidad: 1 }, tDina, 403);
+  // Ver el material sin marcarlo (la lección lo muestra) no cuenta como repasado
+  assert.equal((await ok('material', { curso: 'gestion', unidad: 1, marcar: false }, tDina)).archivos.length, 1);
+  assert.equal((await ok('mi-progreso', {}, tDina)).cursos.gestion[0].material_visto, false);
   assert.equal((await ok('material', { curso: 'gestion', unidad: 1 }, tDina)).archivos.length, 1);
   await falla('cuestionario', { curso: 'gestion', unidad: 1 }, tDina, 403); // falta el video
+  // El video solo cuenta tras el tiempo mínimo desde que se reprodujo (sin duración cargada: 2 minutos)
+  await falla('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tDina, 400);
+  p = await ok('iniciar-video', { curso: 'gestion', unidad: 1 }, tDina);
+  assert.equal(p.cursos.gestion[0].video_faltan, 120);
+  avanzar(1);
+  const temprano = await falla('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tDina, 400);
+  assert.equal(temprano.faltan, 60);
+  avanzar(1);
   await ok('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tDina);
   // Pierde los dos intentos → pausa → repasa video y material → segunda ronda
   for (let i = 0; i < 2; i++) {
@@ -172,6 +183,11 @@ function cuentasFalsas() {
   assert.equal(p.cursos.gestion[0].estado, 'pausada');
   await falla('cuestionario', { curso: 'gestion', unidad: 1 }, tDina, 403);
   avanzar(1);
+  p = await ok('mi-progreso', {}, tDina);
+  assert.equal(p.cursos.gestion[0].video_visto, false, 'tras la pausa hay que volver a ver el video');
+  await falla('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tDina, 400);
+  await ok('iniciar-video', { curso: 'gestion', unidad: 1 }, tDina);
+  avanzar(2);
   await ok('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tDina);
   p = await ok('marcar', { curso: 'gestion', unidad: 1, que: 'material' }, tDina);
   assert.equal(p.cursos.gestion[0].estado, 'en-curso');
@@ -220,7 +236,8 @@ function cuentasFalsas() {
   await ok('hito', { hito: 'compromiso' }, tSara);
   for (let u = 1; u <= 5; u++) {
     await ok('material', { curso: 'gestion', unidad: u }, tSara);
-    await ok('marcar', { curso: 'gestion', unidad: u, que: 'video' }, tSara);
+    if (u === 1) { await ok('iniciar-video', { curso: 'gestion', unidad: 1 }, tSara); avanzar(2); await ok('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tSara); }
+    else await falla('marcar', { curso: 'gestion', unidad: u, que: 'video' }, tSara, 400); // sin video
     const c = await ok('cuestionario', { curso: 'gestion', unidad: u }, tSara);
     await ok('responder', { id: c.id, respuestas: [0, 0, 0, 0, 0] }, tSara);
     await ok('entregar', { curso: 'gestion', unidad: u, texto: 'Evidencia de la unidad con suficiente detalle.' }, tSara);
@@ -248,13 +265,28 @@ function cuentasFalsas() {
   paso('Panel de la Secretaría: avance del equipo y revisión de evidencias');
 
   // ---------- Videos ----------
+  // Solo la administradora (rol aparte) publica videos y material; la Secretaría ya no.
+  const tAdmin = await cuentas.crear({ email: 'admin@correo.co', clave: 'AdminClave2026', nombre: 'Administración' });
+  await db.collection('perfiles').doc(tAdmin).set({ cedula: 'admin', nombre: 'Administración', rol: 'administradora', cuenta_email: 'admin@correo.co' });
   await falla('guardar-video', { video: { codigo: 'GES-M2', youtube_id: 'abcdefghijk' } }, tDina, 403);
-  await ok('guardar-video', { video: { codigo: 'GES-M2', titulo: 'Módulo 2', youtube_id: 'abcdefghijk', audiencia: 'equipo', curso: 'gestion', unidad: 2 } }, tSara);
-  await ok('guardar-video', { video: { codigo: 'GRAB-SER2-MAG-20261015', titulo: 'Taller 2', drive_id: 'abcdefghijklmnopqrstuvwxyz', audiencia: 'emprendedoras', curso: 'grabaciones', unidad: 2, satelite: 'magdalena' } }, tSara);
+  await falla('guardar-video', { video: { codigo: 'GES-M2', youtube_id: 'abcdefghijk' } }, tSara, 403);
+  await falla('admin-contenido', {}, tSara, 403);
+  const gv = await ok('guardar-video', { video: { codigo: 'GES-M2', titulo: 'Módulo 2', url: 'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view?usp=sharing', duracion_min: 20, audiencia: 'equipo', curso: 'gestion', unidad: 2 } }, tAdmin);
+  assert.equal(gv.video.drive_id, '1AbCdEfGhIjKlMnOpQrStUvWxYz012345');
+  await ok('guardar-video', { video: { codigo: 'GRAB-SER2-MAG-20261015', titulo: 'Taller 2', drive_id: 'abcdefghijklmnopqrstuvwxyz', audiencia: 'emprendedoras', curso: 'grabaciones', unidad: 2, satelite: 'magdalena' } }, tAdmin);
+  await falla('admin-guardar-material', { curso: 'gestion', unidad: 2, archivos: [{ nombre: 'Guía', url: 'http://no-seguro' }] }, tAdmin, 400);
+  await ok('admin-guardar-material', { curso: 'gestion', unidad: 2, archivos: [{ nombre: 'Guía del módulo 2', url: 'https://drive.google.com/file/d/x/view' }] }, tAdmin);
+  const ac = await ok('admin-contenido', {}, tAdmin);
+  assert.equal(ac.cursos.gestion.unidades[1].video.duracion_min, 20);
+  assert.equal(ac.cursos.gestion.unidades[1].material[0].nombre, 'Guía del módulo 2');
+  assert.equal(ac.cursos.gestion.unidades[0].preguntas, 10);
+  assert.equal(ac.grabaciones.length, 1);
+  assert.equal((await ok('mi-progreso', {}, tDina)).cursos.gestion[1].video_segundos, 1080, 'el 90 % de 20 minutos');
   assert.equal((await ok('videos', {}, tDina)).videos.length, 3);
   assert.deepEqual((await ok('videos', {}, tRosa)).videos.map((v) => v.codigo), ['GRAB-SER2-MAG-20261015']);
-  await ok('quitar-video', { codigo: 'GES-M2' }, tSara);
-  paso('Videos: la Secretaría publica (YouTube o Drive); cada quien ve solo los suyos');
+  await falla('quitar-video', { codigo: 'GES-M2' }, tSara, 403);
+  await ok('quitar-video', { codigo: 'GES-M2' }, tAdmin);
+  paso('Administradora: publica videos (Drive o YouTube) y material; la Secretaría ya no; cada quien ve solo los suyos');
 
   // ---------- Mi cuenta ----------
   await falla('cambiar-clave', { clave_actual: 'mala', clave_nueva: 'OtraClave2026' }, tDina, 401);
