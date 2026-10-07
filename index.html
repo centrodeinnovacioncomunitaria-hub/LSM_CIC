@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>CIC · Aprende y haz crecer tu negocio en el Caribe</title>
-    <meta name="description" content="La plataforma del Centro de Innovación Comunitaria: tu semana, tu dinamizadora y tus guías para descargar. Para mujeres emprendedoras del Caribe colombiano y su equipo.">
+    <meta name="description" content="La plataforma del Centro de Innovación Comunitaria: talleres para mujeres emprendedoras del Caribe colombiano y cursos para su equipo de acompañamiento.">
     <link rel="canonical" href="https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/">
     <meta name="theme-color" content="#2E4A3E">
     <meta property="og:type" content="website">
@@ -152,20 +152,20 @@
                     <p class="eyebrow">Emprender es florecer</p>
                     <h1 id="titulo-inicio">Aprende, organiza y haz crecer <em>tu negocio.</em></h1>
                     <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
-                    <p class="heroe-texto">La plataforma del Centro de Innovación Comunitaria: tu semana, tu dinamizadora y tus guías en un solo lugar, para las emprendedoras del Caribe colombiano.</p>
+                    <p class="heroe-texto">La plataforma del Centro de Innovación Comunitaria: tus talleres, tu dinamizadora y tus guías en un solo lugar, para las emprendedoras del Caribe colombiano.</p>
 
                     <div class="roles">
                         <p class="roles-titulo" id="quien-eres">¿Quién eres?</p>
                         <div class="roles-tabs" role="tablist" aria-labelledby="quien-eres">
-                            <button type="button" class="rol-tab" role="tab" id="rol-emprendedora" aria-controls="panel-emprendedora" aria-selected="true"><b>Soy emprendedora</b><small>Tu semana y tus guías</small></button>
+                            <button type="button" class="rol-tab" role="tab" id="rol-emprendedora" aria-controls="panel-emprendedora" aria-selected="true"><b>Soy emprendedora</b><small>Tus talleres y sus guías</small></button>
                             <button type="button" class="rol-tab" role="tab" id="rol-dinamizadora" aria-controls="panel-dinamizadora" aria-selected="false" tabindex="-1"><b>Soy dinamizadora</b><small>Cursos para acompañar</small></button>
                             <button type="button" class="rol-tab" role="tab" id="rol-secretaria" aria-controls="panel-secretaria" aria-selected="false" tabindex="-1"><b>Soy secretaria</b><small>Cursos y seguimiento</small></button>
                         </div>
                         <div class="rol-panel" role="tabpanel" id="panel-emprendedora" aria-labelledby="rol-emprendedora">
                             <ol class="pasos">
                                 <li>Inscríbete con tu cédula, tu celular y tu municipio.</li>
-                                <li>Cada semana verás qué toca y quién es tu dinamizadora.</li>
-                                <li>Descarga tus guías y plantillas: se llenan sin internet.</li>
+                                <li>Verás tu próximo taller, tu satélite y quién es tu dinamizadora.</li>
+                                <li>Descarga la guía de cada taller y mira las grabaciones de los virtuales.</li>
                             </ol>
                             <div class="botones">
                                 <button type="button" class="btn btn-primario" data-abrir="registro">Inscribirme</button>
@@ -175,8 +175,8 @@
                         <div class="rol-panel" role="tabpanel" id="panel-dinamizadora" aria-labelledby="rol-dinamizadora" hidden>
                             <ol class="pasos">
                                 <li>La primera vez, activa tu cuenta con el código de 6 números que te llega al correo o te envía la Secretaría Técnica.</li>
-                                <li>Antes de cada sesión, mira el video del módulo y su material.</li>
-                                <li>Lleva la semana de cada emprendedora de tu satélite.</li>
+                                <li>Confirma tu compromiso y aprueba Gestión del CIC, módulo a módulo.</li>
+                                <li>Tras la transferencia con la Secretaría se abren Acompañar HACER y Facilitar SER.</li>
                             </ol>
                             <div class="botones">
                                 <button type="button" class="btn btn-primario" data-abrir="ingresar" data-perfil="dinamizadora">Ingresar</button>
@@ -186,8 +186,8 @@
                         <div class="rol-panel" role="tabpanel" id="panel-secretaria" aria-labelledby="rol-secretaria" hidden>
                             <ol class="pasos">
                                 <li>La primera vez, activa tu cuenta con el código de 6 números que te llega al correo o te envía la Secretaría Técnica.</li>
-                                <li>Sigue el avance de los 8 satélites y de cada emprendedora.</li>
-                                <li>Publica los videos de los cursos y las grabaciones de los talleres.</li>
+                                <li>Aprueba Gestión del CIC y luego tu Formación de la Secretaría Técnica.</li>
+                                <li>Sigue el avance del equipo, revisa evidencias y registra las transferencias.</li>
                             </ol>
                             <div class="botones">
                                 <button type="button" class="btn btn-primario" data-abrir="ingresar" data-perfil="secretaria">Ingresar</button>
@@ -490,7 +490,7 @@
         </section>
         <div class="contenedor">
             <div class="pestanas" role="tablist" id="pestanas-plataforma" aria-label="Secciones de la plataforma">
-                <button type="button" class="pestana" role="tab" id="tab-cursos" aria-controls="vista-cursos" data-vista="cursos">Mi semana</button>
+                <button type="button" class="pestana" role="tab" id="tab-cursos" aria-controls="vista-cursos" data-vista="cursos">Mis talleres</button>
                 <button type="button" class="pestana" role="tab" id="tab-seguimiento" aria-controls="vista-seguimiento" data-vista="seguimiento">Seguimiento</button>
                 <button type="button" class="pestana" role="tab" id="tab-videos" aria-controls="vista-videos" data-vista="videos" hidden>Videos</button>
                 <button type="button" class="pestana" role="tab" id="tab-cuenta" aria-controls="vista-cuenta" data-vista="cuenta">Mi cuenta</button>
@@ -707,6 +707,16 @@
             'facilitar-ser': { titulo: 'Facilitar la ruta SER', color: 'bg-lavanda', prefijo: 'SER-T', meta: '4 talleres en grupo', pagina: 'cursos/facilitar-ser/', ancla: 'taller',
                 modulos: DATOS.ser.map((t) => [`Taller ${t.n} · ${t.titulo}`, t.modalidad]) },
         };
+        // Formación de la Secretaría Técnica: guías y presentaciones de la transferencia (carpeta del Drive)
+        CURSOS['formacion-secretaria'] = { titulo: 'Formación de la Secretaría Técnica', color: 'bg-mantequilla', prefijo: 'STF-U', meta: '6 unidades · guías y presentaciones de la transferencia', pagina: null, ancla: 'unidad',
+            modulos: [
+                ['Unidad 1 · Método Insight', 'Descubrir las necesidades reales de la emprendedora y convertirlas en oportunidades.'],
+                ['Unidad 2 · Oportunidad significativa emergente', 'Reconocer oportunidades de negocio con sentido en el territorio.'],
+                ['Unidad 3 · Modelo de negocio Canvas', 'Describir y ajustar el modelo de negocio en nueve bloques.'],
+                ['Unidad 4 · Producto mínimo viable y Lean Startup', 'Diseñar y validar una idea con poca plata y mucho aprendizaje.'],
+                ['Unidad 5 · Gestión financiera estratégica', 'Finanzas del negocio para la autonomía económica.'],
+                ['Unidad 6 · Guía metodológica del facilitador', 'Cómo facilitar y transferir estas metodologías a las dinamizadoras.'],
+            ] };
         const CURSOS_EQUIPO = ['gestion', 'acompanar-hacer', 'facilitar-ser'];
         const codigoModulo = (id, i) => `${CURSOS[id].prefijo}${i + 1}`;
 
@@ -965,9 +975,9 @@
             $('#bienvenida-titulo').textContent = `Hola, ${primerNombre(perfil.nombre)}`;
             $('#bienvenida-texto').textContent = esEquipo()
                 ? (perfil.rol === 'secretaria' ? 'Tus cursos, el seguimiento de los 8 satélites y los videos de la plataforma.' : 'Tus cursos para acompañar las rutas HACER y SER, y las emprendedoras de tu satélite.')
-                : `Estás en la semana ${semanaActual()} de 6 de tu ruta HACER.`;
+                : `Tu próximo taller es el SER ${proximoTaller().n}: «${proximoTaller().titulo}».`;
             $('#aviso-clave').hidden = !perfil.debe_cambiar_clave;
-            $('#tab-cursos').textContent = esEquipo() ? 'Mis cursos' : 'Mi semana';
+            $('#tab-cursos').textContent = esEquipo() ? 'Mis cursos' : 'Mis talleres';
             $('#tab-seguimiento').hidden = !esEquipo();
             $('#tab-videos').hidden = perfil.rol !== 'secretaria';
             $('#continuar').hidden = true;
@@ -1070,23 +1080,22 @@
             if (error) return null;
             return (data && data[0]) || null;
         }
+        // El próximo taller depende de la semana en que va (la marca su dinamizadora)
+        const proximoTaller = () => DATOS.ser.find((t) => t.semana >= semanaActual()) || DATOS.ser[DATOS.ser.length - 1];
         async function pintarSemana() {
             const v = $('#vista-cursos');
-            const n = semanaActual();
-            const s = DATOS.hacer[n - 1];
-            const t = s.ser ? DATOS.ser[s.ser - 1] : null;
+            const t = proximoTaller();
             const sat = satelite(perfil.satelite);
             v.innerHTML = `
                 <div class="semana-panel">
                     <article class="tarjeta semana-actual">
-                        <p class="eyebrow">Esta semana · semana ${n} de 6</p>
-                        <h2>${esc(s.titulo)}</h2>
-                        <p class="texto-suave">${esc(s.tema)}</p>
-                        <ol class="progreso-semanas" aria-label="Vas en la semana ${n} de 6">${DATOS.hacer.map((x) => `<li class="${x.n < n ? 'hecha' : x.n === n ? 'actual' : ''}"><span class="sr-only">Semana ${x.n}${x.n < n ? ', hecha' : x.n === n ? ', esta semana' : ''}</span></li>`).join('')}</ol>
-                        <p>${esc(s.resumen)}</p>
-                        <p class="semana-sub">Qué vas a hacer</p>
-                        <ul class="lista-check">${s.haras.map((h) => `<li>${esc(h)}</li>`).join('')}</ul>
-                        ${t ? `<p class="semana-extra">También esta semana: <b>Taller SER ${t.n} · ${esc(t.titulo)}</b> (${esc(t.modalidad.toLowerCase())}).</p>` : ''}
+                        <p class="eyebrow">Tu próximo taller · taller ${t.n} de ${DATOS.ser.length}</p>
+                        <h2>${esc(t.titulo)}</h2>
+                        <p class="texto-suave">Taller SER ${t.n} · ${esc(t.modalidad)} · semana ${t.semana} de tu proceso</p>
+                        <ol class="progreso-semanas" aria-label="Vas en el taller ${t.n} de ${DATOS.ser.length}">${DATOS.ser.map((x) => `<li class="${x.n < t.n ? 'hecha' : x.n === t.n ? 'actual' : ''}"><span class="sr-only">Taller ${x.n}${x.n < t.n ? ', hecho' : x.n === t.n ? ', el próximo' : ''}</span></li>`).join('')}</ol>
+                        <p>${esc(t.resumen)}</p>
+                        ${t.haras && t.haras.length ? `<p class="semana-sub">Qué vas a hacer</p><ul class="lista-check">${t.haras.map((h) => `<li>${esc(h)}</li>`).join('')}</ul>` : ''}
+                        <p class="semana-extra">${t.modalidad === 'Virtual' ? 'Es virtual: te conectas desde tu casa o tu negocio. Tu dinamizadora te envía el enlace por WhatsApp.' : 'Es presencial, con las emprendedoras de tu satélite. Tu dinamizadora te confirma el lugar y la hora.'}</p>
                     </article>
                     <aside class="semana-lado">
                         <div class="tarjeta">
@@ -1100,23 +1109,23 @@
                         </div>
                     </aside>
                 </div>
-                <h3 class="vista-subtitulo">Descarga lo de esta semana</h3>
-                <p class="vista-intro">Son archivos de Word y Excel: puedes llenarlos sin internet o imprimirlos.</p>
-                <div class="descargas descargas-grandes">${botonesDescarga([...s.descargas, ...(t ? t.descargas : [])])}</div>
+                <h3 class="vista-subtitulo">Descarga la guía de tu próximo taller</h3>
+                <p class="vista-intro">Es un archivo de Word: puedes llenarlo sin internet o imprimirlo.</p>
+                <div class="descargas descargas-grandes">${botonesDescarga(t.descargas)}</div>
                 <h3 class="vista-subtitulo">Grabaciones de los talleres virtuales</h3>
                 <div id="mis-grabaciones"><p class="vista-intro" role="status">Cargando…</p></div>
-                <h3 class="vista-subtitulo">Toda tu ruta</h3>
+                <h3 class="vista-subtitulo">Tus ${DATOS.ser.length} talleres</h3>
                 <div class="toda-ruta">
-                    ${DATOS.hacer.map((x) => `<details class="desplegable" ${x.n === n ? 'open' : ''}><summary>Semana ${x.n} · ${esc(x.titulo)}${x.n === n ? ' <span class="chip bg-durazno">Esta semana</span>' : x.n < n ? ' <span class="chip">Hecha</span>' : ''}</summary><p class="texto-suave">${esc(x.resumen)}</p><div class="descargas">${botonesDescarga(x.descargas)}</div></details>`).join('')}
-                    ${DATOS.ser.map((x) => `<details class="desplegable"><summary>Taller SER ${x.n} · ${esc(x.titulo)} <span class="chip bg-lavanda">${esc(x.modalidad)}</span></summary><p class="texto-suave">${esc(x.resumen)}</p><div class="descargas">${botonesDescarga(x.descargas)}</div></details>`).join('')}
-                </div>`;
+                    ${DATOS.ser.map((x) => `<details class="desplegable" ${x.n === t.n ? 'open' : ''}><summary>Taller ${x.n} · ${esc(x.titulo)} <span class="chip ${x.n === t.n ? 'bg-durazno' : 'bg-lavanda'}">${x.n === t.n ? 'El próximo' : x.n < t.n ? 'Hecho' : esc(x.modalidad)}</span></summary><p class="texto-suave">${esc(x.resumen)}</p><div class="descargas">${botonesDescarga(x.descargas)}</div></details>`).join('')}
+                </div>
+                <p class="nota">Las sesiones semanales en tu negocio las haces con tu dinamizadora: ella te lleva las herramientas de cada semana.</p>`;
             // Dinamizadora y grabaciones llegan del servidor
             const d = await miDinamizadora();
             const wa = d && whatsapp(d.celular);
             $('#mi-dinamizadora').innerHTML = `
                 <p class="eyebrow">Tu dinamizadora</p>
                 ${d ? `<h3>${esc(d.nombre)}</h3><p class="texto-suave">${esc(d.cargo || 'Dinamizadora de tu satélite')}</p>
-                ${wa ? `<a class="btn btn-primario" href="${wa}" target="_blank" rel="noopener">Escribirle por WhatsApp</a>` : DEMO ? '<p class="texto-suave" style="font-size:.9rem">En la plataforma real aquí verás su botón de WhatsApp.</p>' : ''}`
+                ${wa ? `<a class="btn btn-primario" href="${wa}" target="_blank" rel="noopener">Escribirle por WhatsApp</a>` : DEMO ? '<p class="texto-suave" style="font-size:.95rem">En la plataforma real aquí verás su botón de WhatsApp.</p>' : ''}`
                 : '<h3>Por asignar</h3><p class="texto-suave">Muy pronto verás aquí a tu dinamizadora.</p>'}`;
             let grab = [];
             try { grab = (await traerVideos()).filter((x) => x.audiencia === 'emprendedoras' && (!x.satelite || x.satelite === perfil.satelite)); } catch (e) { /* sin grabaciones */ }
@@ -1416,6 +1425,7 @@
                     perfil.debe_cambiar_clave = false;
                     if (DEMO) guardar(sessionStorage, 'cic-demo', perfil);
                     $('#aviso-clave').hidden = true;
+                    if (esEquipo()) pintarCursos();
                     f.reset();
                     decir(r.demo ? 'Modo demostración: la contraseña no se cambió.'
                         : r.correoEnviado ? `Listo, tu contraseña cambió. Te enviamos un correo de confirmación a ${r.correo}.`

@@ -195,7 +195,7 @@ for my $slug (@ORDEN) {
         my $aprende = $u->{aprende} ? '<p style="font-weight:700;margin-top:.9rem;color:var(--bosque)">Qué vas a aprender</p><ul class="lista-check">' . join('', map { "<li>$_</li>" } @{ $u->{aprende} }) . '</ul>' : '';
         my $logra = $u->{logra} ? qq{<p class="logra"><b>Resultado esperado:</b> $u->{logra}</p>} : '';
         my $momentos = $u->{momentos} ? '<div class="llevas"><span>La sesión:</span>' . join('', map { "<span class=\"chip\">$_</span>" } @{ $u->{momentos} }) . '</div>' : '';
-        my $guia = $c->{guia} ? qq{<a class="abrir-leccion" href="$P$c->{guia}$n">Ver la semana de la emprendedora y sus descargas →</a>} : '';
+        my $guia = $c->{guia} ? qq{<a class="abrir-leccion" href="$P$c->{guia}$n">Ver la semana en la ruta HACER →</a>} : '';
         my $privado = qq{<p class="privado"><svg aria-hidden="true"><use href="#candado"/></svg>Video, material de estudio y cuestionario: al ingresar con tu cédula</p>};
         <<"LI";
                     <li id="$c->{ancla}-$n" class="paso-ruta aparece">

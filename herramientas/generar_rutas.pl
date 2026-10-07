@@ -16,8 +16,9 @@ binmode STDOUT, ':encoding(UTF-8)';
 
 my $BASE = 'https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC';
 
-# Tamaño legible de cada descarga (y aviso si falta el archivo)
-for my $d (map { @{ $_->{descargas} } } @HACER, @SER) {
+# Tamaño legible de cada descarga (y aviso si falta el archivo).
+# Solo la ruta SER (talleres) tiene descargas públicas: el material de HACER lo entrega la dinamizadora.
+for my $d (map { @{ $_->{descargas} } } @SER) {
     my $bytes = -s $d->{ruta} or die "Falta la descarga $d->{ruta}\n";
     $d->{kb} = int($bytes / 1024 + .5);
 }
@@ -44,10 +45,7 @@ sub tarjeta {
                         <p>$t{resumen}</p>
                         <p class="semana-sub">Qué vas a hacer</p>
                         <ul class="lista-check">$haras</ul>
-                        <p class="semana-sub">Descarga</p>
-                        <div class="descargas">
-@{[ botones_descarga($P, $t{descargas}) ]}
-                        </div>$extra
+@{[ @{ $t{descargas} } ? qq{                        <p class="semana-sub">Descarga</p>\n                        <div class="descargas">\n} . botones_descarga($P, $t{descargas}) . qq{\n                        </div>} : qq{                        <p class="semana-extra">Las herramientas de esta semana te las entrega tu dinamizadora en la sesión.</p>} ]}$extra
                     </article>
 HTML
 }
@@ -129,7 +127,7 @@ $r{tarjetas}
                     <div class="patron-hojas animado" aria-hidden="true"></div>
                     <div>
                         <h2>¿Ya te inscribiste?</h2>
-                        <p>Al ingresar verás qué toca esta semana, quién es tu dinamizadora y tus descargas.</p>
+                        <p>Al ingresar verás tu próximo taller, quién es tu dinamizadora y la guía para descargar.</p>
                     </div>
                     <div class="botones" style="margin:0">
                         <a class="btn btn-claro" href="${P}#crear-cuenta">Inscribirme</a>
@@ -153,14 +151,14 @@ pagina_ruta(
     ver => 'Ver las 6 semanas',
     ficha => [['Duración', '6 semanas · 2 horas cada una'], ['Dónde', 'En tu negocio o en la sede de tu satélite'], ['Con quién', 'Tu dinamizadora, solo contigo'], ['Necesitas', 'Tu celular para descargar las guías'], ['Al terminar', 'Constancia de participación']],
     como => 'Una visita por semana, una tarea para la siguiente',
-    pasos => [['1', 'Tu dinamizadora te visita', 'Dos horas en tu negocio para trabajar el tema de la semana.'], ['2', 'Descargas tu guía', 'La guía y las plantillas de la semana, en Word o Excel, para llenar en papel o en el celular.'], ['3', 'Haces tu tarea', 'Antes de la siguiente visita aplicas lo aprendido. Tu dinamizadora la revisa contigo.']],
-    eyebrow_lista => 'Las 6 semanas', titulo_lista => 'Qué toca cada semana', intro_lista => 'Cada semana parte de lo que hiciste en la anterior. Descarga solo lo de tu semana: no necesitas internet para llenarlo.',
+    pasos => [['1', 'Tu dinamizadora te visita', 'Dos horas en tu negocio para trabajar el tema de la semana.'], ['2', 'Trabajas con tus herramientas', 'Tu dinamizadora te entrega la guía y las plantillas de la semana, en papel o en el celular.'], ['3', 'Haces tu tarea', 'Antes de la siguiente visita aplicas lo aprendido. Tu dinamizadora la revisa contigo.']],
+    eyebrow_lista => 'Las 6 semanas', titulo_lista => 'Qué toca cada semana', intro_lista => 'Cada semana parte de lo que hiciste en la anterior. Las herramientas te las entrega tu dinamizadora en cada visita.',
     indice => [map { [$_->{n}, "Semana $_->{n}: $_->{titulo}", "semana-$_->{n}"] } @HACER],
     tarjetas => join('', map {
         my $s = $_;
         my $t = $s->{ser} ? $SER[$s->{ser} - 1] : undef;
         tarjeta('../../', id => "semana-$s->{n}", color => 'bg-durazno', marca => $s->{n}, meta => "Semana $s->{n} · $s->{tema}", titulo => $s->{titulo},
-            resumen => $s->{resumen}, haras => $s->{haras}, descargas => $s->{descargas},
+            resumen => $s->{resumen}, haras => $s->{haras}, descargas => [],
             extra => $t ? qq{Esta semana también: <a class="enlace" href="../ser/#taller-$t->{n}">Taller SER $t->{n} · $t->{titulo}</a> (@{[ lc $t->{modalidad} ]}).} : '')
     } @HACER),
 );
@@ -211,7 +209,7 @@ redireccion("rutas/ser/taller-$_->{n}/index.html", "../#taller-$_->{n}", "Taller
 my $json = JSON::PP->new->canonical->indent->indent_length(2);
 my $datos = {
     satelites => [map { { id => $_->{id}, codigo => $_->{codigo}, nombre => $_->{nombre}, departamento => $_->{departamento}, municipios => [map { $_->[0] } @{ $_->{municipios} }] } } @SATELITES],
-    hacer => [map { { n => $_->{n}, titulo => $_->{titulo}, tema => $_->{tema}, resumen => $_->{resumen}, haras => $_->{haras}, ser => $_->{ser}, descargas => $_->{descargas} } } @HACER],
+    hacer => [map { { n => $_->{n}, titulo => $_->{titulo}, tema => $_->{tema}, resumen => $_->{resumen}, haras => $_->{haras}, ser => $_->{ser} } } @HACER],
     ser   => [map { { n => $_->{n}, titulo => $_->{titulo}, semana => $_->{semana}, modalidad => $_->{modalidad}, resumen => $_->{resumen}, haras => $_->{haras}, descargas => $_->{descargas} } } @SER],
 };
 escribir('assets/datos-cic.js', "// Generado por herramientas/generar_rutas.pl a partir de herramientas/Datos.pm. No editar a mano.\nwindow.CIC_DATOS = " . $json->encode($datos) . ";\n");

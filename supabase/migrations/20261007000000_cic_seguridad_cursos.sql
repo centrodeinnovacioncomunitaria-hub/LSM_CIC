@@ -49,7 +49,7 @@ revoke all on public.preguntas from anon, authenticated;
 -- Avance de cada persona en cada módulo, semana o taller.
 create table if not exists public.progreso (
   persona      uuid not null references auth.users (id) on delete cascade,
-  curso        text not null check (curso in ('gestion', 'acompanar-hacer', 'facilitar-ser')),
+  curso        text not null check (curso in ('gestion', 'formacion-secretaria', 'acompanar-hacer', 'facilitar-ser')),
   unidad       smallint not null check (unidad between 1 and 6),
   video_en     timestamptz,
   material_en  timestamptz,

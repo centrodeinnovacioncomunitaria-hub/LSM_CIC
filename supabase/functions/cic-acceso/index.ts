@@ -46,10 +46,12 @@ const CAMPOS_PERFIL =
   'id, cedula, nombre, rol, cargo, correo, celular, departamento, municipio, negocio, satelite, semana_actual, debe_cambiar_clave';
 
 // Reglas de los cursos del equipo (documento técnico 6.4 y guiones del curso de Gestión)
-const CURSOS: Record<string, { unidades: number; prefijo: string; nombre: string; evidencia: 'actividad' | 'verificacion' }> = {
-  gestion: { unidades: 5, prefijo: 'GES-M', nombre: 'Gestión del CIC', evidencia: 'actividad' },
-  'acompanar-hacer': { unidades: 6, prefijo: 'HAC-S', nombre: 'Acompañar la ruta HACER', evidencia: 'verificacion' },
-  'facilitar-ser': { unidades: 4, prefijo: 'SER-T', nombre: 'Facilitar la ruta SER', evidencia: 'verificacion' },
+// cuestionario: false → la unidad se aprueba al repasar el material y enviar la actividad (no hay banco de preguntas).
+const CURSOS: Record<string, { unidades: number; prefijo: string; nombre: string; evidencia: 'actividad' | 'verificacion'; cuestionario: boolean; roles: string[] }> = {
+  gestion: { unidades: 5, prefijo: 'GES-M', nombre: 'Gestión del CIC', evidencia: 'actividad', cuestionario: true, roles: ['secretaria', 'dinamizadora'] },
+  'formacion-secretaria': { unidades: 6, prefijo: 'STF-U', nombre: 'Formación de la Secretaría Técnica', evidencia: 'actividad', cuestionario: false, roles: ['secretaria'] },
+  'acompanar-hacer': { unidades: 6, prefijo: 'HAC-S', nombre: 'Acompañar la ruta HACER', evidencia: 'verificacion', cuestionario: true, roles: ['secretaria', 'dinamizadora'] },
+  'facilitar-ser': { unidades: 4, prefijo: 'SER-T', nombre: 'Facilitar la ruta SER', evidencia: 'verificacion', cuestionario: true, roles: ['secretaria', 'dinamizadora'] },
 };
 const PREGUNTAS_POR_INTENTO = 5;
 const NOTA_MINIMA = 4;           // 4 de 5
@@ -353,7 +355,8 @@ const aprobada = (ctx: Ctx, curso: string, u: number) => !!filaDe(ctx, curso, u)
 
 // Qué falta para abrir un módulo (null = abierto)
 function requisito(perfil: Fila, ctx: Ctx, curso: string, u: number): string | null {
-  if (perfil.rol === 'secretaria' && curso !== 'gestion') return null; // la Secretaría supervisa: ve todo
+  if (!CURSOS[curso].roles.includes(perfil.rol)) return 'Este curso es solo para la Secretaría Técnica.';
+  if (perfil.debe_cambiar_clave) return 'Primero cambia tu contraseña en «Mi cuenta»: todavía es tu número de cédula.';
   if (u > 1) {
     if (!aprobada(ctx, curso, u - 1)) return `Se abre cuando apruebes el cuestionario de la unidad ${u - 1}.`;
     if (!evidenciaDe(ctx, curso, u - 1)) return `Se abre cuando envíes la ${CURSOS[curso].evidencia === 'actividad' ? 'actividad' : 'verificación de la sesión'} de la unidad ${u - 1}.`;
@@ -361,6 +364,9 @@ function requisito(perfil: Fila, ctx: Ctx, curso: string, u: number): string | n
   }
   if (curso === 'gestion') return ctx.hitos.has('compromiso') ? null : 'Se abre cuando confirmes tu compromiso como parte del equipo.';
   if (!ctx.constancias.some((c) => c.curso === 'gestion')) return 'Se abre cuando apruebes el curso Gestión del CIC.';
+  if (curso === 'formacion-secretaria') return null;
+  // La Secretaría abre las rutas al terminar su formación; las dinamizadoras, con la transferencia.
+  if (perfil.rol === 'secretaria') return ctx.constancias.some((c) => c.curso === 'formacion-secretaria') ? null : 'Se abre cuando termines la Formación de la Secretaría Técnica.';
   const t = curso === 'acompanar-hacer' ? 'transferencia-hacer' : 'transferencia-ser';
   return ctx.hitos.has(t) ? null : 'Se abre cuando la Secretaría Técnica registre tu transferencia de la ruta.';
 }
@@ -376,20 +382,21 @@ function estadoUnidad(perfil: Fila, ctx: Ctx, curso: string, u: number) {
   else if (f?.bloqueado_en) estado = 'pausada';
   else if (f?.video_en || f?.material_en || f?.intentos) estado = 'en-curso';
   const listoParaCuestionario = !!f?.material_en && (!video || !!f?.video_en);
+  const conCuestionario = CURSOS[curso].cuestionario;
   return {
     unidad: u, estado, motivo: falta,
-    tiene_video: video,
+    tiene_video: video, sin_cuestionario: !conCuestionario,
     video_visto: !!f?.video_en, material_visto: !!f?.material_en,
     intentos: f?.intentos ?? 0, intentos_max: INTENTOS_POR_RONDA, ronda: f?.ronda ?? 1,
     mejor_nota: f?.mejor_nota ?? null, aprobado_en: f?.aprobado_en ?? null,
-    puede_cuestionario: !falta && !f?.aprobado_en && !f?.bloqueado_en && (f?.intentos ?? 0) < INTENTOS_POR_RONDA && listoParaCuestionario,
+    puede_cuestionario: conCuestionario && !falta && !f?.aprobado_en && !f?.bloqueado_en && (f?.intentos ?? 0) < INTENTOS_POR_RONDA && listoParaCuestionario,
     evidencia: ev ? { estado: ev.estado, comentario: ev.comentario, texto: ev.texto, enlace: ev.enlace } : null,
   };
 }
 
 function resumen(perfil: Fila, ctx: Ctx) {
   const cursos: Record<string, unknown[]> = {};
-  for (const c of Object.keys(CURSOS)) cursos[c] = Array.from({ length: CURSOS[c].unidades }, (_, i) => estadoUnidad(perfil, ctx, c, i + 1));
+  for (const c of Object.keys(CURSOS).filter((k) => CURSOS[k].roles.includes(perfil.rol))) cursos[c] = Array.from({ length: CURSOS[c].unidades }, (_, i) => estadoUnidad(perfil, ctx, c, i + 1));
   return { cursos, hitos: ctx.hitosLista, constancias: ctx.constancias, reglas: { preguntas: PREGUNTAS_POR_INTENTO, nota_minima: NOTA_MINIMA, intentos: INTENTOS_POR_RONDA } };
 }
 
@@ -452,6 +459,7 @@ const barajar = <T,>(a: T[]) => { const r = [...a]; for (let i = r.length - 1; i
 // Abre un intento: 5 preguntas al azar del banco, sin la respuesta correcta.
 async function cuestionario(req: Request, b: Record<string, unknown>) {
   const { perfil, ctx, curso, unidad } = await equipoAbierto(req, b);
+  if (!CURSOS[curso].cuestionario) throw new Falla(400, 'sin_cuestionario', 'Esta unidad no tiene cuestionario: se aprueba al enviar la actividad.');
   const est = estadoUnidad(perfil, ctx, curso, unidad);
   if (!est.puede_cuestionario) {
     throw new Falla(403, 'no_disponible', est.aprobado_en ? 'Ya aprobaste este cuestionario.'
@@ -504,7 +512,9 @@ async function responder(req: Request, b: Record<string, unknown>) {
 
 // Actividad (Gestión) o verificación de la sesión (HACER y SER): texto y/o enlace a la evidencia.
 async function entregar(req: Request, b: Record<string, unknown>) {
-  const { perfil, curso, unidad } = await equipoAbierto(req, b);
+  const { perfil, ctx, curso, unidad } = await equipoAbierto(req, b);
+  const previa = filaDe(ctx, curso, unidad);
+  if (!CURSOS[curso].cuestionario && !previa?.material_en) throw new Falla(400, 'material', 'Primero repasa el material de estudio de esta unidad.');
   const txt = String(b.texto ?? '').trim().slice(0, 4000);
   const enlace = String(b.enlace ?? '').trim().slice(0, 500);
   if (txt.length < 20 && !enlace) throw new Falla(400, 'evidencia', 'Escribe tu respuesta (al menos unas líneas) o pega el enlace a tu evidencia.');
@@ -514,6 +524,7 @@ async function entregar(req: Request, b: Record<string, unknown>) {
     estado: 'enviada', comentario: null, revisado_por: null, revisado_en: null, creado_en: ahora().toISOString(),
   }, { onConflict: 'persona,curso,unidad,tipo' });
   if (error) throw error;
+  if (!CURSOS[curso].cuestionario && !previa?.aprobado_en) await guardarProgreso(perfil.id, curso, unidad, { aprobado_en: ahora().toISOString() });
   const constancia = await emitirSiCompleto(perfil, curso);
   return { ok: true, constancia, progreso: resumen(perfil, await contexto(perfil.id)) };
 }

@@ -2,20 +2,6 @@
 window.CIC_DATOS = {
   "hacer":[
     {
-      "descargas":[
-        {
-          "etiqueta":"Guía de la semana 1",
-          "kb":18,
-          "ruta":"descargas/hacer/semana-1/CIC_S1_Guia_Emprendedora.docx",
-          "tipo":"Word"
-        },
-        {
-          "etiqueta":"A3 · Registro diario",
-          "kb":24,
-          "ruta":"descargas/hacer/semana-1/CIC_S1_A3_Registro_Diario.xlsx",
-          "tipo":"Excel"
-        }
-      ],
       "haras":[
         "Contar tu negocio con cinco preguntas sencillas",
         "Empezar tu registro diario de ingresos y gastos",
@@ -28,14 +14,6 @@ window.CIC_DATOS = {
       "titulo":"Cuéntame tu negocio"
     },
     {
-      "descargas":[
-        {
-          "etiqueta":"Guía de la semana 2",
-          "kb":22,
-          "ruta":"descargas/hacer/semana-2/CIC_S2_Guia_Emprendedora.docx",
-          "tipo":"Word"
-        }
-      ],
       "haras":[
         "Llenar tu Canvas de la Esquina",
         "Explorar nuevas fuentes de ingreso",
@@ -48,14 +26,6 @@ window.CIC_DATOS = {
       "titulo":"Mi negocio puede ganar de otra forma"
     },
     {
-      "descargas":[
-        {
-          "etiqueta":"Guía de la semana 3",
-          "kb":21,
-          "ruta":"descargas/hacer/semana-3/CIC_S3_Guia_Emprendedora.docx",
-          "tipo":"Word"
-        }
-      ],
       "haras":[
         "Llenar tu matriz de tendencias",
         "Revisar cómo te fue con el cambio que probaste",
@@ -68,26 +38,6 @@ window.CIC_DATOS = {
       "titulo":"Mirar más allá de mi cuadra"
     },
     {
-      "descargas":[
-        {
-          "etiqueta":"Guía de la semana 4",
-          "kb":26,
-          "ruta":"descargas/hacer/semana-4/CIC_S4_Guia_Emprendedora.docx",
-          "tipo":"Word"
-        },
-        {
-          "etiqueta":"A8 · Costos, precio y punto de equilibrio",
-          "kb":18,
-          "ruta":"descargas/hacer/semana-4/CIC_S4_A8_Costos_Precio_PE.xlsx",
-          "tipo":"Excel"
-        },
-        {
-          "etiqueta":"A9 · Flujo de caja y bolsillos",
-          "kb":18,
-          "ruta":"descargas/hacer/semana-4/CIC_S4_A9_Flujo_PyG_Bolsillos.xlsx",
-          "tipo":"Excel"
-        }
-      ],
       "haras":[
         "Hacer el ejercicio de los dos bolsillos",
         "Calcular tus costos y tu nuevo precio",
@@ -100,20 +50,6 @@ window.CIC_DATOS = {
       "titulo":"El bolsillo separado"
     },
     {
-      "descargas":[
-        {
-          "etiqueta":"Guía de la semana 5",
-          "kb":24,
-          "ruta":"descargas/hacer/semana-5/CIC_S5_Guia_Emprendedora.docx",
-          "tipo":"Word"
-        },
-        {
-          "etiqueta":"A11 · Mi CRM",
-          "kb":17,
-          "ruta":"descargas/hacer/semana-5/CIC_S5_A11_Mi_CRM.xlsx",
-          "tipo":"Excel"
-        }
-      ],
       "haras":[
         "Hacer tu plan comercial de una página",
         "Anotar al menos cinco clientes posibles en Mi CRM",
@@ -126,26 +62,6 @@ window.CIC_DATOS = {
       "titulo":"Cómo vender más"
     },
     {
-      "descargas":[
-        {
-          "etiqueta":"Guía de la semana 6",
-          "kb":26,
-          "ruta":"descargas/hacer/semana-6/CIC_S6_Guia_Emprendedora.docx",
-          "tipo":"Word"
-        },
-        {
-          "etiqueta":"A12 · Plan de inversión",
-          "kb":14,
-          "ruta":"descargas/hacer/semana-6/CIC_S6_A12_Plan_Inversion.xlsx",
-          "tipo":"Excel"
-        },
-        {
-          "etiqueta":"A9 · Flujo de caja y bolsillos",
-          "kb":18,
-          "ruta":"descargas/hacer/semana-4/CIC_S4_A9_Flujo_PyG_Bolsillos.xlsx",
-          "tipo":"Excel"
-        }
-      ],
       "haras":[
         "Revisar tu flujo de caja y tus ganancias",
         "Hacer tu plan de inversión",

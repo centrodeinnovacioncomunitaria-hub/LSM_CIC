@@ -20,22 +20,30 @@ La página funciona en **modo demostración** mientras `config.js` esté vacío:
 
 Los datos personales y las respuestas de los cuestionarios **no** están en este repositorio (es público). Viven en Supabase.
 
-## Cómo funcionan los cursos del equipo
+## Quién ve qué
 
-Las reglas salen del documento técnico 6.4 y de los guiones del curso de Gestión. Las aplica el servidor (función `cic-acceso`), no la página, así que nadie puede saltarse un paso ni aprobarse a sí misma.
+| Perfil | Ve en la plataforma |
+|---|---|
+| **Emprendedora** | Solo **talleres**: «Mis talleres» con su próximo taller SER, la guía de cada taller para descargar, las grabaciones de los talleres virtuales, su satélite y su dinamizadora. No entra a los cursos. Las herramientas de la ruta HACER se las entrega su dinamizadora en cada visita. |
+| **Dinamizadora** | Cursos **Gestión del CIC → Acompañar la ruta HACER → Facilitar la ruta SER**, y en *Seguimiento* las emprendedoras de su departamento. |
+| **Secretaría Técnica** | Cursos **Gestión del CIC → Formación de la Secretaría Técnica → Acompañar HACER y Facilitar SER** (para supervisarlos), y en *Seguimiento* el avance de todo el equipo, la bandeja de evidencias, las transferencias y los videos. |
 
-1. **Activar la cuenta** con el código.
+## Cómo funcionan los cursos del equipo (paso a paso)
+
+Las reglas salen del documento técnico 6.4 y de los guiones del curso de Gestión. Las aplica el servidor (función `cic-acceso`), no la página: nadie puede saltarse un paso ni aprobarse a sí misma, **tampoco la Secretaría**. Hasta no cumplir cada paso, el siguiente curso no se abre.
+
+1. **Activar la cuenta** con cédula, código de 6 números y contraseña propia. Si la contraseña todavía es la cédula (cuentas antiguas), los cursos quedan cerrados hasta cambiarla.
 2. **Compromiso:** cada persona lo confirma en *Mis cursos*.
 3. **Gestión del CIC** (5 módulos, en orden). Cada módulo tiene video, material de estudio, cuestionario y actividad:
    - el cuestionario se abre después de ver el video y repasar el material;
    - son 5 preguntas, se aprueba con **4 de 5** y hay **2 intentos**;
    - si pierde los dos, el módulo queda **en pausa** hasta que vuelva a ver el video y el material; entonces se reabre con 2 intentos nuevos;
    - el siguiente módulo se abre al **aprobar el cuestionario y enviar la actividad**.
-4. **Constancia** de Gestión del CIC, con código verificable, al aprobar los 5 módulos y enviar las 5 actividades.
-5. **Transferencia de la ruta:** la Secretaría la marca en *Seguimiento* después de la sesión de transferencia. Abre **Acompañar la ruta HACER** (6 semanas) y **Facilitar la ruta SER** (4 talleres).
-6. En HACER y SER, cada semana o taller funciona igual: 5 preguntas al azar del banco de 10 de esa evaluación, y la **verificación de la sesión** (Parte B) como evidencia.
-
-La Secretaría Técnica tiene abiertos los cursos de las rutas para supervisarlos, y en *Seguimiento* ve el avance de todo el equipo, las alertas (módulos en pausa o 7 días sin avanzar) y la bandeja de evidencias para aprobar o devolver con comentario.
+4. **Constancia** de Gestión del CIC, con código verificable.
+5. Según el perfil:
+   - **Secretaría Técnica → Formación de la Secretaría Técnica** (6 unidades: Método Insight, Oportunidad significativa emergente, Canvas, MVP y Lean Startup, Gestión financiera y Guía del facilitador). Cada unidad se aprueba al repasar su guía y presentaciones y enviar la actividad; no tiene cuestionario porque el material no trae evaluación. Al terminarla recibe su constancia y se abren las rutas HACER y SER para supervisarlas.
+   - **Dinamizadora → transferencia de la ruta:** la Secretaría la marca en *Seguimiento* después de la sesión de transferencia. Abre **Acompañar la ruta HACER** (6 semanas) y **Facilitar la ruta SER** (4 talleres).
+6. En HACER y SER, cada semana o taller funciona igual que Gestión: 5 preguntas al azar del banco de 10 de esa evaluación, y la **verificación de la sesión** (Parte B) como evidencia.
 
 ## 1. Crear el proyecto en Supabase
 
@@ -60,16 +68,21 @@ Para sumar o corregir personas del equipo más adelante, se edita la tabla `dire
 
 ## 3. Material de estudio privado
 
-En **Storage → material-equipo** (lo crea la migración 5, es privado), subir los archivos con esta estructura de carpetas:
+En **Storage → material-equipo** (lo crea la migración 5, es privado), subir los archivos del Drive con esta estructura de carpetas. La plataforma solo los entrega a quien tiene la unidad abierta, con enlaces que vencen en una hora.
 
-| Carpeta | Qué va | Ejemplo |
-|---|---|---|
-| `gestion/general/` | Guía de estudio del curso de Gestión (sirve para los 5 módulos) | `CIC_Guia_Estudio_Curso_Gestion_CIC.docx` |
-| `gestion/1/` … `gestion/5/` | Material propio de cada módulo, si lo hay | |
-| `acompanar-hacer/1/` … `acompanar-hacer/6/` | Material de estudio de las dinamizadoras de cada semana | `CIC_S1_Material_Estudio_Dinamizadoras.docx` |
-| `facilitar-ser/1/` … `facilitar-ser/4/` | Material de estudio de cada taller SER (y sus diapositivas) | `CIC_SER1_Material_Estudio_Dinamizadoras.docx` |
+| Carpeta | Qué va (del Drive «Productos Contrato») |
+|---|---|
+| `gestion/general/` | Guía de estudio del curso de Gestión (una sola: la copia «-1» está duplicada) |
+| `formacion-secretaria/1/` | Guia_Estudio_Metodo_Insight_CIC.docx · The_Insight_Method_Blueprint.pptx |
+| `formacion-secretaria/2/` | Guia_2_Oportunidad_Significativa_Emergente_CIC.docx · Mastering_Strategic_Evolution.pptx |
+| `formacion-secretaria/3/` | Guia_Estudio_Modelo_Negocio_Canvas_CIC.docx · Business_Model_Blueprint.pptx · Estrategia_y_viabilidad_en_nueve_bloques.m4a |
+| `formacion-secretaria/4/` | Guia_Estudio_MVP_LeanStartup_CIC.docx · Diseño_y_Validación_MVP.pptx |
+| `formacion-secretaria/5/` | Guia_Estudio_GestionFinanciera_CIC.docx · Gestión_Financiera_Estratégica.pptx · Strategic_Financial_Autonomy.pptx |
+| `formacion-secretaria/6/` | Guia_Metodologica_Facilitador_UFC · The_Supernova_Consultant.pptx |
+| `acompanar-hacer/1/` … `/6/` | De cada semana: Material de estudio de las dinamizadoras, Herramientas (A1–A13), Guía de la emprendedora y las plantillas de Excel para entregarle |
+| `facilitar-ser/1/` … `/4/` | De cada taller: Material de estudio (guía de facilitación), Herramientas (A14–A17) y las diapositivas del video |
 
-La plataforma solo entrega estos archivos a quien tiene el módulo abierto, con enlaces que vencen en una hora. Las evaluaciones y las claves de respuesta **no** se suben aquí: el cuestionario las toma de la base de datos.
+La asignación de presentaciones a cada unidad de la Formación es una propuesta según sus títulos: la Secretaría puede moverlas de carpeta si corresponde otra. Las evaluaciones y las claves de respuesta **no** se suben aquí: el cuestionario las toma de la base de datos. Las guías de la emprendedora de los talleres SER están en el repositorio (`descargas/ser/`) porque son públicas.
 
 ## 4. Contraseña de aplicación de Gmail
 
@@ -112,7 +125,8 @@ Esa llave es pública por diseño. **Nunca** poner en `config.js` la llave `serv
 
 1. Como Secretaría Técnica: «Activar mi cuenta» con una cédula del directorio → pedir el código → revisar que llegue al correo → crear la contraseña.
 2. En *Seguimiento*, generar un código para una dinamizadora y enviarlo por WhatsApp; ella activa su cuenta con él.
-3. Como dinamizadora: confirmar el compromiso, abrir el material del módulo 1, presentar el cuestionario, enviar la actividad y comprobar que se abre el módulo 2.
+3. Como emprendedora: comprobar que solo ve «Mis talleres» (guías SER y grabaciones), sin cursos.
+3b. Como dinamizadora: confirmar el compromiso, abrir el material del módulo 1, presentar el cuestionario, enviar la actividad y comprobar que se abre el módulo 2.
 4. Como Secretaría: aprobar la actividad en la bandeja, marcar la transferencia HACER de una dinamizadora con Gestión aprobada y verificar que se le abre la semana 1.
 5. Crear una emprendedora de prueba (con un municipio de la lista), verla en *Seguimiento* y cambiarle la semana.
 6. Equivocarse 5 veces de contraseña con una cédula de prueba y comprobar que se bloquea 15 minutos.

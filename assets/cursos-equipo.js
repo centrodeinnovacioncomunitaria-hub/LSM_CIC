@@ -5,8 +5,11 @@
     'use strict';
 
     const REGLAS = { preguntas: 5, nota_minima: 4, intentos: 2 };
-    const UNIDADES = { gestion: 5, 'acompanar-hacer': 6, 'facilitar-ser': 4 };
-    const EVIDENCIA = { gestion: 'actividad', 'acompanar-hacer': 'verificacion', 'facilitar-ser': 'verificacion' };
+    const UNIDADES = { gestion: 5, 'formacion-secretaria': 6, 'acompanar-hacer': 6, 'facilitar-ser': 4 };
+    const EVIDENCIA = { gestion: 'actividad', 'formacion-secretaria': 'actividad', 'acompanar-hacer': 'verificacion', 'facilitar-ser': 'verificacion' };
+    const SIN_CUESTIONARIO = new Set(['formacion-secretaria']);
+    const ROLES = { gestion: ['secretaria', 'dinamizadora'], 'formacion-secretaria': ['secretaria'], 'acompanar-hacer': ['secretaria', 'dinamizadora'], 'facilitar-ser': ['secretaria', 'dinamizadora'] };
+    const PREFIJO = { gestion: 'GES-M', 'formacion-secretaria': 'STF-U', 'acompanar-hacer': 'HAC-S', 'facilitar-ser': 'SER-T' };
     const ESTADOS = {
         bloqueada: { txt: 'Bloqueado', icono: '🔒', clase: 'est-bloqueada' },
         disponible: { txt: 'Disponible', icono: '○', clase: 'est-disponible' },
@@ -27,7 +30,8 @@
         const ahora = () => new Date().toISOString();
 
         function requisito(perfil, d, c, u) {
-            if (perfil.rol === 'secretaria' && c !== 'gestion') return null;
+            if (!ROLES[c].includes(perfil.rol)) return 'Este curso es solo para la Secretaría Técnica.';
+            if (perfil.debe_cambiar_clave) return 'Primero cambia tu contraseña en «Mi cuenta»: todavía es tu número de cédula.';
             if (u > 1) {
                 if (!(d.progreso[k(c, u - 1)] || {}).aprobado_en) return `Se abre cuando apruebes el cuestionario de la unidad ${u - 1}.`;
                 if (!d.evidencias[k(c, u - 1)]) return `Se abre cuando envíes la ${EVIDENCIA[c] === 'actividad' ? 'actividad' : 'verificación de la sesión'} de la unidad ${u - 1}.`;
@@ -35,32 +39,34 @@
             }
             if (c === 'gestion') return d.hitos.includes('compromiso') ? null : 'Se abre cuando confirmes tu compromiso como parte del equipo.';
             if (!d.constancias.some((x) => x.curso === 'gestion')) return 'Se abre cuando apruebes el curso Gestión del CIC.';
+            if (c === 'formacion-secretaria') return null;
+            if (perfil.rol === 'secretaria') return d.constancias.some((x) => x.curso === 'formacion-secretaria') ? null : 'Se abre cuando termines la Formación de la Secretaría Técnica.';
             return d.hitos.includes(c === 'acompanar-hacer' ? 'transferencia-hacer' : 'transferencia-ser') ? null : 'Se abre cuando la Secretaría Técnica registre tu transferencia de la ruta.';
         }
         function estado(perfil, d, c, u, videos) {
             const f = d.progreso[k(c, u)] || {};
             const ev = d.evidencias[k(c, u)] || null;
             const falta = requisito(perfil, d, c, u);
-            const tieneVideo = videos.has(`${{ gestion: 'GES-M', 'acompanar-hacer': 'HAC-S', 'facilitar-ser': 'SER-T' }[c]}${u}`);
+            const tieneVideo = videos.has(`${PREFIJO[c]}${u}`);
             let e = 'disponible';
             if (falta) e = 'bloqueada'; else if (f.aprobado_en) e = 'aprobada'; else if (f.bloqueado_en) e = 'pausada';
             else if (f.video_en || f.material_en || f.intentos) e = 'en-curso';
             return {
-                unidad: u, estado: e, motivo: falta, tiene_video: tieneVideo, video_visto: !!f.video_en, material_visto: !!f.material_en,
+                unidad: u, estado: e, motivo: falta, tiene_video: tieneVideo, sin_cuestionario: SIN_CUESTIONARIO.has(c), video_visto: !!f.video_en, material_visto: !!f.material_en,
                 intentos: f.intentos || 0, intentos_max: REGLAS.intentos, ronda: f.ronda || 1, mejor_nota: f.mejor_nota ?? null, aprobado_en: f.aprobado_en || null,
-                puede_cuestionario: !falta && !f.aprobado_en && !f.bloqueado_en && (f.intentos || 0) < REGLAS.intentos && !!f.material_en && (!tieneVideo || !!f.video_en),
+                puede_cuestionario: !SIN_CUESTIONARIO.has(c) && !falta && !f.aprobado_en && !f.bloqueado_en && (f.intentos || 0) < REGLAS.intentos && !!f.material_en && (!tieneVideo || !!f.video_en),
                 evidencia: ev,
             };
         }
         function resumen(perfil, d, videos) {
             const cursos = {};
-            Object.keys(UNIDADES).forEach((c) => { cursos[c] = Array.from({ length: UNIDADES[c] }, (_, i) => estado(perfil, d, c, i + 1, videos)); });
+            Object.keys(UNIDADES).filter((c) => ROLES[c].includes(perfil.rol)).forEach((c) => { cursos[c] = Array.from({ length: UNIDADES[c] }, (_, i) => estado(perfil, d, c, i + 1, videos)); });
             return { cursos, hitos: d.hitos.map((h) => ({ hito: h })), constancias: d.constancias, reglas: REGLAS };
         }
         function emitir(perfil, d, c) {
             if (d.constancias.some((x) => x.curso === c)) return null;
             for (let u = 1; u <= UNIDADES[c]; u++) if (!(d.progreso[k(c, u)] || {}).aprobado_en || !d.evidencias[k(c, u)]) return null;
-            const codigo = `CIC-${{ gestion: 'GESM', 'acompanar-hacer': 'HACS', 'facilitar-ser': 'SERT' }[c]}-DEMO${String(Math.floor(Math.random() * 90) + 10)}`;
+            const codigo = `CIC-${PREFIJO[c].replace('-', '')}-DEMO${String(Math.floor(Math.random() * 90) + 10)}`;
             const x = { codigo, curso: c, emitida_en: ahora() };
             d.constancias.push(x);
             return x;
@@ -115,7 +121,9 @@
                     exigirAbierta();
                     if ((datos.texto || '').trim().length < 20 && !datos.enlace) throw new Error('Escribe tu respuesta (al menos unas líneas) o pega el enlace a tu evidencia.');
                     if (datos.enlace && !/^https:\/\/\S+$/.test(datos.enlace)) throw new Error('El enlace debe empezar por https:// (por ejemplo, un archivo de Google Drive).');
+                    if (SIN_CUESTIONARIO.has(c) && !(d.progreso[k(c, u)] || {}).material_en) throw new Error('Primero repasa el material de estudio de esta unidad.');
                     d.evidencias[k(c, u)] = { estado: 'enviada', texto: datos.texto, enlace: datos.enlace, comentario: null };
+                    if (SIN_CUESTIONARIO.has(c)) fila().aprobado_en = fila().aprobado_en || ahora();
                     const constancia = emitir(perfil, d, c);
                     r = { ok: true, constancia, progreso: resumen(perfil, d, videos) };
                     break;
@@ -128,7 +136,7 @@
             return r;
         }
         function equipoEjemplo() {
-            const p = (nombre, rol, satelite, activa, g, h, s, hitos = [], extra = {}) => ({ cedula: String(Math.floor(Math.random() * 1e8)), nombre, rol, satelite, activa, avance: { gestion: g, 'acompanar-hacer': h, 'facilitar-ser': s }, hitos, constancias: g === 5 ? [{ curso: 'gestion', codigo: 'CIC-GESM-DEMO01' }] : [], pausas: 0, ultima_actividad: activa ? new Date(Date.now() - 864e5 * (extra.dias || 1)).toISOString() : null, cargo: rol === 'dinamizadora' ? 'Acompañamiento' : 'Secretaría Técnica', ...extra });
+            const p = (nombre, rol, satelite, activa, g, h, s, hitos = [], extra = {}) => ({ cedula: String(Math.floor(Math.random() * 1e8)), nombre, rol, satelite, activa, avance: { gestion: g, 'formacion-secretaria': extra.formacion || 0, 'acompanar-hacer': h, 'facilitar-ser': s }, hitos, constancias: g === 5 ? [{ curso: 'gestion', codigo: 'CIC-GESM-DEMO01' }] : [], pausas: 0, ultima_actividad: activa ? new Date(Date.now() - 864e5 * (extra.dias || 1)).toISOString() : null, cargo: rol === 'dinamizadora' ? 'Acompañamiento' : 'Secretaría Técnica', ...extra });
             return {
                 unidades: UNIDADES,
                 personas: [
@@ -136,7 +144,7 @@
                     p('Dinamizadora de ejemplo 2', 'dinamizadora', 'atlantico', true, 3, 0, 0, ['compromiso'], { pausas: 1, dias: 9 }),
                     p('Dinamizadora de ejemplo 3', 'dinamizadora', 'sucre', true, 5, 0, 0, ['compromiso']),
                     p('Dinamizadora de ejemplo 4', 'dinamizadora', 'cordoba', false, 0, 0, 0),
-                    p('Secretaría de ejemplo', 'secretaria', null, true, 1, 0, 0, ['compromiso']),
+                    p('Secretaría de ejemplo', 'secretaria', null, true, 5, 0, 0, ['compromiso'], { formacion: 2 }),
                 ],
                 pendientes: [
                     { id: 1, nombre: 'Dinamizadora de ejemplo 2', curso: 'gestion', unidad: 3, tipo: 'actividad', texto: 'Ejemplo: describí cómo opera mi satélite, quién hace cada tarea y cómo reporto cada semana a la Secretaría Técnica.', enlace: '', creado_en: new Date(Date.now() - 864e5).toISOString() },
@@ -159,13 +167,17 @@
     function recorrido() {
         const h = new Set((estado.hitos || []).map((x) => x.hito));
         const cons = new Set((estado.constancias || []).map((x) => x.curso));
-        const g = estado.cursos.gestion.filter((x) => x.estado === 'aprobada').length;
+        const hechos = (c) => (estado.cursos[c] || []).filter((x) => x.estado === 'aprobada').length;
+        const rutas = ['Acompañar HACER y facilitar SER', cons.has('acompanar-hacer') && cons.has('facilitar-ser'), `${hechos('acompanar-hacer')}/6 semanas · ${hechos('facilitar-ser')}/4 talleres`];
+        const clave = !C.perfil.debe_cambiar_clave;
         const pasos = [
-            ['Activar tu cuenta', true, 'Listo'],
+            ['Activar tu cuenta', clave, clave ? 'Contraseña propia' : 'Cambia tu contraseña'],
             ['Compromiso', h.has('compromiso'), h.has('compromiso') ? 'Confirmado' : 'Pendiente'],
-            ['Gestión del CIC', cons.has('gestion'), `${g} de 5 módulos`],
-            ['Transferencia de la ruta', h.has('transferencia-hacer') || h.has('transferencia-ser'), h.has('transferencia-hacer') || h.has('transferencia-ser') ? 'Registrada' : 'La registra la Secretaría'],
-            ['Acompañar HACER y facilitar SER', cons.has('acompanar-hacer') && cons.has('facilitar-ser'), `${estado.cursos['acompanar-hacer'].filter((x) => x.estado === 'aprobada').length}/6 semanas · ${estado.cursos['facilitar-ser'].filter((x) => x.estado === 'aprobada').length}/4 talleres`],
+            ['Gestión del CIC', cons.has('gestion'), `${hechos('gestion')} de 5 módulos`],
+            ...(C.perfil.rol === 'secretaria'
+                ? [['Formación de la Secretaría', cons.has('formacion-secretaria'), `${hechos('formacion-secretaria')} de 6 unidades`]]
+                : [['Transferencia de la ruta', h.has('transferencia-hacer') || h.has('transferencia-ser'), h.has('transferencia-hacer') || h.has('transferencia-ser') ? 'Registrada' : 'La registra la Secretaría']]),
+            rutas,
         ];
         const actual = pasos.findIndex(([, ok]) => !ok);
         return `<ol class="recorrido" aria-label="Tu recorrido en los cursos">${pasos.map(([t, ok, sub], i) => `
@@ -187,7 +199,8 @@
         const c = C.CURSOS[id];
         const cod = C.codigoModulo(id, i);
         const vid = porCodigo[cod];
-        if (e.estado === 'bloqueada') return `<p class="nota">${esc(e.motivo)}</p><a class="btn btn-borde" href="${c.pagina}#${c.ancla}-${i + 1}">Ver de qué trata</a>`;
+        if (e.estado === 'bloqueada') return `<p class="nota">${esc(e.motivo)}</p>${c.pagina ? `<a class="btn btn-borde" href="${c.pagina}#${c.ancla}-${i + 1}">Ver de qué trata</a>` : ''}`;
+        if (e.sin_cuestionario) return cuerpoSinCuestionario(id, i, e);
         const ev = e.evidencia;
         const pausa = e.estado === 'pausada';
         const intentosTxt = e.aprobado_en ? `Aprobado con ${e.mejor_nota} de ${REGLAS.preguntas}.`
@@ -230,6 +243,33 @@
         </ol>`;
     }
 
+    // Unidad que se aprueba al repasar el material y enviar la actividad (no tiene banco de preguntas)
+    function cuerpoSinCuestionario(id, i, e) {
+        const c = C.CURSOS[id];
+        const ev = e.evidencia;
+        return `<p class="texto-suave">${esc(c.modulos[i][1])}</p>
+        <ol class="pasos-modulo">
+            <li class="${e.material_visto ? 'ok' : ''}">
+                <h4>1. Guía de estudio y presentaciones</h4>
+                <button type="button" class="btn btn-borde" data-material>Abrir el material de la unidad</button>
+                <div class="material-lista" aria-live="polite"></div>
+                ${e.material_visto ? pasoHecho(true, 'Material repasado') : '<button type="button" class="boton-texto" data-marcar="material">Ya repasé el material</button>'}
+            </li>
+            <li class="${ev && ev.estado !== 'devuelta' ? 'ok' : ''}">
+                <h4>2. Actividad de la unidad</h4>
+                <p class="texto-suave">Escribe cómo aplicarías esta metodología en la transferencia a las dinamizadoras, o pega el enlace a tu documento. Al enviarla, la unidad queda aprobada y se abre la siguiente.</p>
+                ${ev ? `<p class="chip ${ev.estado === 'aprobada' ? 'bg-menta' : ev.estado === 'devuelta' ? 'bg-coral' : 'bg-mantequilla'}">${esc(EV_TXT[ev.estado])}</p>${ev.comentario ? `<p class="nota"><b>Comentario:</b> ${esc(ev.comentario)}</p>` : ''}` : ''}
+                ${ev && ev.estado !== 'devuelta' ? '' : (e.material_visto ? `<form class="form-evidencia" novalidate>
+                    <label class="etiqueta" for="ev-t-${id}-${i}">Tu respuesta</label>
+                    <textarea class="campo" id="ev-t-${id}-${i}" name="texto" rows="4" maxlength="4000">${esc(ev ? ev.texto || '' : '')}</textarea>
+                    <label class="etiqueta" for="ev-e-${id}-${i}">Enlace a tu documento (opcional)</label>
+                    <input class="campo" id="ev-e-${id}-${i}" name="enlace" type="url" inputmode="url" placeholder="https://drive.google.com/…" value="${esc(ev ? ev.enlace || '' : '')}">
+                    <button type="submit" class="btn btn-primario">Enviar y aprobar la unidad</button>
+                </form>` : '<small class="ayuda-campo">Se activa cuando repases el material.</small>')}
+            </li>
+        </ol>`;
+    }
+
     function tarjetaCurso(id) {
         const c = C.CURSOS[id];
         const lista = estado.cursos[id];
@@ -251,7 +291,7 @@
                     <details ${abierta && abierta.unidad === i + 1 ? 'open' : ''}>
                         <summary>
                             <span class="unidad-icono" aria-hidden="true">${s.icono}</span>
-                            <span class="unidad-titulo"><span class="codigo">${esc(C.codigoModulo(id, i))}</span> ${esc(titulo)}<small>${esc(s.txt)}${e.estado === 'aprobada' ? ` · ${e.mejor_nota} de ${REGLAS.preguntas}` : ''}${e.estado === 'bloqueada' ? ` · ${e.motivo}` : ''}</small></span>
+                            <span class="unidad-titulo"><span class="codigo">${esc(C.codigoModulo(id, i))}</span> ${esc(titulo)}<small>${esc(s.txt)}${e.estado === 'aprobada' && !e.sin_cuestionario ? ` · ${e.mejor_nota} de ${REGLAS.preguntas}` : ''}${e.estado === 'bloqueada' ? ` · ${e.motivo}` : ''}</small></span>
                         </summary>
                         <div class="unidad-cuerpo">${cuerpoUnidad(id, i, e)}</div>
                     </details>
@@ -264,12 +304,12 @@
     function pintarVista() {
         const v = C.vista;
         const h = new Set((estado.hitos || []).map((x) => x.hito));
-        const lista = C.perfil.rol === 'secretaria' ? ['gestion', 'acompanar-hacer', 'facilitar-ser'] : ['gestion', 'acompanar-hacer', 'facilitar-ser'];
+        const lista = Object.keys(estado.cursos);
         v.innerHTML = `
             <h2>Mis cursos</h2>
-            <p class="vista-intro">${C.perfil.rol === 'secretaria' ? 'Tú también haces Gestión del CIC. Los cursos de las rutas están abiertos para que los supervises.' : 'Avanza en orden: cada módulo se abre cuando apruebas el anterior.'}${C.DEMO ? ' <b>Demostración:</b> tu avance se guarda solo en este dispositivo y las preguntas son de ejemplo.' : ''}</p>
+            <p class="vista-intro">${C.perfil.rol === 'secretaria' ? 'Avanza en orden: Gestión del CIC, luego tu Formación de la Secretaría Técnica y, al terminarla, se abren las rutas HACER y SER para que las supervises.' : 'Avanza en orden: cada módulo se abre cuando apruebas el anterior.'}${C.DEMO ? ' <b>Demostración:</b> tu avance se guarda solo en este dispositivo y las preguntas son de ejemplo.' : ''}</p>
             ${recorrido()}
-            ${h.has('compromiso') ? '' : tarjetaCompromiso()}
+            ${C.perfil.debe_cambiar_clave ? '<div class="tarjeta compromiso"><h3>Primero, tu contraseña</h3><p>Tu contraseña todavía es tu número de cédula. Cámbiala en «Mi cuenta» para abrir tus cursos.</p><button type="button" class="btn btn-primario" data-ir="cuenta">Cambiar mi contraseña</button></div>' : (h.has('compromiso') ? '' : tarjetaCompromiso())}
             ${lista.map(tarjetaCurso).join('')}
             ${C.DEMO ? '<p class="privado"><button type="button" class="boton-texto" id="demo-reiniciar">Reiniciar la demostración de los cursos</button></p>' : ''}`;
         enlazar();
@@ -425,7 +465,7 @@
                 <td><b>${esc(p.nombre)}</b><small>${esc(p.cargo || '')}${sat(p.satelite) ? ' · ' + esc(sat(p.satelite)) : ''}</small></td>
                 <td>${p.activa ? '<span class="chip bg-menta">Activa</span>' : `<button type="button" class="boton-texto" data-codigo="${esc(p.cedula)}" data-nombre="${esc(p.nombre)}" data-celular="${esc(p.celular || '')}">Generar código</button>`}</td>
                 <td><span class="mini-barra" title="${g} de 5"><span style="width:${g / 5 * 100}%"></span></span> ${g}/5${gestionOk ? ' ✓' : ''}</td>
-                <td>${p.rol === 'dinamizadora' ? `${p.avance['acompanar-hacer']}/6 · ${p.avance['facilitar-ser']}/4` : '—'}</td>
+                <td>${p.rol === 'dinamizadora' ? `${p.avance['acompanar-hacer']}/6 · ${p.avance['facilitar-ser']}/4` : `Formación ${p.avance['formacion-secretaria'] || 0}/6`}</td>
                 <td>${p.rol === 'dinamizadora' ? tr('transferencia-hacer', 'HACER') + tr('transferencia-ser', 'SER') : '—'}</td>
                 <td><small>${esc(hace(p.ultima_actividad))}${p.pausas ? ` · ${p.pausas} en pausa` : ''}${quieto ? ' · sin avanzar' : ''}</small></td>
             </tr>`;
@@ -439,7 +479,7 @@
                 <div class="tarjeta kpi"><b>${d.personas.filter((p) => p.pausas).length}</b><span>${d.personas.filter((p) => p.pausas).length === 1 ? 'persona' : 'personas'} con un módulo en pausa</span></div>
             </div>
             <div class="tabla-caja"><table class="tabla-equipo">
-                <thead><tr><th scope="col">Persona</th><th scope="col">Cuenta</th><th scope="col">Gestión</th><th scope="col">HACER · SER</th><th scope="col">Transferencia</th><th scope="col">Actividad</th></tr></thead>
+                <thead><tr><th scope="col">Persona</th><th scope="col">Cuenta</th><th scope="col">Gestión</th><th scope="col">Rutas o formación</th><th scope="col">Transferencia</th><th scope="col">Actividad</th></tr></thead>
                 <tbody>${filas}</tbody></table></div>
             <p class="ayuda-campo">La transferencia se marca después de la sesión de transferencia con la Secretaría y abre el curso de esa ruta. En rojo: personas con un módulo en pausa o más de 7 días sin avanzar.</p>
             <h3 class="subtitulo-seccion" id="bandeja">Evidencias por revisar</h3>

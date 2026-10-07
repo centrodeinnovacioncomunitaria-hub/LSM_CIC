@@ -880,3 +880,4 @@ details.desplegable summary { min-height: 2.75rem; align-items: center; }
 .evidencia-texto { background: var(--crema); border-radius: .9rem; padding: .7rem .9rem; white-space: pre-line; }
 .evidencia .botones { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .5rem; }
 .codigo-grande { font: 700 2.6rem/1 var(--titulo); letter-spacing: .3em; text-align: center; margin: 1rem 0 .5rem; color: var(--bosque); }
+.recurso-entrega { font-size: .9rem; font-weight: 700; color: var(--musgo); }
