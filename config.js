@@ -4,10 +4,10 @@
 // NUNCA pongas aquí la llave de la cuenta de servicio (el archivo .json de «Generar nueva clave privada»).
 window.CIC_CONFIG = {
   firebase: {
-    apiKey: '',            // Configuración del proyecto → General → Tus apps → apiKey
-    authDomain: '',        // ej.: 'cic-caribe.firebaseapp.com'
-    projectId: '',         // ej.: 'cic-caribe'
-    appId: ''
+    apiKey: 'AIzaSyCdU_Ytlt9bQbCBaFEmBLvBBd8Mzby3GHk',            // Configuración del proyecto → General → Tus apps → apiKey
+    authDomain: 'cic-caribe.firebaseapp.com',        // ej.: 'cic-caribe.firebaseapp.com'
+    projectId: 'cic-caribe',         // ej.: 'cic-caribe'
+    appId: '1:945531375490:web:d9dafd51202867bf64099b'
   },
   // Dirección de la Cloud Function. Vacía = https://us-central1-<projectId>.cloudfunctions.net/cicAcceso
   funcionUrl: '',

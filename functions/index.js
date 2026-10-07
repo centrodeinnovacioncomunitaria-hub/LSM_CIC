@@ -4,11 +4,13 @@
 
 const { onRequest } = require('firebase-functions/v2/https');
 const { defineString } = require('firebase-functions/params');
-const admin = require('firebase-admin');
+const { initializeApp } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
+const { getFirestore } = require('firebase-admin/firestore');
 const { crearLogica } = require('./logica');
 const { crearCuentas } = require('./cuentas');
 
-admin.initializeApp();
+initializeApp();
 
 // Clave web de Firebase (la misma de assets/config.js) y dirección de la página.
 // Van en functions/.env (ver .env.ejemplo).
@@ -16,9 +18,9 @@ const API_KEY = defineString('CIC_API_KEY');
 const SITIO = defineString('CIC_SITIO', { default: 'https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/' });
 const ORIGENES = defineString('CIC_ORIGENES', { default: 'https://centrodeinnovacioncomunitaria-hub.github.io,http://localhost:8080,http://127.0.0.1:8080' });
 
-const cuentas = crearCuentas(admin.auth(), () => API_KEY.value(), () => SITIO.value());
+const cuentas = crearCuentas(getAuth(), () => API_KEY.value(), () => SITIO.value());
 
-const logica = crearLogica({ db: admin.firestore(), cuentas });
+const logica = crearLogica({ db: getFirestore(), cuentas });
 
 exports.cicAcceso = onRequest({ region: 'us-central1', memory: '256MiB', maxInstances: 10 }, async (req, res) => {
   const permitidos = ORIGENES.value().split(',').map((s) => s.trim());

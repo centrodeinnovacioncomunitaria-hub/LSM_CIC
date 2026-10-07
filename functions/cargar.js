@@ -14,7 +14,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const admin = require('firebase-admin');
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
+const { getFirestore } = require('firebase-admin/firestore');
 const { crearLogica } = require('./logica');
 const { crearCuentas } = require('./cuentas');
 
@@ -26,8 +28,8 @@ if (!llave || llave === true) {
   process.exit(1);
 }
 const leerJSON = (f) => JSON.parse(fs.readFileSync(path.resolve(f), 'utf8'));
-admin.initializeApp({ credential: admin.credential.cert(leerJSON(llave)) });
-const db = admin.firestore();
+initializeApp({ credential: cert(leerJSON(llave)) });
+const db = getFirestore();
 
 // Clave web y dirección de la página: las mismas de functions/.env
 const env = Object.fromEntries((fs.existsSync(path.join(__dirname, '.env')) ? fs.readFileSync(path.join(__dirname, '.env'), 'utf8') : '')
@@ -86,7 +88,7 @@ async function vaciar(coleccion) {
   const invitar = opcion('invitar');
   if (invitar) {
     if (!env.CIC_API_KEY) throw new Error('Para invitar, primero pega la clave web en functions/.env (CIC_API_KEY).');
-    const cuentas = crearCuentas(admin.auth(), () => env.CIC_API_KEY, () => env.CIC_SITIO || 'https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/');
+    const cuentas = crearCuentas(getAuth(), () => env.CIC_API_KEY, () => env.CIC_SITIO || 'https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/');
     const logica = crearLogica({ db, cuentas });
     const cedulas = invitar === true ? (await db.collection('directorio').get()).docs.map((d) => d.id) : [String(invitar)];
     let enviados = 0;

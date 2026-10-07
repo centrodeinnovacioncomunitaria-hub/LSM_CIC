@@ -74,7 +74,7 @@ Mientras `config.js` esté vacío, la página funciona en **modo demostración**
 
 ## 3. Publicar la función y las reglas
 
-En el computador (necesita Node.js 20 o más nuevo, https://nodejs.org):
+En el computador (necesita Node.js 22 o más nuevo, https://nodejs.org):
 
 ```bash
 npm install -g firebase-tools
