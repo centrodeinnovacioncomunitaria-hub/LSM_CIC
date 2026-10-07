@@ -11,5 +11,7 @@ window.CIC_CONFIG = {
   },
   // Dirección de la Cloud Function. Vacía = https://us-central1-<projectId>.cloudfunctions.net/cicAcceso
   funcionUrl: '',
+  // Segunda dirección del mismo servidor: se usa sola si la primera no responde en el navegador
+  funcionAlterna: 'https://cicacceso-fg3c52ar6q-uc.a.run.app',
   whatsappCIC: ''          // WhatsApp de atención del CIC (solo números, ej.: '3001234567'); vacío = no se muestra el botón
 };

@@ -61,7 +61,7 @@ const iniciales = (n) => String(n || '').split(/\s+/).filter(Boolean).slice(0, 3
 
 function validarCedula(v) {
   const c = soloDigitos(v);
-  if (c.length < 5 || c.length > 12) throw new Falla(400, 'cedula', 'Escribe tu número de cédula, solo números.');
+  if (c.length < 5 || c.length > 15) throw new Falla(400, 'cedula', 'Escribe tu número de cédula, solo números.');
   return c;
 }
 function validarClaveNueva(clave, cedula) {
