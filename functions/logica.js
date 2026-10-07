@@ -371,6 +371,86 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
     return { ok: true, archivos };
   }
 
+  // ================================================================ Foro de la comunidad
+  // Solo para personas con cuenta (equipo y emprendedoras). La Secretaría y la administración moderan.
+  const FORO_CATEGORIAS = { general: 'Conversación general', hacer: 'Ruta HACER', ser: 'Ruta SER', ventas: 'Mercados y ventas', finanzas: 'Ahorro y financiamiento', equipo: 'Equipo del CIC' };
+  const autorDe = (p) => { const n = String(p.nombre || '').trim().split(/\s+/); return `${n[0] || 'Participante'}${n[1] ? ` ${n[1][0]}.` : ''}`; };
+  const moderador = (p) => p.rol === 'secretaria' || esAdmin(p);
+  async function foroTemas(token, b) {
+    const p = await usuarioDelToken(token);
+    let temas = (await lista(col('foro_temas'))).filter((t) => !t.borrado);
+    if (b.categoria && FORO_CATEGORIAS[b.categoria]) temas = temas.filter((t) => t.categoria === b.categoria);
+    if (p.rol === 'emprendedora') temas = temas.filter((t) => t.categoria !== 'equipo');
+    temas.sort((a, b2) => (b2.fijado ? 1 : 0) - (a.fijado ? 1 : 0) || String(b2.ultima_actividad).localeCompare(String(a.ultima_actividad)));
+    return {
+      categorias: Object.fromEntries(Object.entries(FORO_CATEGORIAS).filter(([k]) => p.rol !== 'emprendedora' || k !== 'equipo')),
+      puede_moderar: moderador(p),
+      temas: temas.slice(0, 100).map((t) => ({ id: t._id, titulo: t.titulo, categoria: t.categoria, autor: t.autor, autor_rol: t.autor_rol, extracto: String(t.texto).slice(0, 180), respuestas: t.respuestas || 0, creado_en: t.creado_en, ultima_actividad: t.ultima_actividad, fijado: !!t.fijado })),
+    };
+  }
+  async function foroTema(token, b) {
+    const p = await usuarioDelToken(token);
+    const t = await datos(col('foro_temas').doc(String(b.id || '-')));
+    if (!t || t.borrado || (t.categoria === 'equipo' && p.rol === 'emprendedora')) throw new Falla(404, 'no_existe', 'Esta conversación ya no existe.');
+    const resp = (await lista(col('foro_respuestas').where('tema', '==', String(b.id)))).filter((r) => !r.borrado).sort((a, b2) => a.creado_en.localeCompare(b2.creado_en));
+    const propio = (x) => x.autor_id === p.id;
+    return {
+      puede_moderar: moderador(p),
+      tema: { id: String(b.id), titulo: t.titulo, categoria: t.categoria, categoria_nombre: FORO_CATEGORIAS[t.categoria], texto: t.texto, autor: t.autor, autor_rol: t.autor_rol, creado_en: t.creado_en, fijado: !!t.fijado, mio: propio(t) },
+      respuestas: resp.map((r) => ({ id: r._id, texto: r.texto, autor: r.autor, autor_rol: r.autor_rol, creado_en: r.creado_en, mio: propio(r) })),
+    };
+  }
+  async function foroLimite(p) {
+    const ultimo = await datos(col('foro_limites').doc(p.id));
+    if (ultimo && ahora() - new Date(ultimo.en) < 20000) throw new Falla(429, 'despacio', 'Espera unos segundos antes de volver a publicar.');
+    await col('foro_limites').doc(p.id).set({ en: hoy() });
+  }
+  async function foroPublicar(token, b) {
+    const p = await usuarioDelToken(token);
+    const categoria = String(b.categoria || '');
+    const titulo = texto(b.titulo, 140);
+    const cuerpo = String(b.texto ?? '').trim().slice(0, 5000);
+    if (!FORO_CATEGORIAS[categoria] || (categoria === 'equipo' && p.rol === 'emprendedora')) throw new Falla(400, 'categoria', 'Elige un tema de la lista.');
+    if (titulo.length < 8) throw new Falla(400, 'titulo', 'Escribe un título de al menos unas palabras.');
+    if (cuerpo.length < 15) throw new Falla(400, 'texto', 'Cuéntanos un poco más (al menos una frase).');
+    await foroLimite(p);
+    const t = hoy();
+    const ref = await col('foro_temas').add({ categoria, titulo, texto: cuerpo, autor_id: p.id, autor: autorDe(p), autor_rol: NOMBRE_ROL[p.rol] || 'Administración', creado_en: t, ultima_actividad: t, respuestas: 0, fijado: false, borrado: false });
+    return { ok: true, id: ref.id };
+  }
+  async function foroResponder(token, b) {
+    const p = await usuarioDelToken(token);
+    const id = String(b.id || '-');
+    const ref = col('foro_temas').doc(id);
+    const t = await datos(ref);
+    if (!t || t.borrado || (t.categoria === 'equipo' && p.rol === 'emprendedora')) throw new Falla(404, 'no_existe', 'Esta conversación ya no existe.');
+    const cuerpo = String(b.texto ?? '').trim().slice(0, 3000);
+    if (cuerpo.length < 2) throw new Falla(400, 'texto', 'Escribe tu respuesta.');
+    await foroLimite(p);
+    await col('foro_respuestas').add({ tema: id, texto: cuerpo, autor_id: p.id, autor: autorDe(p), autor_rol: NOMBRE_ROL[p.rol] || 'Administración', creado_en: hoy(), borrado: false });
+    await ref.update({ respuestas: (t.respuestas || 0) + 1, ultima_actividad: hoy() });
+    return foroTema(token, { id });
+  }
+  async function foroBorrar(token, b) {
+    const p = await usuarioDelToken(token);
+    const coleccion = b.tipo === 'respuesta' ? 'foro_respuestas' : 'foro_temas';
+    const ref = col(coleccion).doc(String(b.id || '-'));
+    const x = await datos(ref);
+    if (!x || x.borrado) throw new Falla(404, 'no_existe', 'Ya no existe.');
+    if (x.autor_id !== p.id && !moderador(p)) throw new Falla(403, 'permiso', 'Solo quien lo escribió o la Secretaría Técnica pueden quitarlo.');
+    await ref.update({ borrado: true, borrado_por: p.id, borrado_en: hoy() });
+    if (coleccion === 'foro_respuestas') { const t = await datos(col('foro_temas').doc(x.tema)); if (t) await col('foro_temas').doc(x.tema).update({ respuestas: Math.max(0, (t.respuestas || 1) - 1) }); }
+    return { ok: true };
+  }
+  async function foroFijar(token, b) {
+    const p = await usuarioDelToken(token);
+    if (!moderador(p)) throw new Falla(403, 'permiso', 'Solo la Secretaría Técnica fija conversaciones.');
+    const ref = col('foro_temas').doc(String(b.id || '-'));
+    if (!(await datos(ref))) throw new Falla(404, 'no_existe', 'Ya no existe.');
+    await ref.update({ fijado: b.fijado === true });
+    return { ok: true };
+  }
+
   // Dinamizadora de una emprendedora: la asignada o la de «acompañamiento» de su satélite.
   async function miDinamizadora(token) {
     const p = await usuarioDelToken(token);
@@ -723,6 +803,13 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
         case 'iniciar-video': r = await iniciarVideo(token, b); break;
         case 'admin-contenido': r = await adminContenido(token); break;
         case 'admin-guardar-material': r = await adminGuardarMaterial(token, b); break;
+        // Foro
+        case 'foro-temas': r = await foroTemas(token, b); break;
+        case 'foro-tema': r = await foroTema(token, b); break;
+        case 'foro-publicar': r = await foroPublicar(token, b); break;
+        case 'foro-responder': r = await foroResponder(token, b); break;
+        case 'foro-borrar': r = await foroBorrar(token, b); break;
+        case 'foro-fijar': r = await foroFijar(token, b); break;
         case 'material': r = await material(token, b); break;
         case 'cuestionario': r = await cuestionario(token, b); break;
         case 'responder': r = await responder(token, b); break;

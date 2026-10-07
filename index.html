@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261012">
+    <link rel="stylesheet" href="assets/cic.css?v=20261013">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -101,6 +101,7 @@
                 </div>
                 <a href="recursos/">Recursos</a>
                 <a href="el-cic/">El CIC</a>
+                <a href="foro/">Foro</a>
                 <div class="submenu">
                     <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-cursos">Equipo <svg aria-hidden="true"><use href="#flecha"/></svg></button>
                     <ul id="sub-cursos" class="submenu-lista" hidden>
@@ -204,7 +205,7 @@
         <section class="banda-cifras" aria-label="El CIC en cifras">
             <div class="patron-hojas animado" aria-hidden="true"></div>
             <div class="contenedor">
-                <ul class="cifras lista-limpia">
+                <ul class="cifras lista-limpia escalonado">
                     <li class="aparece"><b data-contar="200">200</b><span>emprendedoras acompañadas</span></li>
                     <li class="aparece"><b data-contar="24">24</b><span>dinamizadoras en el territorio</span></li>
                     <li class="aparece"><b data-contar="8">8</b><span>satélites en 7 departamentos</span></li>
@@ -214,12 +215,12 @@
             </div>
         </section>
 
-        <!-- 2 · Qué es el CIC: texto + fotos + pilares en carrusel -->
+        <!-- 1 · Qué es el CIC: texto + fotos -->
         <section id="sobre-cic" class="seccion seccion-blanca con-decor" aria-labelledby="titulo-sobre">
             <div class="patron-puntos decor decor-derecha" aria-hidden="true"></div>
             <div class="contenedor">
                 <div class="split">
-                    <div class="split-texto aparece">
+                    <div class="split-texto aparece-izq">
                         <p class="eyebrow"><span class="indice">01</span> Qué es el CIC</p>
                         <h2 id="titulo-sobre">Una red para que tu negocio <em>florezca.</em></h2>
                         <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
@@ -231,21 +232,34 @@
                         </ul>
                         <div class="botones"><a class="btn btn-bosque" href="el-cic/">Conoce el CIC</a></div>
                     </div>
-                    <div class="collage aparece" aria-hidden="true">
+                    <div class="collage aparece-zoom" aria-hidden="true">
                         <div class="collage-a hoja"><img class="foto-duo" style="filter:url(#duo-verde)" referrerpolicy="no-referrer" loading="lazy" width="600" height="750" alt="" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgkaFUGQ0lPFM6brzHzL_IpVWq1-TNBT09i9fsvGLFzL9xLCLwIwXAvQrNSRSFfO0YGUrww76EF6ipz-koMBblKLzogX8BmWFiyR5SAm5yjcVIxCCxAXAslyDUhedAtzoGcDtzMJ2Xzapk/s800/IMG_6604.JPG"></div>
                         <div class="collage-b hoja-inv"><img class="foto-duo" style="filter:url(#duo-durazno)" referrerpolicy="no-referrer" loading="lazy" width="600" height="600" alt="" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgZ6XmgMPuMbbJRwkFLRYZPOKWcJGlk5gcSWAM9IGCDVm27Zy3I3IAiUwh9HF5Z-RUJk15hNWiCijwvXpVXB51lFmUI0EoAPs87PPfiLCHjtMEtemSH2jjJpho54M0t1cnNAAzT5C0qebk/s800/IMG_6578.JPG"></div>
                         <div class="collage-sello"><b>Emprender</b><span>es florecer</span></div>
                     </div>
                 </div>
 
-                <div class="cabeza-fila aparece">
-                    <h3 class="subtitulo-bloque">Cuatro pilares y una base</h3>
+            </div>
+        </section>
+
+        <svg class="onda" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true" style="background:#fff"><path d="M0,40 C240,80 480,0 720,30 C960,60 1200,10 1440,40 L1440,70 L0,70 Z" style="fill:var(--crema-2)"/></svg>
+
+        <!-- 2 · Pilares del modelo -->
+        <section id="pilares" class="seccion seccion-pilares con-decor" aria-labelledby="titulo-pilares">
+            <div class="patron-hojas decor-completo" aria-hidden="true"></div>
+            <div class="contenedor">
+                <div class="cabeza-fila">
+                    <div class="cabeza aparece">
+                        <p class="eyebrow"><span class="indice">02</span> El modelo</p>
+                        <h2 id="titulo-pilares">Cuatro pilares y <em>una base.</em></h2>
+                        <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
+                    </div>
                     <div class="carrusel-controles" data-carrusel="pilares">
                         <button type="button" class="carrusel-btn" data-dir="-1" aria-label="Ver pilares anteriores"><span aria-hidden="true">‹</span></button>
                         <button type="button" class="carrusel-btn" data-dir="1" aria-label="Ver más pilares"><span aria-hidden="true">›</span></button>
                     </div>
                 </div>
-                <ol class="carrusel lista-limpia" id="carrusel-pilares">
+                <ol class="carrusel lista-limpia escalonado" id="carrusel-pilares">
 <!-- PILARES:inicio -->
                     <li class="tarjeta pilar aparece"><span class="numero bg-menta">1</span><h3>Acompañamiento integral</h3><p>Cada emprendedora recibe acompañamiento en su negocio: autoestima, modelo de negocio y finanzas.</p></li>
                     <li class="tarjeta pilar aparece"><span class="numero bg-coral">2</span><h3>Acceso a mercados</h3><p>Conectar los negocios con clientes nuevos, ferias, gremios y aliados comerciales.</p></li>
@@ -257,7 +271,7 @@
             </div>
         </section>
 
-        <svg class="onda" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,40 C240,80 480,0 720,30 C960,60 1200,10 1440,40 L1440,70 L0,70 Z" fill="var(--crema)"/></svg>
+        <svg class="onda" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true" style="background:var(--crema-2)"><path d="M0,25 C180,60 420,70 720,40 C1020,10 1260,10 1440,35 L1440,70 L0,70 Z" style="fill:var(--crema)"/></svg>
 
         <!-- 3 · Cómo funciona: en cascada y en el mapa -->
         <section id="como-funciona" class="seccion con-decor" aria-labelledby="titulo-como">
@@ -265,11 +279,11 @@
             <div class="patron-ondas animado decor decor-izquierda" aria-hidden="true"></div>
             <div class="contenedor">
                 <div class="cabeza aparece">
-                    <p class="eyebrow"><span class="indice">02</span> Cómo funciona</p>
+                    <p class="eyebrow"><span class="indice">03</span> Cómo funciona</p>
                     <h2 id="titulo-como">De la Secretaría Técnica a <em>tu satélite.</em></h2>
                     <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
                 </div>
-                <ol class="pasos-h lista-limpia">
+                <ol class="pasos-h lista-limpia escalonado">
                     <li class="paso-h aparece"><span class="paso-h-num bg-agua">1</span><h3>Secretaría Técnica</h3><p>5 personas dirigen el CIC y forman al equipo.</p></li>
                     <li class="paso-h aparece"><span class="paso-h-num bg-durazno">2</span><h3>8 satélites</h3><p>24 dinamizadoras, 3 en cada satélite.</p></li>
                     <li class="paso-h aparece"><span class="paso-h-num bg-coral">3</span><h3>200 emprendedoras</h3><p>En su negocio y en talleres de grupo.</p></li>
@@ -351,19 +365,20 @@
             </div>
         </section>
 
+        <svg class="onda" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true" style="background:var(--crema)"><path d="M0,40 C240,80 480,0 720,30 C960,60 1200,10 1440,40 L1440,70 L0,70 Z" style="fill:#fff"/></svg>
         <!-- 4 · Talleres para emprendedoras: tarjetas tipo catálogo -->
         <section id="rutas" class="seccion seccion-blanca con-decor" aria-labelledby="titulo-rutas">
             <div class="patron-puntos decor decor-derecha" aria-hidden="true"></div>
             <div class="contenedor">
                 <div class="cabeza-fila aparece">
                     <div class="cabeza">
-                        <p class="eyebrow"><span class="indice">03</span> Talleres para emprendedoras</p>
+                        <p class="eyebrow"><span class="indice">04</span> Talleres para emprendedoras</p>
                         <h2 id="titulo-rutas">Cuatro talleres para <em>crecer juntas.</em></h2>
                         <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
                     </div>
                     <a class="btn btn-borde" href="rutas/ser/">Ver todos los talleres</a>
                 </div>
-                <div class="catalogo">
+                <div class="catalogo escalonado">
                     <a class="tarjeta-taller aparece" href="rutas/ser/#taller-1">
                         <div class="taller-portada bg-lavanda"><div class="patron-hojas" aria-hidden="true"></div><span class="taller-num">1</span><span class="chip chip-claro">Presencial</span></div>
                         <div class="taller-cuerpo"><p class="taller-meta">Taller SER 1 · Semana 1</p><h3>De la subsistencia a la gerencia</h3><p>Te reconoces como gerenta de tu negocio y piensas en tu proyecto de vida.</p><span class="taller-enlace">Ver el taller <span aria-hidden="true">→</span></span></div>
@@ -395,13 +410,14 @@
             </div>
         </section>
 
+        <svg class="onda" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true" style="background:#fff"><path d="M0,25 C180,60 420,70 720,40 C1020,10 1260,10 1440,35 L1440,70 L0,70 Z" style="fill:var(--bosque)"/></svg>
         <!-- 5 · Equipo del CIC: acceso solo con cédula y contraseña -->
         <section id="cursos-equipo" class="seccion bloque-equipo" aria-labelledby="titulo-equipo">
             <div class="patron-hojas animado" aria-hidden="true"></div>
             <div class="contenedor">
                 <div class="split split-equipo">
-                    <div class="aparece">
-                        <p class="eyebrow eyebrow-claro"><span class="indice">04</span> Equipo del CIC</p>
+                    <div class="aparece-izq">
+                        <p class="eyebrow eyebrow-claro"><span class="indice">05</span> Equipo del CIC</p>
                         <h2 id="titulo-equipo">Formación para quienes <em>acompañan.</em></h2>
                         <p class="lead">Dinamizadoras y Secretaría Técnica avanzan curso a curso. Cada uno se abre al aprobar el anterior.</p>
                         <div class="botones">
@@ -409,7 +425,7 @@
                             <button type="button" class="btn btn-borde-claro" data-abrir="ingresar" data-perfil="secretaria">Soy secretaria</button>
                         </div>
                     </div>
-                    <ol class="escalera lista-limpia aparece" aria-label="Recorrido del equipo">
+                    <ol class="escalera lista-limpia escalonado" aria-label="Recorrido del equipo">
                         <li><span class="escalera-num">1</span><span><b>Activa tu cuenta</b><small>Con cédula, código y contraseña</small></span></li>
                         <li><span class="escalera-num">2</span><span><b>Gestión del CIC</b><small>5 módulos con cuestionario</small></span></li>
                         <li><span class="escalera-num">3</span><span><b>Transferencia o formación</b><small>Según tu perfil</small></span></li>
@@ -420,15 +436,16 @@
             </div>
         </section>
 
+        <svg class="onda" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true" style="background:var(--bosque)"><path d="M0,40 C240,80 480,0 720,30 C960,60 1200,10 1440,40 L1440,70 L0,70 Z" style="fill:var(--crema)"/></svg>
         <!-- 6 · Galería: mujeres que florecen -->
         <section class="seccion galeria-seccion" aria-labelledby="titulo-galeria">
             <div class="contenedor">
                 <div class="cabeza aparece">
-                    <p class="eyebrow"><span class="indice">05</span> En el territorio</p>
+                    <p class="eyebrow"><span class="indice">06</span> En el territorio</p>
                     <h2 id="titulo-galeria">Mujeres que <em>florecen.</em></h2>
                     <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
                 </div>
-                <div class="galeria">
+                <div class="galeria escalonado">
                     <figure class="galeria-item galeria-alta aparece"><img class="foto-duo" style="filter:url(#duo-verde)" referrerpolicy="no-referrer" loading="lazy" width="600" height="800" alt="Facilitadora conversando con un grupo de mujeres" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgkaFUGQ0lPFM6brzHzL_IpVWq1-TNBT09i9fsvGLFzL9xLCLwIwXAvQrNSRSFfO0YGUrww76EF6ipz-koMBblKLzogX8BmWFiyR5SAm5yjcVIxCCxAXAslyDUhedAtzoGcDtzMJ2Xzapk/s800/IMG_6604.JPG"><figcaption>Aprender en grupo</figcaption></figure>
                     <figure class="galeria-item aparece"><img class="foto-duo" style="filter:url(#duo-coral)" referrerpolicy="no-referrer" loading="lazy" width="800" height="600" alt="Mujeres de la Red en un taller" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEicEkPOKCm_sE-jU7pciFF2BYTM6QwPMDneMMFKks7sapmv17WIn0rzCAw_O-QWl62bQCkdrrB9Vboed1-2YI24qd3sS_cV5OhRVkEnccxOJZpaBHiG-j52MkSkLGb7h19tBVGtq3_w2p4/s800/IMG_6584.JPG"><figcaption>Talleres SER</figcaption></figure>
                     <figure class="galeria-item aparece"><img class="foto-duo" style="filter:url(#duo-durazno)" referrerpolicy="no-referrer" loading="lazy" width="800" height="600" alt="Emprendedoras atentas en una sesión" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgZ6XmgMPuMbbJRwkFLRYZPOKWcJGlk5gcSWAM9IGCDVm27Zy3I3IAiUwh9HF5Z-RUJk15hNWiCijwvXpVXB51lFmUI0EoAPs87PPfiLCHjtMEtemSH2jjJpho54M0t1cnNAAzT5C0qebk/s800/IMG_6578.JPG"><figcaption>La Red de Mujeres del Caribe</figcaption></figure>
@@ -438,23 +455,30 @@
             <div class="marquesina" aria-hidden="true"><div class="marquesina-pista"><span>Riohacha</span><span>Albania</span><span>Santa Marta</span><span>Valledupar</span><span>Pueblo Bello</span><span>Baranoa</span><span>Campo de la Cruz</span><span>Cartagena</span><span>María la Baja</span><span>Sincelejo</span><span>Tolú</span><span>Montería</span><span>Tierralta</span><span>Riohacha</span><span>Albania</span><span>Santa Marta</span><span>Valledupar</span><span>Pueblo Bello</span><span>Baranoa</span><span>Campo de la Cruz</span><span>Cartagena</span><span>María la Baja</span><span>Sincelejo</span><span>Tolú</span><span>Montería</span><span>Tierralta</span></div></div>
         </section>
 
-        <!-- Aliados -->
-        <section id="aliados" class="seccion seccion-crema2" aria-labelledby="titulo-aliados">
-            <div class="contenedor">
-                <div class="cabeza aparece">
-                    <p class="eyebrow">Aliados</p>
-                    <h2 id="titulo-aliados">Una red que no empieza de cero.</h2>
-                    <p>El CIC se ejecuta en el marco del Convenio 432, dentro del Fondo de Igualdad.</p>
+        <!-- 7 · Aliados -->
+        <section id="aliados" class="seccion seccion-blanca seccion-aliados con-decor" aria-labelledby="titulo-aliados">
+            <div class="patron-puntos decor decor-derecha" aria-hidden="true"></div>
+            <div class="contenedor aliados-split">
+                <div class="aliados-texto aparece-izq">
+                    <p class="eyebrow"><span class="indice">07</span> Aliados</p>
+                    <h2 id="titulo-aliados">Una red que no <em>empieza de cero.</em></h2>
+                    <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
+                    <p class="lead">El CIC une a organizaciones de mujeres con trayectoria, una entidad que ejecuta, un fondo que financia y un equipo que acompaña la metodología.</p>
+                    <div class="convenio">
+                        <span class="convenio-sello" aria-hidden="true">432</span>
+                        <p><b>Convenio 432 · Fondo de Igualdad</b>El marco que hace posible el Centro de Innovación Comunitaria en el Caribe.</p>
+                    </div>
                 </div>
-                <div class="rejilla r4 aliados-rejilla">
-                    <article class="tarjeta aliado aparece"><span class="chip bg-menta">Base comunitaria</span><h3>Red de Mujeres del Caribe</h3><p>Más de 30 años de trayectoria y nodos en siete departamentos.</p></article>
-                    <article class="tarjeta aliado aparece"><span class="chip bg-durazno">Ejecuta</span><h3>APRODEFA</h3><p>Implementa el modelo con la Red de Mujeres del Caribe.</p></article>
-                    <article class="tarjeta aliado aparece"><span class="chip bg-mantequilla">Financia</span><h3>Fondo de Igualdad</h3><p>El proyecto hace parte del Convenio 432.</p></article>
-                    <article class="tarjeta aliado aparece"><span class="chip bg-lavanda">Acompaña</span><h3>Emprende Ahora</h3><p>Acompaña el diseño metodológico y la formación del equipo.</p></article>
-                </div>
+                <ul class="aliados-tarjetas lista-limpia escalonado">
+                    <li class="aliado-tarjeta aparece"><span class="aliado-monograma bg-menta" aria-hidden="true">RMC</span><div><span class="chip">Base comunitaria</span><h3>Red de Mujeres del Caribe</h3><p>Más de 30 años de trayectoria y nodos en los siete departamentos.</p></div></li>
+                    <li class="aliado-tarjeta aparece"><span class="aliado-monograma bg-durazno" aria-hidden="true">AP</span><div><span class="chip">Ejecuta</span><h3>APRODEFA</h3><p>Implementa el modelo con la Red de Mujeres del Caribe.</p></div></li>
+                    <li class="aliado-tarjeta aparece"><span class="aliado-monograma bg-mantequilla" aria-hidden="true">FI</span><div><span class="chip">Financia</span><h3>Fondo de Igualdad</h3><p>El proyecto hace parte del Convenio 432.</p></div></li>
+                    <li class="aliado-tarjeta aparece"><span class="aliado-monograma bg-lavanda" aria-hidden="true">EA</span><div><span class="chip">Acompaña</span><h3>Emprende Ahora</h3><p>Acompaña el diseño metodológico y la formación del equipo.</p></div></li>
+                </ul>
             </div>
         </section>
 
+        <svg class="onda" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true" style="background:#fff"><path d="M0,25 C180,60 420,70 720,40 C1020,10 1260,10 1440,35 L1440,70 L0,70 Z" style="fill:var(--crema)"/></svg>
         <!-- Centro de ayuda -->
         <section id="ayuda" class="seccion con-decor" aria-labelledby="titulo-ayuda">
             <div class="patron-puntos decor decor-izquierda" aria-hidden="true"></div>
@@ -495,6 +519,7 @@
             </div>
         </section>
 
+        <svg class="onda" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true" style="background:var(--crema)"><path d="M0,40 C240,80 480,0 720,30 C960,60 1200,10 1440,40 L1440,70 L0,70 Z" style="fill:#fff"/></svg>
         <!-- Política de tratamiento de datos (borrador para revisión jurídica) -->
         <section id="politica-datos" class="seccion seccion-blanca" aria-labelledby="titulo-politica">
             <div class="contenedor">
@@ -571,7 +596,7 @@
                 </div>
                 <div>
                     <h2>Ayuda</h2>
-                    <ul><li><a href="#ayuda">Preguntas frecuentes</a></li><li><a href="#verificar">Verificar constancia</a></li><li><a href="#politica-datos">Política de datos</a></li></ul>
+                    <ul><li><a href="foro/">Foro de la comunidad</a></li><li><a href="#ayuda">Preguntas frecuentes</a></li><li><a href="#verificar">Verificar constancia</a></li><li><a href="#politica-datos">Política de datos</a></li></ul>
                 </div>
             </div>
             <div class="pie-legal">
@@ -678,10 +703,10 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261012"></script>
-    <script src="assets/datos-cic.js?v=20261012"></script>
-    <script src="assets/sitio.js?v=20261012"></script>
-    <script src="assets/cursos-equipo.js?v=20261012"></script>
+    <script src="./config.js?v=20261013"></script>
+    <script src="assets/datos-cic.js?v=20261013"></script>
+    <script src="assets/sitio.js?v=20261013"></script>
+    <script src="assets/cursos-equipo.js?v=20261013"></script>
     <script>
     (() => {
         'use strict';

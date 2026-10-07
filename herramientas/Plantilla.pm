@@ -43,6 +43,7 @@ sub nav {
                 </div>
                 <a href="${P}recursos/"@{[ $cur->('recursos') ]}>Recursos</a>
                 <a href="${P}el-cic/"@{[ $cur->('el-cic') ]}>El CIC</a>
+                <a href="${P}foro/"@{[ $cur->('foro') ]}>Foro</a>
                 <div class="submenu">
                     <button type="button" class="submenu-btn$cursos" aria-expanded="false" aria-controls="sub-cursos">Equipo $f</button>
                     <ul id="sub-cursos" class="submenu-lista" hidden>
@@ -84,7 +85,7 @@ sub pie {
                 </div>
                 <div>
                     <h2>Ayuda</h2>
-                    <ul><li><a href="${P}#ayuda">Preguntas frecuentes</a></li><li><a href="${P}#verificar">Verificar constancia</a></li><li><a href="${P}#politica-datos">Política de datos</a></li></ul>
+                    <ul><li><a href="${P}foro/">Foro de la comunidad</a></li><li><a href="${P}#ayuda">Preguntas frecuentes</a></li><li><a href="${P}#verificar">Verificar constancia</a></li><li><a href="${P}#politica-datos">Política de datos</a></li></ul>
                 </div>
             </div>
             <div class="pie-legal">
@@ -132,7 +133,7 @@ sub cabeza {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght\@6..12,400;6..12,600;6..12,700&family=Quicksand:wght\@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="${P}assets/cic.css?v=20261012">
+    <link rel="stylesheet" href="${P}assets/cic.css?v=20261013">
 $jsonld    <script>document.documentElement.classList.add('js');</script>
 </head>
 HTML
@@ -163,6 +164,6 @@ HTML
 }
 
 # Pie, guion del sitio y cierre de la página.
-sub final_pagina { my $P = shift; return "\n" . pie($P) . qq{\n    <script src="${P}assets/sitio.js?v=20261012"></script>\n</body>\n</html>\n} }
+sub final_pagina { my $P = shift; return "\n" . pie($P) . qq{\n    <script src="${P}assets/sitio.js?v=20261013"></script>\n</body>\n</html>\n} }
 
 1;

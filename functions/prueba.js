@@ -288,6 +288,30 @@ function cuentasFalsas() {
   await ok('quitar-video', { codigo: 'GES-M2' }, tAdmin);
   paso('Administradora: publica videos (Drive o YouTube) y material; la Secretaría ya no; cada quien ve solo los suyos');
 
+  // ---------- Foro ----------
+  await falla('foro-temas', {}, null, 401);
+  await falla('foro-publicar', { categoria: 'hacer', titulo: 'Corto', texto: 'Hola' }, tRosa, 400);
+  const tema = await ok('foro-publicar', { categoria: 'hacer', titulo: '¿Cómo registran las ventas fiadas?', texto: 'En mi tienda fío mucho y no sé cómo anotarlo en el registro diario.' }, tRosa);
+  await falla('foro-publicar', { categoria: 'general', titulo: 'Otra pregunta seguida', texto: 'Publicando muy rápido otra vez.' }, tRosa, 429);
+  await falla('foro-publicar', { categoria: 'equipo', titulo: 'Tema del equipo solamente', texto: 'Una emprendedora no puede abrir aquí.' }, tRosa, 400);
+  avanzar(1);
+  const conv = await ok('foro-responder', { id: tema.id, texto: 'Anótalas aparte y súmalas cuando te paguen.' }, tDina);
+  assert.equal(conv.respuestas.length, 1);
+  assert.equal(conv.respuestas[0].autor, 'Dina D.');
+  assert.equal(conv.respuestas[0].autor_rol, 'Dinamizadora');
+  await ok('foro-publicar', { categoria: 'equipo', titulo: 'Reunión de la Secretaría con el equipo', texto: 'Recordatorio de la reunión del viernes.' }, tSara);
+  assert.equal((await ok('foro-temas', {}, tRosa)).temas.length, 1, 'la emprendedora no ve los temas del equipo');
+  assert.equal((await ok('foro-temas', {}, tDina)).temas.length, 2);
+  assert.equal((await ok('foro-temas', { categoria: 'hacer' }, tDina)).temas[0].respuestas, 1);
+  await falla('foro-borrar', { tipo: 'tema', id: tema.id }, tDina, 403);
+  await ok('foro-fijar', { id: tema.id, fijado: true }, tSara);
+  assert.equal((await ok('foro-temas', {}, tDina)).temas[0].fijado, true);
+  await ok('foro-borrar', { tipo: 'respuesta', id: conv.respuestas[0].id }, tSara);
+  assert.equal((await ok('foro-tema', { id: tema.id }, tRosa)).respuestas.length, 0);
+  await ok('foro-borrar', { tipo: 'tema', id: tema.id }, tRosa);
+  await falla('foro-tema', { id: tema.id }, tRosa, 404);
+  paso('Foro: solo con cuenta; temas del equipo ocultos a emprendedoras; límite de publicación; moderación');
+
   // ---------- Mi cuenta ----------
   await falla('cambiar-clave', { clave_actual: 'mala', clave_nueva: 'OtraClave2026' }, tDina, 401);
   await falla('cambiar-clave', { clave_actual: 'DinaClave2026', clave_nueva: '22222222' }, tDina, 400);

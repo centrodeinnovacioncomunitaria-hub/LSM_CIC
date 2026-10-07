@@ -84,11 +84,19 @@
     const obs = 'IntersectionObserver' in window ? new IntersectionObserver((es) => es.forEach((e) => {
         if (!e.isIntersecting) return;
         e.target.classList.add('visible');
+        setTimeout(() => { e.target.style.transitionDelay = ''; }, 1800); // el retraso escalonado solo aplica al aparecer
         $$('[data-contar]', e.target).forEach(contar);
         if (e.target.matches('[data-contar]')) contar(e.target);
         obs.unobserve(e.target);
     }), { rootMargin: '0px 0px -8% 0px' }) : null;
-    $$('.aparece, .trazo, [data-contar]').forEach((el) => (obs ? obs.observe(el) : el.classList.add('visible')));
+    // Grupos que aparecen uno tras otro: cada hijo entra con un pequeño retraso
+    $$('.escalonado').forEach((g) => [...g.children].forEach((h, i) => {
+        if (!h.matches('.aparece, .aparece-izq, .aparece-der, .aparece-zoom')) h.classList.add('aparece');
+        h.style.transitionDelay = `${Math.min(i, 8) * 90}ms`;
+    }));
+    // Fotos que se descubren al entrar en pantalla
+    $$('.galeria-item, .bloque-foto').forEach((el) => el.classList.add('revela'));
+    $$('.aparece, .aparece-izq, .aparece-der, .aparece-zoom, .revela, .trazo, [data-contar]').forEach((el) => (obs ? obs.observe(el) : el.classList.add('visible')));
 
     // Hojas flotantes: <div class="hojas-flotantes" data-hojas="7"></div>
     const COLORES = ['var(--menta)', 'var(--durazno)', 'var(--coral)', 'var(--mantequilla)', 'var(--lavanda)'];
