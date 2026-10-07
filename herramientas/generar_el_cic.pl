@@ -94,11 +94,9 @@ my $html = cabeza(P => $P, titulo => 'El CIC · qué es, cómo funciona y sus 8 
             <div class="patron-puntos decor decor-derecha" aria-hidden="true"></div>
             <div class="contenedor">
                 <p class="eyebrow">Pilares</p>
-                <h2 id="t-pilares" style="margin-top:.4rem">Cuatro pilares y una base</h2>
+                <h2 id="t-pilares" style="margin-top:.4rem">Tres pilares sobre una base</h2>
                 <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
-                <ol class="rejilla r5 lista-limpia">
 $pilares
-                </ol>
             </div>
         </section>
 

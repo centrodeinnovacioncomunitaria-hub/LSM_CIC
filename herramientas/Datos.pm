@@ -82,12 +82,18 @@ our @SER = (
 );
 
 # ---------------------------------------------------------------- Pilares
+# Estructura del modelo: el «software social» (habilidades del ser) envuelve tres pilares
+# que se apoyan sobre la apropiación del ecosistema emprendedor.
+our %MODELO = (
+    marco => 'Instalación del software social: habilidades del ser',
+    marco_texto => 'Confianza, liderazgo, derechos y cuidado de cada mujer: el ser envuelve todo el modelo.',
+    base => 'Apropiación del ecosistema emprendedor',
+    base_texto => 'Cada satélite conoce y activa los actores de su territorio.',
+);
 our @PILARES = (
-    ['bg-menta',       'Acompañamiento integral',   'Cada emprendedora recibe acompañamiento en su negocio: autoestima, modelo de negocio y finanzas.'],
-    ['bg-coral',       'Acceso a mercados',         'Conectar los negocios con clientes nuevos, ferias, gremios y aliados comerciales.'],
-    ['bg-mantequilla', 'Acceso a financiamiento',   'Educación financiera y ahorro y crédito en grupo, para no depender del «gota a gota».'],
-    ['bg-agua',        'Apropiación del ecosistema','Cada satélite conoce y activa los actores de su territorio.'],
-    ['bg-lavanda',     'Desarrollo del ser',        'La base de todo: confianza, liderazgo, derechos y cuidado de cada mujer.'],
+    { forma => 'triangulo', color => 'menta',       titulo => 'Acompañamiento',          puntos => ['Modelo de negocio.', 'Gestión financiera.'] },
+    { forma => 'cuadrado',  color => 'coral',       titulo => 'Acceso a mercados',       puntos => ['Clusters, núcleos, programas y demás relacionados con la vinculación al mercado.', 'Relaciones públicas y relaciones externas.'] },
+    { forma => 'circulo',   color => 'mantequilla', titulo => 'Acceso a financiamiento', puntos => ['Unidades de microfinanciamiento comunitario.', 'Educación financiera.', 'Nuevas fuentes de financiación.'] },
 );
 
 # ---------------------------------------------------------------- Mapa de la región Caribe
@@ -184,16 +190,29 @@ sub bloque_mapa {
 HTML
 }
 
-# Tarjetas de los cinco pilares (inicio y El CIC).
+# Bloque del modelo (inicio y El CIC): marco del ser, tres figuras y la base del ecosistema.
+my %FIGURA = (
+    triangulo => q{<polygon points="100,6 196,170 4,170" />},
+    cuadrado  => q{<rect x="6" y="6" width="188" height="188" rx="10" />},
+    circulo   => q{<circle cx="100" cy="100" r="94" />},
+);
 sub pilares_lista {
     my $n = 0;
-    return join "
-", map {
-        my ($color, $titulo, $texto) = @$_;
+    my $figuras = join "\n", map {
+        my $p = $_;
         $n++;
-        my $base = $titulo eq q{Desarrollo del ser} ? q{ pilar-base} : q{};
-        qq{                    <li class="tarjeta pilar aparece$base"><span class="numero $color">$n</span><h3>$titulo</h3><p>$texto</p></li>}
+        my $caja = $p->{forma} eq 'triangulo' ? '0 0 200 176' : '0 0 200 200';
+        my $puntos = join '', map { "<li>$_</li>" } @{ $p->{puntos} };
+        qq{                        <li class="figura figura-$p->{forma} figura-$p->{color} aparece"><svg class="figura-forma" viewBox="$caja" preserveAspectRatio="none" aria-hidden="true">$FIGURA{$p->{forma}}</svg><div class="figura-texto"><span class="numero bg-$p->{color}">$n</span><h3>$p->{titulo}</h3><ul>$puntos</ul></div></li>}
     } @PILARES;
+    return qq{                <div class="modelo-cic aparece">
+                    <p class="modelo-marco"><span class="modelo-punto bg-lavanda" aria-hidden="true"></span>$MODELO{marco}</p>
+                    <p class="modelo-marco-texto">$MODELO{marco_texto}</p>
+                    <ol class="modelo-figuras lista-limpia escalonado">
+$figuras
+                    </ol>
+                    <div class="modelo-base aparece"><span class="modelo-punto bg-agua" aria-hidden="true"></span><div><h3>$MODELO{base}.</h3><p>$MODELO{base_texto}</p></div></div>
+                </div>};
 }
 
 # Lista accesible de satélites que acompaña al mapa.
