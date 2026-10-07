@@ -9,3 +9,6 @@ supabase/.temp/
 
 # Las plantillas públicas de las rutas sí se publican
 !descargas/**/*.xlsx
+
+# Banco de preguntas con respuestas: solo en privado_NO_SUBIR, nunca aquí
+banco_preguntas*.sql

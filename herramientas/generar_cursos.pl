@@ -28,7 +28,7 @@ my %CURSOS = (
       ['Acceso', 'Con tu cédula, si estás en la base de datos del equipo'],
       ['Duración', '≈ 2 horas · 5 módulos de 15 a 35 minutos'],
       ['Modalidad', '100 % virtual, a tu ritmo'],
-      ['Evaluación', 'Cuestionario por módulo: 5 preguntas, se aprueba con 4 (70 %), 2 intentos'],
+      ['Evaluación', 'Cuestionario por módulo: 5 preguntas, se aprueba con 4 de 5, 2 intentos'],
       ['Al terminar', 'Constancia al aprobar los 5 módulos'],
     ],
     pasos_titulo => 'Cómo es cada módulo',
@@ -59,8 +59,8 @@ my %CURSOS = (
     ],
     faq => [
       ['¿Quién debe hacer este curso?', 'Las 24 dinamizadoras de los 8 satélites y el equipo de la Secretaría Técnica. Es el primer curso del equipo.'],
-      ['¿Cómo entro?', 'Toca «Ingresar», elige «Dinamizadora» o «Secretaria» y escribe tu cédula. La primera vez, tu contraseña también es tu cédula; al entrar, cámbiala y te llegará un correo de confirmación.'],
-      ['¿Qué pasa si no apruebo un cuestionario?', 'Tienes dos intentos. Si en el segundo no llegas al 70 %, el módulo se bloquea hasta que vuelvas a ver el video y el material de refuerzo.'],
+      ['¿Cómo entro?', 'Toca «Ingresar», elige «Dinamizadora» o «Secretaria» y escribe tu cédula. La primera vez, toca «Activar mi cuenta» y usa el código que te llega al correo o que te envía la Secretaría Técnica; ahí creas tu contraseña y te llegará un correo de confirmación.'],
+      ['¿Qué pasa si no apruebo un cuestionario?', 'Tienes dos intentos. Si en el segundo no llegas a 4 de 5, el módulo se bloquea hasta que vuelvas a ver el video y el material de refuerzo.'],
       ['¿Puedo hacerlo desde el celular?', 'Sí. Los videos son cortos y la plataforma guarda tu avance para que sigas donde lo dejaste.'],
     ],
   },
@@ -321,7 +321,7 @@ $otros
                     <div class="hojas-flotantes" data-hojas="6" aria-hidden="true"></div>
                     <div>
                         <h2>Empieza $c->{titulo}</h2>
-                        <p>Entra con tu cédula. La primera vez, tu contraseña también es tu cédula.</p>
+                        <p>Entra con tu cédula. La primera vez, activa tu cuenta con el código que te llega al correo o que te envía la Secretaría Técnica.</p>
                     </div>
                     <div class="botones" style="margin:0">
                         <a class="btn btn-claro" href="${P}#ingresar-dinamizadora">Soy dinamizadora</a>
@@ -395,7 +395,7 @@ $tarjetas
                     <h2 id="titulo-acceso" style="font-size:1.6rem;margin:.4rem 0 1.2rem">Acceso solo para el equipo</h2>
                     <ol class="requisitos">
                         <li>Las dinamizadoras y la Secretaría Técnica entran con su cédula, si están en la base de datos del equipo.</li>
-                        <li>La primera vez, la contraseña también es la cédula; al entrar se cambia y llega un correo de confirmación.</li>
+                        <li>La primera vez, cada persona activa su cuenta con un código de 6 números (llega al correo o lo envía la Secretaría Técnica) y crea su propia contraseña.</li>
                         <li>Las emprendedoras no ven estos cursos: ellas se inscriben en los <a class="enlace" href="${P}#rutas">talleres</a>.</li>
                     </ol>
                 </div>
@@ -403,7 +403,7 @@ $tarjetas
                     <p class="eyebrow">Cómo se evalúa</p>
                     <h2 style="font-size:1.6rem;margin:.4rem 0 1.2rem">Aprender y demostrarlo</h2>
                     <ol class="requisitos">
-                        <li>Cada módulo, semana o taller tiene un cuestionario: se aprueba con 4 de 5 respuestas (70 %), con 2 intentos.</li>
+                        <li>Cada módulo, semana o taller tiene un cuestionario: se aprueba con 4 de 5 respuestas, con 2 intentos. Cada unidad se abre al aprobar la anterior y enviar su evidencia.</li>
                         <li>Si no se aprueba el segundo intento, se vuelve a ver el video y el material antes de intentarlo otra vez.</li>
                         <li>En HACER y SER, además, se verifica la sesión con la emprendedora: la Secretaría revisa las evidencias.</li>
                     </ol>

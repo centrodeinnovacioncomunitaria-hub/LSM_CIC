@@ -785,3 +785,98 @@ details.desplegable summary { min-height: 2.75rem; align-items: center; }
     .seccion { padding: 3.2rem 0; }
     .equipo-cursos { display: none; }
 }
+
+/* =====================================================================
+   Accesibilidad: tamaños mínimos de lectura en celular (público con poca práctica digital)
+   ===================================================================== */
+.eyebrow { font-size: .8125rem; }
+.chip { font-size: .8125rem; }
+.ayuda-campo { font-size: .875rem; }
+.mensaje, .nota, .casilla, .texto-boton { font-size: .95rem; }
+
+/* =====================================================================
+   Acceso con código de activación o recuperación
+   ===================================================================== */
+.acceso-enlaces { display: flex; flex-wrap: wrap; justify-content: center; gap: .2rem 1.4rem; }
+.acceso-enlaces .texto-boton { margin: .8rem 0 0; min-height: 2.75rem; }
+.subtitulo-dialogo { font-size: 1.2rem; margin-top: .4rem; }
+#form-codigo .btn-borde { margin-top: .7rem; }
+.campo-codigo { font: 700 1.5rem/1 var(--titulo); letter-spacing: .4em; text-align: center; }
+
+/* =====================================================================
+   Cursos del equipo: recorrido, unidades y estados
+   ===================================================================== */
+.recorrido { list-style: none; margin: 1.2rem 0 1.6rem; padding: 0; display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr)); }
+.recorrido li { display: flex; gap: .7rem; align-items: center; background: #fff; border: 1.5px solid var(--linea); border-radius: 1.1rem; padding: .75rem .9rem; }
+.recorrido b { display: block; font: 700 .98rem/1.2 var(--titulo); }
+.recorrido small { display: block; color: var(--musgo); font-size: .875rem; }
+.recorrido-num { flex-shrink: 0; width: 2.2rem; height: 2.2rem; border-radius: 50%; display: grid; place-items: center; font: 700 1rem var(--titulo); background: var(--crema-2); }
+.recorrido li.hecho .recorrido-num { background: var(--menta); }
+.recorrido li.actual { border-color: var(--coralp); box-shadow: var(--sombra); }
+.recorrido li.actual .recorrido-num { background: var(--coralp); color: #fff; }
+
+.compromiso { margin-bottom: 1.6rem; border: 2px solid var(--menta); }
+.compromiso h3 { font-size: 1.25rem; margin-bottom: .5rem; }
+.compromiso .btn { margin-top: 1rem; }
+.compromiso .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+.barra-avance { height: .55rem; border-radius: 999px; background: rgba(255, 255, 255, .6); margin: .8rem 0 .2rem; overflow: hidden; }
+.barra-avance span { display: block; height: 100%; background: var(--bosque); border-radius: inherit; transition: width .4s ease; }
+.curso-cab .btn-claro { margin-top: .8rem; }
+
+.unidades { list-style: none; margin: 0; padding: .4rem 1rem 1rem; display: grid; gap: .5rem; }
+.unidad details { border: 1.5px solid var(--linea); border-radius: 1.1rem; background: #fff; }
+.unidad summary { cursor: pointer; list-style: none; display: flex; gap: .8rem; align-items: center; padding: .8rem 1rem; min-height: 3.2rem; }
+.unidad summary::-webkit-details-marker { display: none; }
+.unidad summary::after { content: '+'; margin-left: auto; font: 700 1.3rem/1 var(--titulo); color: var(--coralp); }
+.unidad details[open] summary::after { content: '–'; }
+.unidad-icono { flex-shrink: 0; width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: var(--crema-2); }
+.unidad-titulo { font-weight: 700; line-height: 1.3; }
+.unidad-titulo small { display: block; font-weight: 600; color: var(--musgo); font-size: .875rem; margin-top: .15rem; }
+.est-aprobada .unidad-icono { background: var(--menta); }
+.est-curso .unidad-icono, .est-disponible .unidad-icono { background: var(--mantequilla); }
+.est-pausada .unidad-icono { background: var(--coral); }
+.est-bloqueada summary { color: var(--musgo); }
+.est-bloqueada .unidad-icono { background: #EDE6DE; }
+.unidad-cuerpo { padding: 0 1rem 1.1rem; }
+.pasos-modulo { list-style: none; margin: 0; padding: 0; display: grid; gap: .8rem; }
+.pasos-modulo > li { border-left: 4px solid var(--linea); padding: .2rem 0 .3rem .9rem; display: grid; gap: .55rem; justify-items: start; }
+.pasos-modulo > li.ok { border-left-color: var(--menta); }
+.pasos-modulo h4 { font-size: 1.05rem; }
+.pasos-modulo .btn { min-height: 2.9rem; }
+.pasos-modulo .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.paso-ok { font-weight: 700; color: #2F6B4F; }
+.lista-archivos { margin: 0; padding-left: 1.1rem; display: grid; gap: .35rem; }
+.form-evidencia { width: 100%; display: grid; gap: .1rem; }
+.form-evidencia textarea { min-height: 6rem; resize: vertical; }
+.form-evidencia .btn { margin-top: .8rem; justify-self: start; }
+
+/* Cuestionario */
+.dialogo-cuestionario { width: min(40rem, 100vw - 1rem); }
+.pregunta { border: 0; margin: 1.3rem 0 0; padding: 0; }
+.pregunta legend { font-weight: 700; line-height: 1.4; margin-bottom: .6rem; padding: 0; }
+.pregunta-num { display: inline-grid; place-items: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--menta); font: 700 .95rem var(--titulo); margin-right: .3rem; }
+.opcion { display: flex; gap: .7rem; align-items: flex-start; padding: .75rem .9rem; margin-top: .45rem; border: 1.5px solid var(--linea); border-radius: 1rem; background: #fff; cursor: pointer; min-height: 2.9rem; }
+.opcion:has(input:checked) { border-color: var(--bosque); background: rgba(158, 208, 183, .25); }
+.opcion input { width: 1.2rem; height: 1.2rem; accent-color: var(--bosque); flex-shrink: 0; margin-top: .15rem; }
+.dialogo-cuestionario .btn.ancho { margin-top: 1.4rem; }
+.resultado-cue { text-align: center; }
+.resultado-nota { font: 700 3.6rem/1 var(--titulo); margin: .5rem 0 .3rem; }
+.resultado-nota small { font-size: 1.6rem; color: var(--musgo); }
+.resultado-nota.aprobado { color: #2F6B4F; }
+.resultado-nota.no-aprobado { color: var(--coralp); }
+.retro { text-align: left; padding-left: 1.1rem; display: grid; gap: .5rem; margin-top: .5rem; }
+
+/* Panel de la Secretaría: avance del equipo y evidencias */
+.avance-equipo { margin-top: 2.2rem; }
+.subtitulo-seccion { font-size: 1.35rem; margin: 2rem 0 1rem; }
+.tabla-equipo td small { display: block; color: var(--musgo); font-size: .875rem; }
+.mini-barra { display: inline-block; vertical-align: middle; width: 3.2rem; height: .45rem; border-radius: 999px; background: var(--crema-2); overflow: hidden; }
+.mini-barra span { display: block; height: 100%; background: var(--bosque); }
+.fila-alerta { background: rgba(238, 152, 132, .14); }
+.casilla-mini { margin: 0 .6rem 0 0; display: inline-flex; align-items: center; min-height: 2.75rem; font-size: .9rem; }
+.evidencia { margin-top: .9rem; display: grid; gap: .45rem; }
+.evidencia h4 { font-size: 1.1rem; }
+.evidencia-texto { background: var(--crema); border-radius: .9rem; padding: .7rem .9rem; white-space: pre-line; }
+.evidencia .botones { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .5rem; }
+.codigo-grande { font: 700 2.6rem/1 var(--titulo); letter-spacing: .3em; text-align: center; margin: 1rem 0 .5rem; color: var(--bosque); }

@@ -174,7 +174,7 @@
                         </div>
                         <div class="rol-panel" role="tabpanel" id="panel-dinamizadora" aria-labelledby="rol-dinamizadora" hidden>
                             <ol class="pasos">
-                                <li>Entra con tu cédula; la primera vez, tu contraseña también es tu cédula.</li>
+                                <li>La primera vez, activa tu cuenta con el código de 6 números que te llega al correo o te envía la Secretaría Técnica.</li>
                                 <li>Antes de cada sesión, mira el video del módulo y su material.</li>
                                 <li>Lleva la semana de cada emprendedora de tu satélite.</li>
                             </ol>
@@ -185,7 +185,7 @@
                         </div>
                         <div class="rol-panel" role="tabpanel" id="panel-secretaria" aria-labelledby="rol-secretaria" hidden>
                             <ol class="pasos">
-                                <li>Entra con tu cédula; la primera vez, tu contraseña también es tu cédula.</li>
+                                <li>La primera vez, activa tu cuenta con el código de 6 números que te llega al correo o te envía la Secretaría Técnica.</li>
                                 <li>Sigue el avance de los 8 satélites y de cada emprendedora.</li>
                                 <li>Publica los videos de los cursos y las grabaciones de los talleres.</li>
                             </ol>
@@ -422,8 +422,8 @@
                         <details><summary>¿Cómo me inscribo?</summary><p>Toca «Inscribirme», elige «Emprendedora» y escribe tu nombre, tu cédula, tu celular y tu municipio. Tu dinamizadora también puede ayudarte.</p></details>
                         <details><summary>¿Qué veo al entrar?</summary><p>Tu semana: qué toca, en qué satélite estás, quién es tu dinamizadora y las guías y plantillas para descargar. También las grabaciones de los talleres virtuales.</p></details>
                         <details><summary>¿Necesito internet para las guías?</summary><p>Solo para descargarlas. Son archivos de Word y Excel que puedes llenar sin conexión o imprimir.</p></details>
-                        <details><summary>¿Quién entra como dinamizadora o secretaria?</summary><p>Solo quienes están en la base de datos del equipo del CIC. Entran con su cédula; la primera vez, su contraseña también es la cédula.</p></details>
-                        <details><summary>¿Cómo recupero mi contraseña?</summary><p>Pídele a tu dinamizadora o a la Secretaría Técnica que la restablezca. Volverá a ser tu número de cédula y, al entrar, eliges una nueva.</p></details>
+                        <details><summary>¿Quién entra como dinamizadora o secretaria?</summary><p>Solo quienes están en la base de datos del equipo del CIC. La primera vez tocan «Activar mi cuenta» y usan el código de 6 números que les llega al correo o les envía la Secretaría Técnica; ahí crean su propia contraseña.</p></details>
+                        <details><summary>¿Cómo recupero mi contraseña?</summary><p>Toca «Ingresar» y luego «¿Olvidaste tu contraseña?». Si tienes correo registrado, te llega un código; si no, pídeselo a tu dinamizadora o a la Secretaría Técnica por WhatsApp. Con el código creas una contraseña nueva.</p></details>
                         <details><summary>¿Qué recibo al terminar?</summary><p>Una constancia de participación: completa las 6 semanas de la ruta HACER, al menos 3 de los 4 talleres SER y tus evidencias.</p></details>
                         <details><summary>¿Cómo se protegen mis datos?</summary><p>Solo pedimos lo necesario, con tu autorización, según la Ley 1581 de 2012. Lee la <a class="enlace" href="#politica-datos">política de tratamiento de datos</a>.</p></details>
                     </div>
@@ -483,7 +483,7 @@
                 <p id="bienvenida-texto" class="texto-suave" style="margin-top:.8rem;max-width:42rem"></p>
                 <div id="continuar" class="continuar" hidden></div>
                 <div id="aviso-clave" class="aviso-clave" hidden>
-                    <p><strong>Tu contraseña todavía es tu número de cédula.</strong> Cámbiala por una que solo tú conozcas; te enviaremos un correo de confirmación.</p>
+                    <p><strong>Tu contraseña todavía es tu número de cédula.</strong> Cualquiera que conozca tu cédula podría entrar: cámbiala ahora por una que solo tú conozcas.</p>
                     <button type="button" class="btn btn-bosque btn-pequeno" data-ir="cuenta">Cambiar contraseña</button>
                 </div>
             </div>
@@ -565,8 +565,8 @@
 
             <p id="acceso-mensaje" class="mensaje error" role="alert" hidden></p>
 
-            <form id="form-ingresar" role="tabpanel" aria-labelledby="pestana-ingresar" novalidate>
-                <p id="pista-equipo" class="nota" style="background:rgba(158,208,183,.4)" hidden><strong>¿Primera vez?</strong> Tu contraseña es tu número de cédula. Al entrar podrás cambiarla.</p>
+            <form id="form-ingresar" method="post" action="#" role="tabpanel" aria-labelledby="pestana-ingresar" novalidate>
+                <p id="pista-equipo" class="nota" style="background:rgba(158,208,183,.4)" hidden><strong>¿Primera vez?</strong> Toca «Activar mi cuenta» y usa el código de 6 números que te llegó al correo o que te envió la Secretaría Técnica.</p>
                 <label class="etiqueta" for="in-cedula">Número de cédula</label>
                 <input class="campo" id="in-cedula" name="cedula" inputmode="numeric" autocomplete="username" maxlength="15" placeholder="Solo números, sin puntos" required>
                 <label class="etiqueta" for="in-clave">Contraseña</label>
@@ -575,10 +575,32 @@
                     <button type="button" class="ver" aria-controls="in-clave" aria-pressed="false">Ver</button>
                 </div>
                 <button type="submit" class="btn btn-primario ancho">Ingresar</button>
-                <button type="button" id="olvide" class="texto-boton">¿Olvidaste tu contraseña?</button>
+                <div class="acceso-enlaces">
+                    <button type="button" id="olvide" class="texto-boton">¿Olvidaste tu contraseña?</button>
+                    <button type="button" id="activar-cuenta" class="texto-boton" hidden>Activar mi cuenta</button>
+                </div>
             </form>
 
-            <form id="form-registro" role="tabpanel" aria-labelledby="pestana-registro" novalidate hidden>
+            <form id="form-codigo" method="post" action="#" novalidate hidden aria-labelledby="codigo-titulo">
+                <h3 id="codigo-titulo" class="subtitulo-dialogo">Crea tu contraseña con un código</h3>
+                <p class="texto-suave" id="codigo-ayuda">Sirve para activar tu cuenta la primera vez o para recuperar tu contraseña.</p>
+                <label class="etiqueta" for="co-cedula">Número de cédula</label>
+                <input class="campo" id="co-cedula" name="cedula" inputmode="numeric" autocomplete="username" maxlength="15" placeholder="Solo números, sin puntos" required>
+                <button type="button" id="pedir-codigo" class="btn btn-borde ancho">Enviarme el código al correo</button>
+                <small class="ayuda-campo">¿No tienes correo registrado? Pídele el código a la Secretaría Técnica o a tu dinamizadora por WhatsApp.</small>
+                <label class="etiqueta" for="co-codigo">Código de 6 números</label>
+                <input class="campo campo-codigo" id="co-codigo" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required>
+                <label class="etiqueta" for="co-clave">Crea tu contraseña</label>
+                <div class="clave">
+                    <input class="campo" id="co-clave" name="clave" type="password" autocomplete="new-password" minlength="8" required aria-describedby="co-clave-ayuda">
+                    <button type="button" class="ver" aria-controls="co-clave" aria-pressed="false">Ver</button>
+                </div>
+                <small id="co-clave-ayuda" class="ayuda-campo">Mínimo 8 letras o números, distinta de tu cédula.</small>
+                <button type="submit" class="btn btn-primario ancho">Guardar contraseña y entrar</button>
+                <button type="button" id="volver-ingresar" class="texto-boton">Volver a ingresar con mi contraseña</button>
+            </form>
+
+            <form id="form-registro" method="post" action="#" role="tabpanel" aria-labelledby="pestana-registro" novalidate hidden>
                 <label class="etiqueta" for="re-nombre">Nombre y apellido</label>
                 <input class="campo" id="re-nombre" name="nombre" autocomplete="name" maxlength="90" required>
                 <div class="dos-campos">
@@ -613,6 +635,7 @@
     <script src="./config.js"></script>
     <script src="assets/datos-cic.js"></script>
     <script src="assets/sitio.js"></script>
+    <script src="assets/cursos-equipo.js"></script>
     <script>
     (() => {
         'use strict';
@@ -756,11 +779,13 @@
         }
         function modo(m) {
             const esRegistro = m === 'registro' && rolElegido() === 'emprendedora';
+            const esCodigo = m === 'codigo';
             $('#pestana-ingresar').setAttribute('aria-selected', String(!esRegistro));
             $('#pestana-registro').setAttribute('aria-selected', String(esRegistro));
-            $('#form-ingresar').hidden = esRegistro;
+            $('#form-ingresar').hidden = esRegistro || esCodigo;
             $('#form-registro').hidden = !esRegistro;
-            $('#acceso-titulo').textContent = esRegistro ? 'Inscríbete' : 'Ingresa al CIC';
+            $('#form-codigo').hidden = !esCodigo;
+            $('#acceso-titulo').textContent = esRegistro ? 'Inscríbete' : esCodigo ? 'Activa o recupera tu cuenta' : 'Ingresa al CIC';
             mensaje('');
         }
         // Mientras no elija quién es, solo ve la pregunta. La inscripción es solo para emprendedoras.
@@ -771,6 +796,7 @@
             const equipo = rol === 'secretaria' || rol === 'dinamizadora';
             $('#pestanas-acceso').hidden = rol !== 'emprendedora';
             $('#pista-equipo').hidden = !equipo;
+            $('#activar-cuenta').hidden = !equipo;
             if (rol !== 'emprendedora') modo('ingresar');
             mensaje('');
         }
@@ -796,10 +822,56 @@
             b.setAttribute('aria-pressed', String(ver));
         }));
         $$('#in-cedula, #re-cedula').forEach((c) => c.addEventListener('input', () => { c.value = soloDigitos(c.value); }));
-        $('#olvide').addEventListener('click', () => {
-            mensaje(rolElegido() === 'emprendedora'
-                ? 'Pídele a tu dinamizadora o a la Secretaría Técnica que restablezca tu contraseña. Volverá a ser tu número de cédula.'
-                : 'Pídele a la Secretaría Técnica que restablezca tu contraseña. Volverá a ser tu número de cédula y te llegará un correo de aviso.', 'ok');
+        function abrirCodigo(activar) {
+            const ced = soloDigitos($('#in-cedula').value);
+            modo('codigo');
+            $('#codigo-titulo').textContent = activar ? 'Activa tu cuenta' : 'Recupera tu contraseña';
+            $('#codigo-ayuda').textContent = activar
+                ? 'Usa el código de 6 números que te llegó al correo o que te envió la Secretaría Técnica, y crea tu contraseña.'
+                : 'Te enviamos un código a tu correo registrado. Si no tienes correo, pídeselo a tu dinamizadora o a la Secretaría Técnica por WhatsApp.';
+            if (ced) $('#co-cedula').value = ced;
+            setTimeout(() => $(ced ? '#co-codigo' : '#co-cedula').focus(), 30);
+        }
+        $('#olvide').addEventListener('click', () => abrirCodigo(false));
+        $('#activar-cuenta').addEventListener('click', () => abrirCodigo(true));
+        $('#volver-ingresar').addEventListener('click', () => { modo('ingresar'); $('#in-cedula').focus(); });
+        $$('#co-cedula, #co-codigo').forEach((c) => c.addEventListener('input', () => { c.value = soloDigitos(c.value); }));
+        $('#pedir-codigo').addEventListener('click', async () => {
+            const cedula = soloDigitos($('#co-cedula').value);
+            if (cedula.length < 5) return mensaje('Escribe tu número de cédula, solo números.');
+            const b = $('#pedir-codigo');
+            b.disabled = true;
+            try {
+                if (DEMO) { mensaje('Demostración: en la plataforma real te llegaría un código al correo. Para probar, escribe 123456.', 'ok'); return; }
+                await conectar();
+                const r = await llamar('solicitar-codigo', { cedula });
+                mensaje(r.mensaje, 'ok');
+                $('#co-codigo').focus();
+            } catch (e) { mensaje(e.message); } finally { setTimeout(() => { b.disabled = false; }, DEMO ? 0 : 30000); }
+        });
+        $('#form-codigo').addEventListener('submit', (ev) => {
+            ev.preventDefault();
+            const f = ev.currentTarget;
+            const cedula = soloDigitos(f.cedula.value), codigo = soloDigitos(f.codigo.value), clave = f.clave.value;
+            if (cedula.length < 5) return mensaje('Escribe tu número de cédula, solo números.');
+            if (codigo.length !== 6) return mensaje('El código tiene 6 números.');
+            if (clave.length < 8) return mensaje('La contraseña debe tener al menos 8 letras o números.');
+            if (clave === cedula) return mensaje('La contraseña no puede ser tu número de cédula.');
+            ocupado(f, async () => {
+                if (DEMO) {
+                    if (codigo !== '123456') throw new Error('En la demostración, el código es 123456.');
+                    const rol = rolElegido() || 'dinamizadora';
+                    const nombres = { emprendedora: 'Emprendedora de prueba', dinamizadora: 'Dinamizadora de prueba', secretaria: 'Secretaría de prueba' };
+                    entrar({ id: 'demo', cedula, nombre: nombres[rol], rol, departamento: 'Magdalena', satelite: 'magdalena', semana_actual: 1, correo: '', celular: '', debe_cambiar_clave: false });
+                    aviso('Demostración: así se activa una cuenta. No se guardó ninguna contraseña.');
+                    return;
+                }
+                await conectar();
+                const r = await llamar('activar', { cedula, codigo, clave });
+                await sb.auth.setSession(r.sesion);
+                entrar(r.perfil);
+                aviso('Listo: tu contraseña quedó guardada.');
+            });
         });
 
         async function ocupado(form, fn) {
@@ -1054,55 +1126,9 @@
         }
 
         // ---------- Mis cursos (equipo): video, tema y avance por módulo ----------
-        const claveAvance = () => `cic-avance-${perfil.cedula}`;
-        async function pintarCursos() {
-            const v = $('#vista-cursos');
-            v.innerHTML = '<p class="vista-intro" role="status">Cargando tus cursos…</p>';
-            let videos = [];
-            try { videos = (await traerVideos()).filter((x) => x.audiencia === 'equipo'); } catch (e) { /* sin videos */ }
-            const porCodigo = Object.fromEntries(videos.map((x) => [x.codigo, x]));
-            const avance = leer(localStorage, claveAvance()) || {};
-            v.innerHTML = `
-                <h2>Mis cursos</h2>
-                <p class="vista-intro">Antes de cada sesión, mira el video del módulo y repasa el tema. Marca cada módulo cuando lo termines${DEMO ? ' (en la demostración, la marca queda solo en este dispositivo)' : ''}.</p>
-                ${CURSOS_EQUIPO.map((id) => {
-                    const c = CURSOS[id];
-                    const hechos = new Set(avance[id] || []);
-                    const pct = Math.round((hechos.size / c.modulos.length) * 100);
-                    return `<article class="curso curso-ancho" id="curso-${id}">
-                        <div class="curso-cab ${c.color}">
-                            <h3>${esc(c.titulo)}</h3>
-                            <p style="font-size:.95rem;margin-top:.2rem">${esc(c.meta)} · ${pct} % hecho</p>
-                        </div>
-                        <ol class="modulos-video">
-                        ${c.modulos.map(([titulo, detalle], i) => {
-                            const cod = codigoModulo(id, i);
-                            const vid = porCodigo[cod];
-                            return `<li>
-                                <details class="desplegable">
-                                    <summary><span><span class="codigo">${cod}</span> ${esc(titulo)}${hechos.has(i) ? ' <span class="chip bg-menta">Hecho</span>' : ''}</span></summary>
-                                    <p class="texto-suave">${esc(detalle)}</p>
-                                    ${vid ? reproductor(vid) : '<p class="video-pendiente">El video de este módulo todavía no está publicado.</p>'}
-                                    <div class="botones">
-                                        <a class="btn btn-borde" href="${c.pagina}#${c.ancla}-${i + 1}">Ver el tema</a>
-                                        <label class="casilla casilla-boton"><input type="checkbox" data-curso="${id}" data-i="${i}" ${hechos.has(i) ? 'checked' : ''}><span>Lo terminé</span></label>
-                                    </div>
-                                </details>
-                            </li>`;
-                        }).join('')}
-                        </ol>
-                    </article>`;
-                }).join('')}
-                <p class="privado">El material de estudio y los cuestionarios se abren en una próxima etapa.</p>`;
-            $$('#vista-cursos input[data-curso]').forEach((ch) => ch.addEventListener('change', () => {
-                const a = leer(localStorage, claveAvance()) || {};
-                const s = new Set(a[ch.dataset.curso] || []);
-                ch.checked ? s.add(Number(ch.dataset.i)) : s.delete(Number(ch.dataset.i));
-                a[ch.dataset.curso] = [...s];
-                guardar(localStorage, claveAvance(), a);
-                aviso(ch.checked ? 'Módulo marcado como terminado.' : 'Marca quitada.');
-            }));
-        }
+        // Contexto que comparten la página y los cursos del equipo (assets/cursos-equipo.js)
+        const contextoCursos = () => ({ perfil, DEMO, esc, llamar, reproductor, traerVideos, aviso, CURSOS, codigoModulo, satelite });
+        function pintarCursos() { return window.CICCursos.pintar($('#vista-cursos'), contextoCursos()); }
 
         // ---------- Seguimiento (equipo) ----------
         const EJEMPLO = [
@@ -1156,7 +1182,7 @@
                 <td>${esc(sat ? sat.nombre : '')}<small>${esc(p.municipio || p.departamento || '')}</small></td>
                 <td>${p.rol === 'emprendedora' ? selectorSemana(p) : ''}</td>
                 <td style="white-space:nowrap">${wa ? `<a class="enlace" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}</td>
-                ${conAccion ? `<td style="white-space:nowrap">${p.cedula !== perfil.cedula ? `<button type="button" class="boton-texto" data-restablecer="${esc(p.cedula)}" data-nombre="${esc(p.nombre)}">Restablecer contraseña</button>` : ''}</td>` : ''}
+                ${conAccion ? `<td style="white-space:nowrap">${p.cedula !== perfil.cedula ? `<button type="button" class="boton-texto" data-restablecer="${esc(p.cedula)}" data-nombre="${esc(p.nombre)}" data-celular="${esc(p.celular || "")}">Código de acceso</button>` : ''}</td>` : ''}
             </tr>`;
         }
         function tabla(lista, conAccion) {
@@ -1168,13 +1194,17 @@
         function pintarDinamizadora(v, lista) {
             v.innerHTML = `
                 <h2>Emprendedoras de ${esc(perfil.departamento || 'tu departamento')}</h2>
-                <p class="vista-intro">Cuando termines una sesión, cambia su semana: así cada emprendedora ve lo que le toca y sus descargas.</p>
+                <p class="vista-intro">Cuando termines una sesión, cambia su semana: así cada emprendedora ve lo que le toca y sus descargas. Si alguien olvida su contraseña, genérale un código de acceso y envíaselo por WhatsApp.</p>
                 <div class="rejilla r4 movil-2"><div class="tarjeta kpi"><b>${lista.length}</b><span>inscritas</span></div></div>
                 <div class="controles"><div><label class="etiqueta" for="buscar-d">Buscar por nombre, municipio o negocio</label><input id="buscar-d" class="campo" type="search"></div></div>
-                <div id="tabla-d">${tabla(lista, false)}</div>`;
+                <div id="tabla-d">${tabla(lista, true)}</div>`;
             $('#buscar-d').addEventListener('input', (e) => {
                 const t = e.target.value.toLowerCase();
-                $('#tabla-d').innerHTML = tabla(lista.filter((p) => [p.nombre, p.municipio, p.negocio].join(' ').toLowerCase().includes(t)), false);
+                $('#tabla-d').innerHTML = tabla(lista.filter((p) => [p.nombre, p.municipio, p.negocio].join(' ').toLowerCase().includes(t)), true);
+            });
+            $('#tabla-d').addEventListener('click', (e) => {
+                const b = e.target.closest('[data-restablecer]');
+                if (b) window.CICCursos.generarCodigo(b.dataset.restablecer, b.dataset.nombre, contextoCursos(), b.dataset.celular);
             });
         }
         function pintarSecretaria(v, lista) {
@@ -1189,7 +1219,7 @@
                     <div class="tarjeta kpi"><b>${emp.length}</b><span>emprendedoras inscritas</span></div>
                     <div class="tarjeta kpi"><b>${din.length}<small style="font-size:1rem" class="texto-suave">/24</small></b><span>dinamizadoras que ya ingresaron</span></div>
                     <div class="tarjeta kpi"><b>${porSat.filter(([, n]) => n).length}<small style="font-size:1rem" class="texto-suave">/8</small></b><span>satélites con emprendedoras</span></div>
-                    <div class="tarjeta kpi"><b>${lista.filter((p) => p.debe_cambiar_clave).length}</b><span>cuentas con la cédula como contraseña</span></div>
+                    <div class="tarjeta kpi"><b>${lista.filter((p) => p.debe_cambiar_clave).length}</b><span>cuentas con contraseña antigua (cédula)</span></div>
                 </div>
                 <div class="tarjeta" style="margin-top:1.5rem">
                     <h3 style="font-size:1.15rem;margin-bottom:1rem">Emprendedoras por satélite</h3>
@@ -1199,7 +1229,9 @@
                     <div><label class="etiqueta" for="buscar-s">Buscar</label><input id="buscar-s" class="campo" type="search" placeholder="Nombre, cédula, municipio…"></div>
                     <div style="flex:0 1 14rem"><label class="etiqueta" for="filtro-rol">Perfil</label><select id="filtro-rol" class="campo"><option value="">Todos</option><option value="emprendedora">Emprendedoras</option><option value="dinamizadora">Dinamizadoras</option><option value="secretaria">Secretaría Técnica</option></select></div>
                 </div>
-                <div id="tabla-s">${tabla(lista, true)}</div>`;
+                <div id="tabla-s">${tabla(lista, true)}</div>
+                <div id="avance-equipo" class="avance-equipo"></div>`;
+            window.CICCursos.pintarEquipo($('#avance-equipo'), contextoCursos());
             const filtrar = () => {
                 const t = $('#buscar-s').value.toLowerCase();
                 const r = $('#filtro-rol').value;
@@ -1207,16 +1239,9 @@
             };
             $('#buscar-s').addEventListener('input', filtrar);
             $('#filtro-rol').addEventListener('change', filtrar);
-            $('#tabla-s').addEventListener('click', async (e) => {
+            $('#tabla-s').addEventListener('click', (e) => {
                 const b = e.target.closest('[data-restablecer]');
-                if (!b) return;
-                if (!confirm(`¿Restablecer la contraseña de ${b.dataset.nombre}? Volverá a ser su número de cédula y le llegará un correo de aviso.`)) return;
-                b.disabled = true;
-                try {
-                    if (DEMO) { aviso('Modo demostración: no se cambió ninguna contraseña.'); return; }
-                    const r = await llamar('restablecer', { cedula: b.dataset.restablecer }, true);
-                    aviso(r.correoEnviado ? `Listo. Le avisamos por correo (${r.correo}).` : 'Listo. No se pudo enviar el correo de aviso: avísale directamente.');
-                } catch (err) { aviso(err.message); } finally { b.disabled = false; }
+                if (b) window.CICCursos.generarCodigo(b.dataset.restablecer, b.dataset.nombre, contextoCursos(), b.dataset.celular);
             });
         }
 
@@ -1417,7 +1442,23 @@
             '#ingresar-secretaria': ['ingresar', 'secretaria'],
             '#crear-cuenta': ['registro'],
         };
+        // Verificación pública de constancias: enlace #verificar-CIC-XXXX-XXXXXX (solo muestra iniciales)
+        async function verificarConstancia(codigo) {
+            let d = document.getElementById('dlg-verificar');
+            if (!d) { d = document.createElement('dialog'); d.id = 'dlg-verificar'; d.setAttribute('aria-labelledby', 'verif-t'); document.body.appendChild(d); }
+            const pintar = (html) => { d.innerHTML = `<div class="dialogo"><button type="button" class="cerrar" aria-label="Cerrar">×</button><p class="eyebrow">Verificación de constancia</p><h2 id="verif-t" class="dialogo-titulo" style="font-size:1.5rem">${esc(codigo)}</h2>${html}</div>`; d.querySelector('.cerrar').addEventListener('click', () => d.close()); };
+            pintar('<p class="texto-suave" role="status">Consultando…</p>');
+            if (!d.open) d.showModal();
+            try {
+                const r = DEMO ? { valida: /DEMO/.test(codigo), iniciales: 'D. P.', curso: 'Gestión del CIC', emitida_en: new Date().toISOString() } : (await conectar(), await llamar('verificar', { codigo }));
+                pintar(r.valida
+                    ? `<p class="mensaje ok">Constancia válida.</p><p style="margin-top:.8rem">Expedida a <b>${esc(r.iniciales)}</b> por aprobar <b>${esc(r.curso)}</b> el ${esc(fecha(r.emitida_en))}.</p><p class="ayuda-campo">Por privacidad solo se muestran las iniciales.</p>`
+                    : '<p class="mensaje error">No encontramos una constancia con ese código. Revisa que esté bien escrito.</p>');
+            } catch (e) { pintar(`<p class="mensaje error">${esc(e.message)}</p>`); }
+        }
         function abrirPorEnlace() {
+            const v = location.hash.match(/^#verificar-(CIC-[A-Z]{4}-[A-Z0-9]{6})$/i);
+            if (v) { history.replaceState(null, '', location.pathname + location.search); verificarConstancia(v[1].toUpperCase()); return; }
             const accion = ACCESO_POR_ENLACE[location.hash];
             if (!accion) return;
             history.replaceState(null, '', location.pathname + location.search);
