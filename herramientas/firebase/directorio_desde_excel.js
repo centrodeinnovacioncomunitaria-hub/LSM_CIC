@@ -9,6 +9,7 @@
 // - Si en «TODO EL EQUIPO» falta la cédula o el correo, se toma de la hoja de su departamento.
 // - Satélite: el de su departamento. Cesar tiene dos (Valledupar y Pueblo Bello): por defecto queda
 //   Valledupar; corrígelo en el JSON (campo "satelite": "pueblo-bello") antes de cargar.
+// - Si junto a la salida existe personas_extra.json (lista con el mismo formato), se agrega: sirve para cuentas de prueba.
 'use strict';
 const fs = require('fs');
 const zlib = require('zlib');
@@ -119,6 +120,15 @@ const repetidas = personas.filter((p, i) => personas.findIndex((x) => x.cedula =
 repetidas.forEach((p) => avisos.push(`${p.nombre}: cédula repetida (${p.cedula}).`));
 const validas = personas.filter((p) => p.cedula.length >= 5 && !repetidas.includes(p));
 
+// Personas adicionales (por ejemplo, cuentas de prueba): personas_extra.json en la misma carpeta de la salida
+const extra = path.join(path.dirname(salida), 'personas_extra.json');
+if (fs.existsSync(extra)) {
+  for (const p of JSON.parse(fs.readFileSync(extra, 'utf8'))) {
+    if (validas.some((x) => x.cedula === p.cedula)) { avisos.push(`personas_extra.json: la cédula ${p.cedula} ya está en el Excel; se deja la del Excel.`); continue; }
+    validas.push(p);
+  }
+  avisos.push(`Se agregaron las personas de personas_extra.json.`);
+}
 fs.mkdirSync(path.dirname(salida), { recursive: true });
 fs.writeFileSync(salida, JSON.stringify(validas, null, 2));
 console.log(`Listo: ${validas.length} personas (${validas.filter((p) => p.rol === 'secretaria').length} de la Secretaría, ${validas.filter((p) => p.rol === 'dinamizadora').length} dinamizadoras) → ${salida}`);
