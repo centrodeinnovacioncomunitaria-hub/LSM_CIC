@@ -31,13 +31,13 @@ const sateliteDe = (municipio) => (Object.entries(SATELITES).find(([, s]) => s.m
 // Reglas de los cursos del equipo (documento técnico 6.4 y guiones del curso de Gestión)
 // cuestionario: false → la unidad se aprueba al repasar el material y enviar la actividad.
 const CURSOS = {
-  gestion: { unidades: 5, prefijo: 'GES-M', nombre: 'Gestión del CIC', evidencia: 'actividad', cuestionario: true, roles: ['secretaria', 'dinamizadora'] },
+  gestion: { unidades: 4, prefijo: 'GES-M', nombre: 'Gestión del CIC', evidencia: 'actividad', cuestionario: true, roles: ['secretaria', 'dinamizadora'] },
   'formacion-secretaria': { unidades: 6, prefijo: 'STF-U', nombre: 'Formación de la Secretaría Técnica', evidencia: 'actividad', cuestionario: false, roles: ['secretaria'] },
   'acompanar-hacer': { unidades: 6, prefijo: 'HAC-S', nombre: 'Acompañar la ruta HACER', evidencia: 'verificacion', cuestionario: true, roles: ['secretaria', 'dinamizadora'] },
   'facilitar-ser': { unidades: 4, prefijo: 'SER-T', nombre: 'Facilitar la ruta SER', evidencia: 'verificacion', cuestionario: true, roles: ['secretaria', 'dinamizadora'] },
 };
-const PREGUNTAS_POR_INTENTO = 5;
-const NOTA_MINIMA = 4;           // 4 de 5
+const PREGUNTAS_POR_INTENTO = 10; // el banco oficial (octubre 2026) tiene 10 preguntas por evaluación
+const NOTA_MINIMA = 7;            // 70 %: 7 de 10
 const INTENTOS_POR_RONDA = 2;    // si pierde los dos, repasa video y material para volver a intentar
 const MINUTOS_CUESTIONARIO = 60; // un intento abierto vence en una hora
 const CODIGO_HORAS_EQUIPO = 24;  // código que genera la Secretaría o la dinamizadora
@@ -309,7 +309,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
     const visibles = p.rol === 'emprendedora' ? todos.filter((v) => v.audiencia === 'emprendedoras' && (!v.satelite || v.satelite === p.satelite)) : todos;
     return { videos: visibles.map(({ _id, ...v }) => v).sort((a, b) => a.codigo.localeCompare(b.codigo)) };
   }
-  const RE_VIDEO = /^(GES-M[1-5]|STF-U[1-6]|HAC-S[1-6]|SER-T[1-4]|GRAB-SER[1-4]-[A-Z]{3,5}-[0-9]{8})$/;
+  const RE_VIDEO = /^(GES-M[1-4]|STF-U[1-6]|HAC-S[1-6]|SER-T[1-4]|GRAB-SER[1-4]-[A-Z]{3,5}-[0-9]{8})$/;
   async function guardarVideo(token, b) {
     const p = await usuarioDelToken(token);
     if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Solo la administración de la plataforma publica videos.');
@@ -626,7 +626,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
     return { archivos };
   }
 
-  // Abre un intento: 5 preguntas al azar del banco, sin la respuesta correcta.
+  // Abre un intento: las 10 preguntas del banco oficial, en orden aleatorio y con las opciones barajadas, sin la respuesta correcta.
   async function cuestionario(token, b) {
     const { perfil, ctx, curso, unidad } = await equipoAbierto(token, b);
     if (!CURSOS[curso].cuestionario) throw new Falla(400, 'sin_cuestionario', 'Esta unidad no tiene cuestionario: se aprueba al enviar la actividad.');
@@ -639,10 +639,12 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
     const banco = (await lista(col('preguntas').where('curso', '==', curso))).filter((p) => p.unidad === unidad);
     if (!banco.length) throw new Falla(503, 'sin_banco', 'El cuestionario de este módulo todavía no está cargado. Avísale a la Secretaría Técnica.');
     const elegidas = barajar(banco).slice(0, PREGUNTAS_POR_INTENTO);
-    const ref = await col('cuestionarios').add({ persona: perfil.id, curso, unidad, preguntas: elegidas.map((p) => p._id), creado_en: hoy(), respondido_en: null });
+    // Las opciones también cambian de orden en cada intento; se guarda el orden para calificar.
+    const ordenes = elegidas.map((p) => barajar(p.opciones.map((_, i) => i)));
+    const ref = await col('cuestionarios').add({ persona: perfil.id, curso, unidad, preguntas: elegidas.map((p) => p._id), ordenes: ordenes.map((o) => o.join(',')), creado_en: hoy(), respondido_en: null });
     return {
       id: ref.id, intento: est.intentos + 1, de: INTENTOS_POR_RONDA, nota_minima: NOTA_MINIMA, minutos: MINUTOS_CUESTIONARIO,
-      preguntas: elegidas.map((p) => ({ id: p._id, enunciado: p.enunciado, opciones: p.opciones })),
+      preguntas: elegidas.map((p, i) => ({ id: p._id, enunciado: p.enunciado, opciones: ordenes[i].map((j) => p.opciones[j]) })),
     };
   }
 
@@ -659,10 +661,17 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
     const detalle = [];
     for (let i = 0; i < c.preguntas.length; i++) {
       const p = await datos(col('preguntas').doc(String(c.preguntas[i])));
-      const bien = !!p && p.correcta === resp[i];
-      detalle.push({ id: c.preguntas[i], bien, retro: bien ? null : ((p && p.retro) || 'Repasa este tema en el video y en el material de estudio.') });
+      // La opción elegida se traduce al orden original del banco antes de comparar
+      const orden = c.ordenes && c.ordenes[i] ? String(c.ordenes[i]).split(',').map(Number) : null;
+      const elegida = orden ? orden[resp[i]] : resp[i];
+      const bien = !!p && p.correcta === elegida;
+      detalle.push({ id: c.preguntas[i], bien, justificacion: (p && p.retro) || null });
     }
     const nota = detalle.filter((d) => d.bien).length;
+    // La justificación oficial solo se muestra al aprobar: si se mostrara al fallar, el segundo intento
+    // tendría las respuestas a la vista. Al fallar solo se indica qué preguntas repasar.
+    const aprobadoAhora = nota >= NOTA_MINIMA;
+    detalle.forEach((d) => { d.retro = d.bien ? null : (aprobadoAhora ? d.justificacion : 'Repasa este tema en el video y en el material de estudio.'); delete d.justificacion; });
     // Se marca como respondido antes de sumar el intento: así no se puede calificar dos veces.
     await ref.update({ respuestas: resp, nota, respondido_en: hoy() });
     const ctx = await contexto(perfil.id);

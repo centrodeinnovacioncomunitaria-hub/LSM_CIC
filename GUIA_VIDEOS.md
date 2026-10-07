@@ -17,7 +17,7 @@ Cada módulo de un curso del equipo se abre en *Mis cursos* (solo cuando el ante
 
 1. **Video** (8 a 15 minutos). Primero aparece solo la imagen; el video se carga cuando la persona toca ▶, así no gasta datos quien no lo va a ver. Debajo, el botón «Ya vi el video».
 2. **Material de estudio**: se abre con los enlaces de Google Drive de cada unidad (ver CONFIGURAR_FIREBASE.md, paso 5) y «Ver el tema» abre la página pública del módulo.
-3. **Cuestionario**: 5 preguntas, se aprueba con 4 de 5 y hay 2 intentos. Se activa cuando la persona vio el video y repasó el material. Lo califica el servidor.
+3. **Evaluación**: 10 preguntas con 4 opciones, se aprueba con 7 de 10 (70 %) y hay 2 intentos. Se activa cuando la persona vio el video y repasó el material. Lo califica el servidor.
 4. **Actividad** (Gestión) o **verificación de la sesión** (HACER y SER): texto o enlace a la evidencia, que revisa la Secretaría Técnica.
 
 Si un módulo todavía no tiene video, dice «El video de este módulo todavía no está publicado» y el cuestionario se abre solo con el material. **Al publicar el video, se vuelve obligatorio verlo** antes del cuestionario para quien aún no lo ha presentado.

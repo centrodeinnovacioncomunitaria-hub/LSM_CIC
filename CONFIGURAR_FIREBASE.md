@@ -29,7 +29,7 @@ Mientras `config.js` esté vacío, la página funciona en **modo demostración**
 
 1. Activar la cuenta con contraseña propia.
 2. Confirmar el **compromiso** en *Mis cursos*.
-3. **Gestión del CIC**, 5 módulos en orden: video → material → cuestionario de **5 preguntas**, se aprueba con **4 de 5**, **2 intentos**; si pierde los dos, el módulo queda en pausa hasta volver a ver el video y el material. El siguiente módulo se abre al aprobar y enviar la actividad.
+3. **Gestión del CIC**, 4 módulos en orden: video → material → evaluación de **10 preguntas** (4 opciones), se aprueba con **7 de 10 (70 %)**, **2 intentos**; si pierde los dos, el módulo queda en pausa hasta volver a ver el video y el material. El siguiente módulo se abre al aprobar y enviar la actividad.
 4. **Constancia** con código verificable (cualquiera la puede verificar; solo se muestran las iniciales).
 5. Secretaría → **Formación de la Secretaría Técnica** (6 unidades, sin cuestionario: se aprueba con el material y la actividad) → HACER y SER. Dinamizadora → la Secretaría registra su **transferencia** → HACER (6 semanas) y SER (4 talleres), con 5 preguntas al azar de un banco de 10 y la verificación de la sesión como evidencia.
 
@@ -114,7 +114,7 @@ Al terminar muestra la dirección de la función, del estilo `https://us-central
    node cargar.js --llave ../../privado_NO_SUBIR/llave-firebase.json --directorio ../../privado_NO_SUBIR/directorio.json --preguntas ../../privado_NO_SUBIR/banco_preguntas.json --material ../../privado_NO_SUBIR/material.json
    ```
 
-   - `banco_preguntas.json`: las 125 preguntas oficiales (Gestión 5×5, HACER 6×10, SER 4×10) con su respuesta. Si cambian las evaluaciones: `node herramientas/extraer_preguntas.js ../material_cursos/_texto ../privado_NO_SUBIR/banco_preguntas.json`.
+   - `banco_preguntas.json`: las 140 preguntas del «Banco de evaluaciones y claves de respuesta» (octubre 2026): Gestión 4×10, HACER 6×10, SER 4×10, con su respuesta y justificación. Si cambia el documento: descárgalo como texto (Archivo → Descargar → Texto sin formato) y ejecuta `node herramientas/extraer_preguntas_doc.js <documento.txt> ../privado_NO_SUBIR/banco_preguntas.json`.
    - `material.json`: los enlaces de Google Drive del material de cada unidad (ver el paso 5). Puede cargarlo después; mientras tanto, cada persona marca «Ya repasé el material».
    - Para sumar o corregir personas del equipo: edite el Excel, vuelva a generar `directorio.json` y cárguelo de nuevo. No borra cuentas ni avances.
 

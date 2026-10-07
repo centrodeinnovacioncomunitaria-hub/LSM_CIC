@@ -4,8 +4,8 @@
 (() => {
     'use strict';
 
-    const REGLAS = { preguntas: 5, nota_minima: 4, intentos: 2 };
-    const UNIDADES = { gestion: 5, 'formacion-secretaria': 6, 'acompanar-hacer': 6, 'facilitar-ser': 4 };
+    const REGLAS = { preguntas: 10, nota_minima: 7, intentos: 2 }; // banco oficial de octubre 2026: 7 de 10 (70 %)
+    const UNIDADES = { gestion: 4, 'formacion-secretaria': 6, 'acompanar-hacer': 6, 'facilitar-ser': 4 };
     const EVIDENCIA = { gestion: 'actividad', 'formacion-secretaria': 'actividad', 'acompanar-hacer': 'verificacion', 'facilitar-ser': 'verificacion' };
     const SIN_CUESTIONARIO = new Set(['formacion-secretaria']);
     const ROLES = { gestion: ['secretaria', 'dinamizadora'], 'formacion-secretaria': ['secretaria'], 'acompanar-hacer': ['secretaria', 'dinamizadora'], 'facilitar-ser': ['secretaria', 'dinamizadora'] };
@@ -76,9 +76,9 @@
             return x;
         }
         // Preguntas de ejemplo: en la demostración la respuesta correcta es siempre la primera opción.
-        const preguntasEjemplo = (c, u) => Array.from({ length: 5 }, (_, i) => ({
-            id: i, enunciado: `Pregunta de ejemplo ${i + 1} de la unidad ${u}. En la plataforma real salen 5 preguntas oficiales al azar.`,
-            opciones: ['Respuesta correcta (en la demostración, siempre la primera)', 'Otra opción', 'Una opción más'],
+        const preguntasEjemplo = (c, u) => Array.from({ length: REGLAS.preguntas }, (_, i) => ({
+            id: i, enunciado: `Pregunta de ejemplo ${i + 1} de la unidad ${u}. En la plataforma real salen las 10 preguntas oficiales.`,
+            opciones: ['Respuesta correcta (en la demostración, siempre la primera)', 'Otra opción', 'Una opción más', 'Una cuarta opción'],
         }));
         let abierto = null;
 
@@ -186,9 +186,9 @@
     const nombreUnidad = (c) => ({ gestion: 'Módulo', 'formacion-secretaria': 'Unidad', 'acompanar-hacer': 'Semana', 'facilitar-ser': 'Taller' }[c] || 'Unidad');
     // De dónde salen las preguntas: el archivo de evaluación oficial (Drive «Productos Contrato»)
     const fuenteEvaluacion = (c, u) => ({
-        gestion: 'Cuestionario oficial del módulo (guion del curso Gestión del CIC)',
-        'acompanar-hacer': `Evaluación oficial «CIC_S${u}_Evaluacion» · Parte A: cuestionario para dinamizadoras`,
-        'facilitar-ser': `Evaluación oficial «CIC_SER${u}_Evaluacion» · Parte A: cuestionario para dinamizadoras`,
+        gestion: `Banco oficial de evaluaciones (octubre 2026) · Curso de gestión, módulo ${u}`,
+        'acompanar-hacer': `Banco oficial de evaluaciones (octubre 2026) · Ruta del HACER, semana ${u}`,
+        'facilitar-ser': `Banco oficial de evaluaciones (octubre 2026) · Ruta del SER, taller ${u}`,
     }[c] || '');
     const minSeg = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
@@ -200,7 +200,7 @@
         const pasos = [
             ['Activar tu cuenta', true, 'Contraseña propia'],
             ['Compromiso', h.has('compromiso'), h.has('compromiso') ? 'Confirmado' : 'Pendiente'],
-            ['Gestión del CIC', cons.has('gestion'), `${hechos('gestion')} de 5 módulos`],
+            ['Gestión del CIC', cons.has('gestion'), `${hechos('gestion')} de ${UNIDADES.gestion} módulos`],
             ...(C.perfil.rol === 'secretaria'
                 ? [['Formación de la Secretaría', cons.has('formacion-secretaria'), `${hechos('formacion-secretaria')} de 6 unidades`]]
                 : [['Transferencia de la ruta', h.has('transferencia-hacer') || h.has('transferencia-ser'), h.has('transferencia-hacer') || h.has('transferencia-ser') ? 'Registrada' : 'La registra la Secretaría']]),
@@ -339,7 +339,7 @@
                         <h3 id="t-evaluacion"><span class="paso-n">3</span> Evaluación</h3>
                         <p class="fuente-evaluacion">${esc(fuenteEvaluacion(curso, unidad))}</p>
                         <ul class="reglas-evaluacion">
-                            <li><b>${REGLAS.preguntas} preguntas</b> al azar del banco oficial, en orden aleatorio.</li>
+                            <li><b>${REGLAS.preguntas} preguntas</b> de opción múltiple con una sola respuesta correcta. Las preguntas y las opciones cambian de orden en cada intento.</li>
                             <li>Se aprueba con <b>${REGLAS.nota_minima} de ${REGLAS.preguntas}</b>. Tienes <b>${e.intentos_max} intentos</b>.</li>
                             <li>Si no apruebas en los dos, vuelves a ver el video y el material y se reabre.</li>
                         </ul>

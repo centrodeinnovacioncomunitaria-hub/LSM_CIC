@@ -61,6 +61,8 @@ function cuentasFalsas() {
   const cuentas = cuentasFalsas();
   const { atender } = crearLogica({ db, cuentas, ahora: () => reloj });
   const pedir = async (accion, datos = {}, token = null) => atender({ accion, ...datos }, token);
+  // Responde un intento con n respuestas correctas (las opciones llegan en orden aleatorio)
+  const responder = (q, n) => q.preguntas.map((p, i) => (i < n ? p.opciones.indexOf('bien') : p.opciones.findIndex((o) => o !== 'bien')));
   const ok = async (accion, datos, token) => { const r = await pedir(accion, datos, token); assert.equal(r.estado, 200, `${accion}: ${JSON.stringify(r.cuerpo)}`); return r.cuerpo; };
   const falla = async (accion, datos, token, estado) => { const r = await pedir(accion, datos, token); assert.equal(r.estado, estado, `${accion} debía fallar con ${estado}: ${JSON.stringify(r.cuerpo)}`); return r.cuerpo; };
   let pasos = 0;
@@ -75,7 +77,7 @@ function cuentasFalsas() {
   for (const [c, d] of Object.entries(dir)) await db.collection('directorio').doc(c).set(d);
   for (const [curso, def] of Object.entries(CURSOS)) {
     if (!def.cuestionario) continue;
-    for (let u = 1; u <= def.unidades; u++) for (let n = 1; n <= 10; n++) await db.collection('preguntas').doc(`${curso}-${u}-${n}`).set({ curso, unidad: u, n, enunciado: `P${n}`, opciones: ['bien', 'mal', 'mal'], correcta: 0, retro: 'Repasa.' });
+    for (let u = 1; u <= def.unidades; u++) for (let n = 1; n <= 10; n++) await db.collection('preguntas').doc(`${curso}-${u}-${n}`).set({ curso, unidad: u, n, enunciado: `P${n}`, opciones: ['bien', 'mal1', 'mal2', 'mal3'], correcta: 0, retro: 'Justificación oficial.' });
   }
   for (const curso of Object.keys(CURSOS)) for (let u = 1; u <= 6; u++) await db.collection('material').doc(`${curso}_${u}`).set({ archivos: [{ nombre: `Guía ${u}`, url: 'https://drive.google.com/x' }] });
   await db.collection('videos').doc('GES-M1').set({ codigo: 'GES-M1', titulo: 'Módulo 1', drive_id: 'abcdefghijklmnopqrstuvwxyz', audiencia: 'equipo', curso: 'gestion', unidad: 1 });
@@ -173,11 +175,12 @@ function cuentasFalsas() {
   // Pierde los dos intentos → pausa → repasa video y material → segunda ronda
   for (let i = 0; i < 2; i++) {
     const q = await ok('cuestionario', { curso: 'gestion', unidad: 1 }, tDina);
-    assert.equal(q.preguntas.length, 5);
+    assert.equal(q.preguntas.length, 10);
     assert.equal(q.preguntas[0].correcta, undefined, 'no se envía la respuesta correcta');
-    const r = await ok('responder', { id: q.id, respuestas: [1, 1, 0, 0, 0] }, tDina);
+    const r = await ok('responder', { id: q.id, respuestas: responder(q, 5) }, tDina); // 5 de 10: no aprueba
     assert.equal(r.aprobado, false);
-    assert.equal(r.detalle.filter((d) => d.retro).length, 2);
+    assert.equal(r.detalle.filter((d) => d.retro).length, 5);
+    assert.ok(r.detalle.every((d) => d.retro !== 'Justificación oficial.'), 'al fallar no se muestra la justificación');
   }
   p = await ok('mi-progreso', {}, tDina);
   assert.equal(p.cursos.gestion[0].estado, 'pausada');
@@ -195,10 +198,11 @@ function cuentasFalsas() {
   paso('Cuestionario: 5 preguntas sin respuesta, 2 intentos, pausa hasta repasar video y material');
 
   const q = await ok('cuestionario', { curso: 'gestion', unidad: 1 }, tDina);
-  const bien = await ok('responder', { id: q.id, respuestas: [0, 0, 0, 0, 1] }, tDina);
-  assert.equal(bien.nota, 4);
+  const bien = await ok('responder', { id: q.id, respuestas: responder(q, 7) }, tDina);
+  assert.equal(bien.nota, 7);
+  assert.ok(bien.detalle.filter((d) => !d.bien).every((d) => d.retro === 'Justificación oficial.'), 'al aprobar se muestra la justificación');
   assert.equal(bien.aprobado, true);
-  await falla('responder', { id: q.id, respuestas: [0, 0, 0, 0, 0] }, tDina, 409);
+  await falla('responder', { id: q.id, respuestas: responder(q, 10) }, tDina, 409);
   assert.equal(bien.progreso.cursos.gestion[1].estado, 'bloqueada', 'falta la actividad de la unidad 1');
   await falla('entregar', { curso: 'gestion', unidad: 1, texto: 'corto' }, tDina, 400);
   p = (await ok('entregar', { curso: 'gestion', unidad: 1, texto: 'Mi actividad del módulo 1 con suficiente detalle.' }, tDina)).progreso;
@@ -211,12 +215,12 @@ function cuentasFalsas() {
     await ok('material', { curso, unidad: u }, token);
     if (CURSOS[curso].cuestionario) {
       const c = await ok('cuestionario', { curso, unidad: u }, token);
-      assert.equal((await ok('responder', { id: c.id, respuestas: [0, 0, 0, 0, 0] }, token)).aprobado, true);
+      assert.equal((await ok('responder', { id: c.id, respuestas: responder(c, 10) }, token)).aprobado, true);
     }
     return ok('entregar', { curso, unidad: u, texto: 'Evidencia de la unidad con suficiente detalle.' }, token);
   }
   let fin;
-  for (let u = 2; u <= 5; u++) fin = await completar(tDina, 'gestion', u);
+  for (let u = 2; u <= 4; u++) fin = await completar(tDina, 'gestion', u);
   assert.match(fin.constancia.codigo, /^CIC-GESM-[A-Z0-9]{6}$/);
   const ver = await ok('verificar', { codigo: fin.constancia.codigo });
   assert.deepEqual([ver.valida, ver.iniciales], [true, 'D. D. D.']);
@@ -234,12 +238,12 @@ function cuentasFalsas() {
 
   // ---------- Secretaría: su formación sin cuestionario y luego las rutas ----------
   await ok('hito', { hito: 'compromiso' }, tSara);
-  for (let u = 1; u <= 5; u++) {
+  for (let u = 1; u <= 4; u++) {
     await ok('material', { curso: 'gestion', unidad: u }, tSara);
     if (u === 1) { await ok('iniciar-video', { curso: 'gestion', unidad: 1 }, tSara); avanzar(2); await ok('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tSara); }
     else await falla('marcar', { curso: 'gestion', unidad: u, que: 'video' }, tSara, 400); // sin video
     const c = await ok('cuestionario', { curso: 'gestion', unidad: u }, tSara);
-    await ok('responder', { id: c.id, respuestas: [0, 0, 0, 0, 0] }, tSara);
+    await ok('responder', { id: c.id, respuestas: responder(c, 10) }, tSara);
     await ok('entregar', { curso: 'gestion', unidad: u, texto: 'Evidencia de la unidad con suficiente detalle.' }, tSara);
   }
   p = await ok('mi-progreso', {}, tSara);
@@ -257,7 +261,7 @@ function cuentasFalsas() {
   await falla('equipo', {}, tDina, 403);
   const eq = await ok('equipo', {}, tSara);
   assert.equal(eq.personas.length, 3);
-  assert.equal(eq.personas.find((x) => x.cedula === '22222222').avance.gestion, 5);
+  assert.equal(eq.personas.find((x) => x.cedula === '22222222').avance.gestion, 4);
   assert.ok(eq.pendientes.length >= 5);
   await falla('revisar', { id: eq.pendientes[0].id, estado: 'devuelta', comentario: '' }, tSara, 400);
   await ok('revisar', { id: eq.pendientes[0].id, estado: 'devuelta', comentario: 'Agrega la foto de la sesión.' }, tSara);
