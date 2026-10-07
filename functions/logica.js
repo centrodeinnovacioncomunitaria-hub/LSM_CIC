@@ -165,7 +165,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date() }) {
     const cedula = validarCedula(b.cedula);
     const generico = {
       ok: true,
-      mensaje: 'Si esta cédula está registrada con un correo, te llegó un enlace para crear tu contraseña (revisa también «Spam» o «Correo no deseado»). Si no tienes correo registrado, pídele un código a la Secretaría Técnica o a tu dinamizadora.',
+      mensaje: 'Si esta cédula está registrada con un correo, te llegó un enlace para crear tu contraseña. Vence en 1 hora y solo sirve el del último correo que pidas. Si no lo ves, revisa «Spam» o «Correo no deseado». Si no tienes correo registrado, pídele un código a la Secretaría Técnica o a tu dinamizadora.',
     };
     const previo = await datos(col('enlaces').doc(cedula));
     if (previo && ahora() - new Date(previo.enviado_en) < 2 * 60000) return generico; // máximo uno cada 2 minutos
