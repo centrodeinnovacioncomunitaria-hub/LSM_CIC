@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261009">
+    <link rel="stylesheet" href="assets/cic.css?v=20261010">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -680,10 +680,10 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261009"></script>
-    <script src="assets/datos-cic.js?v=20261009"></script>
-    <script src="assets/sitio.js?v=20261009"></script>
-    <script src="assets/cursos-equipo.js?v=20261009"></script>
+    <script src="./config.js?v=20261010"></script>
+    <script src="assets/datos-cic.js?v=20261010"></script>
+    <script src="assets/sitio.js?v=20261010"></script>
+    <script src="assets/cursos-equipo.js?v=20261010"></script>
     <script>
     (() => {
         'use strict';
@@ -825,13 +825,22 @@
             if (conSesion && !t) { const e = new Error('Tu sesión terminó. Vuelve a ingresar.'); e.codigo = 'sesion'; throw e; }
             let r;
             try {
-                r = await fetch(FUNCION, {
+                // Si el servidor estaba dormido o la red parpadeó, se reintenta hasta 2 veces antes de avisar
+                const pedir = () => fetch(FUNCION, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) },
                     body: JSON.stringify({ accion, ...datos }),
                 });
+                for (let intento = 0; ; intento++) {
+                    try { r = await pedir(); break; } catch (e) {
+                        if (intento >= 2) throw e;
+                        await new Promise((ok) => setTimeout(ok, 1500 * (intento + 1)));
+                    }
+                }
             } catch (e) {
-                throw new Error('No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.');
+                throw new Error(navigator.onLine === false
+                    ? 'No hay conexión a internet. Revisa tu conexión e intenta de nuevo.'
+                    : 'No pudimos comunicarnos con el servidor del CIC. Espera un momento e intenta de nuevo. Si sigue pasando, prueba sin bloqueadores de anuncios o en otro navegador.');
             }
             const j = await r.json().catch(() => ({}));
             if (!r.ok) {
