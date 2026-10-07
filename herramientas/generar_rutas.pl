@@ -101,9 +101,10 @@ $ficha
                     </aside>
                 </div>
             </section>
+            <nav class="subnav-cic subnav-fija" aria-label="En esta página"><ol><li><a href="#como">Cómo funciona</a></li><li><a href="#vivir">Cómo se vive</a></li><li><a href="#lista">$r{eyebrow_lista}</a></li></ol></nav>
         </div>
 
-        <section class="bloque" aria-labelledby="titulo-como">
+        <section id="como" class="bloque bloque-banda" aria-labelledby="titulo-como">
             <div class="contenedor">
                 <p class="eyebrow">Cómo funciona</p>
                 <h2 id="titulo-como" style="margin-top:.4rem">$r{como}</h2>
@@ -114,7 +115,21 @@ $pasos
             </div>
         </section>
 
-        <section class="bloque" aria-labelledby="titulo-semanas">
+        <section id="vivir" class="bloque" aria-labelledby="titulo-vivir">
+            <div class="contenedor franja-foto aparece">
+                <div class="franja-img hoja"><img class="foto-duo" style="filter:url(#$r{duo})" referrerpolicy="no-referrer" loading="lazy" width="800" height="600" alt="$r{foto_alt}" src="$r{foto}"></div>
+                <div class="franja-texto">
+                    <p class="eyebrow">Cómo se vive</p>
+                    <h2 id="titulo-vivir" style="margin-top:.4rem">$r{frase}</h2>
+                    <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
+                    <ul class="franja-datos lista-limpia">
+$r{datos}
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="lista" class="bloque" aria-labelledby="titulo-semanas">
             <div class="contenedor">
                 <p class="eyebrow">$r{eyebrow_lista}</p>
                 <h2 id="titulo-semanas" style="margin-top:.4rem">$r{titulo_lista}</h2>
@@ -144,7 +159,11 @@ HTML
 
 # ---------------------------------------------------------------- Ruta HACER
 pagina_ruta(
-    slug => 'hacer', titulo => 'Ruta HACER', color => 'bg-durazno', chip => 'Para emprendedoras · 6 semanas',
+    slug => 'hacer', titulo => 'Ruta HACER', color => 'bg-durazno', duo => 'duo-durazno',
+    foto => 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgnlDPWIXl4bQVqs74nRqDFAzFGXWFCXTPt3sufw3YsOl0hgW36kFEL6xA7w77UPSlcg5uB-P3bYXrSdZugbnzhbLOXxE9JwKIDIGS8LMBof2JiftJH_sC7GpVCMHYwPjVDHZiIHVb60XQ/s800/IMG_6618.JPG',
+    foto_alt => 'Emprendedoras trabajando con sus herramientas', frase => 'Tu negocio, una semana a la vez.',
+    datos => join("
+", map { qq{                        <li><b>$_->[0]</b><span>$_->[1]</span></li>} } (['6', 'visitas de tu dinamizadora'], ['2 h', 'por visita, en tu negocio'], ['1', 'tarea para la semana siguiente'])), chip => 'Para emprendedoras · 6 semanas',
     seo_titulo => 'Ruta HACER · 6 semanas para ordenar tu negocio · CIC',
     desc => 'Seis semanas de acompañamiento en tu negocio, con tu dinamizadora: costos, precio, ventas y plan de inversión. Descarga la guía y las plantillas de cada semana.',
     lead => 'Seis semanas de acompañamiento en tu propio negocio, con tu dinamizadora, para ordenar tus costos, tu precio y tus ventas.',
@@ -165,7 +184,11 @@ pagina_ruta(
 
 # ---------------------------------------------------------------- Ruta SER
 pagina_ruta(
-    slug => 'ser', titulo => 'Ruta SER', color => 'bg-lavanda', chip => 'Para emprendedoras · 4 talleres en grupo',
+    slug => 'ser', titulo => 'Ruta SER', color => 'bg-lavanda', duo => 'duo-verde',
+    foto => 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgkaFUGQ0lPFM6brzHzL_IpVWq1-TNBT09i9fsvGLFzL9xLCLwIwXAvQrNSRSFfO0YGUrww76EF6ipz-koMBblKLzogX8BmWFiyR5SAm5yjcVIxCCxAXAslyDUhedAtzoGcDtzMJ2Xzapk/s800/IMG_6604.JPG',
+    foto_alt => 'Una facilitadora conversa con un grupo de mujeres', frase => 'Aprender en grupo, crecer juntas.',
+    datos => join("
+", map { qq{                        <li><b>$_->[0]</b><span>$_->[1]</span></li>} } (['4', 'talleres en grupo'], ['2 + 2', 'presenciales y virtuales'], ['3 de 4', 'para tu constancia'])), chip => 'Para emprendedoras · 4 talleres en grupo',
     seo_titulo => 'Ruta SER · 4 talleres en grupo para emprendedoras · CIC',
     desc => 'Cuatro talleres en grupo de confianza, decisiones, liderazgo, derechos y ahorro colectivo. Dos presenciales y dos virtuales, con grabación.',
     lead => 'Cuatro talleres en grupo para fortalecer a la mujer que sostiene el negocio: confianza, decisiones, liderazgo, derechos y ahorro.',

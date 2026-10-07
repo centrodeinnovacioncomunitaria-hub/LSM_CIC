@@ -40,18 +40,6 @@
         },
         {
           "@type": "Course",
-          "@id": "https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/gestion-cic/",
-          "url": "https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/gestion-cic/",
-          "name": "Gestión del CIC",
-          "description": "Curso virtual de 5 módulos para dinamizadoras y Secretaría Técnica sobre cómo funciona un centro de innovación comunitaria.",
-          "provider": { "@id": "https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/#cic" },
-          "inLanguage": "es-CO",
-          "timeRequired": "PT2H",
-          "isAccessibleForFree": true,
-          "educationalCredentialAwarded": "Constancia de participación"
-        },
-        {
-          "@type": "Course",
           "@id": "https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/#ruta-hacer",
           "name": "Ruta HACER",
           "description": "Seis semanas de acompañamiento individual para ordenar costos, precios y ventas del negocio.",
@@ -91,6 +79,7 @@
         <symbol id="isotipo" viewBox="12 12 96 96"><path d="M60,104 C30,100 14,78 18,44 C44,50 58,70 60,104 Z" fill="#9ED0B7" style="mix-blend-mode:multiply"/><path d="M60,104 C90,100 106,78 102,44 C76,50 62,70 60,104 Z" fill="#F2B592" style="mix-blend-mode:multiply"/><circle cx="60" cy="30" r="12" fill="#EE9884"/></symbol>
         <symbol id="isotipo-neg" viewBox="12 12 96 96"><path d="M60,104 C30,100 14,78 18,44 C44,50 58,70 60,104 Z" fill="#fff" fill-opacity=".6"/><path d="M60,104 C90,100 106,78 102,44 C76,50 62,70 60,104 Z" fill="#fff" fill-opacity=".85"/><circle cx="60" cy="30" r="12" fill="#fff"/></symbol>
         <symbol id="trazo" viewBox="0 0 152 16"><path d="M3 11 C 30 2, 52 2, 76 9 S 124 15, 149 5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+        <symbol id="candado" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 018 0v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     </svg>
 
     <a class="saltar" href="#contenido">Saltar al contenido</a>
@@ -115,10 +104,9 @@
                 <div class="submenu">
                     <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-cursos">Equipo <svg aria-hidden="true"><use href="#flecha"/></svg></button>
                     <ul id="sub-cursos" class="submenu-lista" hidden>
-                        <li><a href="cursos/gestion-cic/"><span class="punto bg-agua"></span><span><b>Gestión del CIC</b><small>5 módulos</small></span></a></li>
-                        <li><a href="cursos/acompanar-hacer/"><span class="punto bg-durazno"></span><span><b>Acompañar la ruta HACER</b><small>6 semanas</small></span></a></li>
-                        <li><a href="cursos/facilitar-ser/"><span class="punto bg-lavanda"></span><span><b>Facilitar la ruta SER</b><small>4 talleres</small></span></a></li>
-                        <li><a class="todas" href="cursos/">Cursos del equipo</a></li>
+                        <li><a href="#ingresar-dinamizadora"><span class="punto bg-durazno"></span><span><b>Soy dinamizadora</b><small>Ingresa con tu cédula</small></span></a></li>
+                        <li><a href="#ingresar-secretaria"><span class="punto bg-agua"></span><span><b>Soy secretaria</b><small>Ingresa con tu cédula</small></span></a></li>
+                        <li><a class="todas" href="cursos/">Cursos del equipo · con contraseña</a></li>
                     </ul>
                 </div>
                 <a href="#ayuda">Ayuda</a>
@@ -212,17 +200,52 @@
             </div>
         </section>
 
-        <!-- Qué es el CIC y sus pilares -->
+        <!-- 1 · Cifras: el CIC en números -->
+        <section class="banda-cifras" aria-label="El CIC en cifras">
+            <div class="patron-hojas animado" aria-hidden="true"></div>
+            <div class="contenedor">
+                <ul class="cifras lista-limpia">
+                    <li class="aparece"><b data-contar="200">200</b><span>emprendedoras acompañadas</span></li>
+                    <li class="aparece"><b data-contar="24">24</b><span>dinamizadoras en el territorio</span></li>
+                    <li class="aparece"><b data-contar="8">8</b><span>satélites en 7 departamentos</span></li>
+                    <li class="aparece"><b data-contar="13">13</b><span>municipios del Caribe</span></li>
+                    <li class="aparece"><b data-contar="30">30</b><span>años de la Red de Mujeres del Caribe</span></li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 2 · Qué es el CIC: texto + fotos + pilares en carrusel -->
         <section id="sobre-cic" class="seccion seccion-blanca con-decor" aria-labelledby="titulo-sobre">
             <div class="patron-puntos decor decor-derecha" aria-hidden="true"></div>
             <div class="contenedor">
-                <div class="cabeza aparece">
-                    <p class="eyebrow">Qué es el CIC</p>
-                    <h2 id="titulo-sobre">Una red para que tu negocio florezca.</h2>
-                    <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
-                    <p>El Centro de Innovación Comunitaria acompaña a las mujeres emprendedoras del Caribe para pasar de la subsistencia a la autonomía económica. No es un edificio: es una red que se apoya en la Red de Mujeres del Caribe, con más de 30 años de trayectoria.</p>
+                <div class="split">
+                    <div class="split-texto aparece">
+                        <p class="eyebrow"><span class="indice">01</span> Qué es el CIC</p>
+                        <h2 id="titulo-sobre">Una red para que tu negocio <em>florezca.</em></h2>
+                        <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
+                        <p class="lead">Acompañamos a las mujeres emprendedoras del Caribe para pasar de la subsistencia a la autonomía económica.</p>
+                        <ul class="lista-iconos">
+                            <li><span class="icono-circulo bg-menta" aria-hidden="true">✿</span><span><b>No es un edificio</b>Es una red que llega a tu municipio.</span></li>
+                            <li><span class="icono-circulo bg-durazno" aria-hidden="true">♥</span><span><b>Con la Red de Mujeres del Caribe</b>Más de 30 años de trayectoria.</span></li>
+                            <li><span class="icono-circulo bg-mantequilla" aria-hidden="true">★</span><span><b>Gratis para ti</b>Talleres, guías y acompañamiento.</span></li>
+                        </ul>
+                        <div class="botones"><a class="btn btn-bosque" href="el-cic/">Conoce el CIC</a></div>
+                    </div>
+                    <div class="collage aparece" aria-hidden="true">
+                        <div class="collage-a hoja"><img class="foto-duo" style="filter:url(#duo-verde)" referrerpolicy="no-referrer" loading="lazy" width="600" height="750" alt="" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgkaFUGQ0lPFM6brzHzL_IpVWq1-TNBT09i9fsvGLFzL9xLCLwIwXAvQrNSRSFfO0YGUrww76EF6ipz-koMBblKLzogX8BmWFiyR5SAm5yjcVIxCCxAXAslyDUhedAtzoGcDtzMJ2Xzapk/s800/IMG_6604.JPG"></div>
+                        <div class="collage-b hoja-inv"><img class="foto-duo" style="filter:url(#duo-durazno)" referrerpolicy="no-referrer" loading="lazy" width="600" height="600" alt="" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgZ6XmgMPuMbbJRwkFLRYZPOKWcJGlk5gcSWAM9IGCDVm27Zy3I3IAiUwh9HF5Z-RUJk15hNWiCijwvXpVXB51lFmUI0EoAPs87PPfiLCHjtMEtemSH2jjJpho54M0t1cnNAAzT5C0qebk/s800/IMG_6578.JPG"></div>
+                        <div class="collage-sello"><b>Emprender</b><span>es florecer</span></div>
+                    </div>
                 </div>
-                <ol class="rejilla r5 lista-limpia">
+
+                <div class="cabeza-fila aparece">
+                    <h3 class="subtitulo-bloque">Cuatro pilares y una base</h3>
+                    <div class="carrusel-controles" data-carrusel="pilares">
+                        <button type="button" class="carrusel-btn" data-dir="-1" aria-label="Ver pilares anteriores"><span aria-hidden="true">‹</span></button>
+                        <button type="button" class="carrusel-btn" data-dir="1" aria-label="Ver más pilares"><span aria-hidden="true">›</span></button>
+                    </div>
+                </div>
+                <ol class="carrusel lista-limpia" id="carrusel-pilares">
 <!-- PILARES:inicio -->
                     <li class="tarjeta pilar aparece"><span class="numero bg-menta">1</span><h3>Acompañamiento integral</h3><p>Cada emprendedora recibe acompañamiento en su negocio: autoestima, modelo de negocio y finanzas.</p></li>
                     <li class="tarjeta pilar aparece"><span class="numero bg-coral">2</span><h3>Acceso a mercados</h3><p>Conectar los negocios con clientes nuevos, ferias, gremios y aliados comerciales.</p></li>
@@ -231,74 +254,80 @@
                     <li class="tarjeta pilar aparece pilar-base"><span class="numero bg-lavanda">5</span><h3>Desarrollo del ser</h3><p>La base de todo: confianza, liderazgo, derechos y cuidado de cada mujer.</p></li>
 <!-- PILARES:fin -->
                 </ol>
-                <p class="aparece" style="margin-top:1.4rem"><a class="btn btn-borde" href="el-cic/">Conoce el CIC</a></p>
             </div>
         </section>
 
-        <!-- Cómo funciona: de la Secretaría Técnica a los satélites, con el mapa -->
+        <svg class="onda" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0,40 C240,80 480,0 720,30 C960,60 1200,10 1440,40 L1440,70 L0,70 Z" fill="var(--crema)"/></svg>
+
+        <!-- 3 · Cómo funciona: en cascada y en el mapa -->
         <section id="como-funciona" class="seccion con-decor" aria-labelledby="titulo-como">
             <span id="territorio"></span>
             <div class="patron-ondas animado decor decor-izquierda" aria-hidden="true"></div>
             <div class="contenedor">
                 <div class="cabeza aparece">
-                    <p class="eyebrow">Cómo funciona</p>
-                    <h2 id="titulo-como">De la Secretaría Técnica a tu satélite.</h2>
+                    <p class="eyebrow"><span class="indice">02</span> Cómo funciona</p>
+                    <h2 id="titulo-como">De la Secretaría Técnica a <em>tu satélite.</em></h2>
                     <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
                 </div>
-                <ol class="flujo lista-limpia">
-                    <li class="flujo-paso aparece"><span class="flujo-num bg-agua">1</span><div><h3>Secretaría Técnica</h3><p>5 personas que dirigen el CIC, forman a las dinamizadoras y acompañan a cada satélite.</p></div></li>
-                    <li class="flujo-paso aparece"><span class="flujo-num bg-durazno">2</span><div><h3>8 satélites, 24 dinamizadoras</h3><p>Organizaciones de mujeres de la Red, con 3 dinamizadoras cada una.</p></div></li>
-                    <li class="flujo-paso aparece"><span class="flujo-num bg-coral">3</span><div><h3>200 emprendedoras</h3><p>Cada una con su dinamizadora, en su negocio y en grupo.</p></div></li>
+                <ol class="pasos-h lista-limpia">
+                    <li class="paso-h aparece"><span class="paso-h-num bg-agua">1</span><h3>Secretaría Técnica</h3><p>5 personas dirigen el CIC y forman al equipo.</p></li>
+                    <li class="paso-h aparece"><span class="paso-h-num bg-durazno">2</span><h3>8 satélites</h3><p>24 dinamizadoras, 3 en cada satélite.</p></li>
+                    <li class="paso-h aparece"><span class="paso-h-num bg-coral">3</span><h3>200 emprendedoras</h3><p>En su negocio y en talleres de grupo.</p></li>
                 </ol>
 <!-- MAPA:inicio -->
                 <div class="mapa-cic">
                     <figure class="mapa-figura aparece">
-        <svg class="mapa-svg" viewBox="20 10 600 580" role="img" aria-labelledby="mapa-titulo mapa-desc">
+        <svg class="mapa-svg" viewBox="40 20 560 560" role="img" aria-labelledby="mapa-titulo mapa-desc">
             <title id="mapa-titulo">Mapa de los satélites del CIC en la región Caribe</title>
-            <desc id="mapa-desc">Mapa esquemático de siete departamentos del Caribe colombiano. La Secretaría Técnica se conecta con 8 satélites: La Guajira, Magdalena, Valledupar, Pueblo Bello, Atlántico, Bolívar, Sucre y Córdoba.</desc>
-            <text class="mapa-mar" x="70" y="200">Mar Caribe</text>
-            <polygon class="mapa-depto" points="235,167 224,175 208,183 193,196 202,220 215,240 240,250 238,205" style="fill:var(--lavanda)"/>
-            <text class="mapa-depto-nombre" x="225" y="145" text-anchor="middle">Atlántico</text>
-            <polygon class="mapa-depto" points="193,196 175,215 165,233 160,260 155,285 185,290 210,320 225,360 235,400 225,440 230,485 260,540 300,570 325,540 332,465 328,415 322,375 285,350 255,300 240,250 215,240 202,220" style="fill:var(--agua)"/>
-            <text class="mapa-depto-nombre" x="280" y="450" text-anchor="middle">Bolívar</text>
-            <polygon class="mapa-depto" points="385,187 410,205 435,227 425,280 405,345 390,405 375,495 345,500 332,465 328,415 322,375 340,315 335,245" style="fill:var(--durazno)"/>
-            <text class="mapa-depto-nombre" x="375" y="350" text-anchor="middle">Cesar</text>
-            <polygon class="mapa-depto" points="90,380 110,350 130,337 152,333 165,360 185,395 200,420 225,440 190,485 150,530 105,530 75,480 65,430" style="fill:var(--menta)"/>
-            <text class="mapa-depto-nombre" x="125" y="490" text-anchor="middle">Córdoba</text>
-            <polygon class="mapa-depto" points="364,150 400,145 429,121 476,97 503,55 525,47 554,29 580,45 588,90 522,135 495,165 465,190 435,227 410,205 385,187" style="fill:var(--mantequilla)"/>
-            <text class="mapa-depto-nombre" x="515" y="77" text-anchor="middle">La Guajira</text>
-            <polygon class="mapa-depto" points="364,150 385,187 335,245 340,315 322,375 285,350 255,300 240,250 238,205 235,167 265,177 295,173 300,150 330,142" style="fill:var(--menta)"/>
-            <text class="mapa-depto-nombre" x="290" y="250" text-anchor="middle">Magdalena</text>
-            <polygon class="mapa-depto" points="155,285 165,305 160,323 152,333 165,360 185,395 200,420 225,440 235,400 225,360 210,320 185,290" style="fill:var(--coral)"/>
-            <text class="mapa-depto-nombre" x="205" y="390" text-anchor="middle">Sucre</text>
-            <path class="mapa-linea" data-sat="la-guajira" d="M160,86 Q294.5,52.5 429,121"/>
-            <path class="mapa-linea" data-sat="magdalena" d="M160,86 Q230,67.5 300,151"/>
-            <path class="mapa-linea" data-sat="valledupar" d="M160,86 Q277.5,106 395,228"/>
-            <path class="mapa-linea" data-sat="pueblo-bello" d="M160,86 Q260.5,108.5 361,233"/>
-            <path class="mapa-linea" data-sat="atlantico" d="M160,86 Q194,90 228,196"/>
-            <path class="mapa-linea" data-sat="bolivar" d="M160,86 Q164.5,110 169,236"/>
-            <path class="mapa-linea" data-sat="sucre" d="M160,86 Q170,164.5 180,345"/>
-            <path class="mapa-linea" data-sat="cordoba" d="M160,86 Q146,192 132,400"/>
+            <desc id="mapa-desc">Mapa de los siete departamentos del Caribe colombiano. La Secretaría Técnica se conecta con 8 satélites: La Guajira, Magdalena, Valledupar, Pueblo Bello, Atlántico, Bolívar, Sucre y Córdoba.</desc>
+            <rect class="mapa-agua" x="40" y="20" width="560" height="560" rx="24"/>
+            <text class="mapa-mar" x="300" y="70">Mar Caribe</text>
+            <path class="mapa-vecino" d="M89.3,413.1L98.3,417.8L100.3,433.2L80.7,461.7L68.1,509.2L85.3,539.7L135.9,536.1L155.0,503.7L169.7,504.3L172.6,494.2L185.4,489.3L197.1,472.6L224.1,470.0L236.6,456.5L266.1,484.5L266.6,495.3L272.3,505.3L262.9,514.7L258.6,532.1L269.3,543.3L281.1,527.9L283.7,536.6L277.4,543.9L277.3,558.0L282.8,574.9L295.2,576.5L324.6,548.6L330.4,575.8L308.7,592.6L301.5,602.7L278.2,617.4L275.6,621.9L280.5,636.3L259.8,655.2L257.0,665.7L261.0,669.2L261.3,677.0L257.4,679.3L259.1,686.1L254.0,689.3L252.6,699.2L247.7,699.0L242.2,707.0L232.3,701.6L218.3,704.4L208.4,710.2L203.3,721.9L191.2,729.2L185.6,728.6L177.4,706.6L169.2,709.0L158.2,702.3L158.6,723.5L142.8,722.5L130.4,727.8L115.3,725.9L106.7,709.9L104.0,694.4L106.8,677.5L95.6,673.0L93.7,656.3L48.3,658.1L40.7,643.3L42.8,626.8L30.1,617.5L33.8,612.7L29.1,612.2L30.2,608.3L23.1,606.6L26.2,603.5L22.4,593.6L40.5,587.8L36.6,574.1L49.4,572.4L64.4,577.9L69.7,561.0L65.8,549.6L48.0,536.3L39.6,517.3L21.6,512.3L5.1,492.8L16.0,484.0L23.6,468.0L20.6,447.2L25.3,457.7L23.5,463.9L33.3,460.7L29.1,464.7L34.3,464.9L32.9,471.6L25.5,471.1L26.3,481.7L38.6,482.5L44.5,477.8L42.7,437.4L35.7,424.2L25.2,418.6L31.0,411.8L50.1,406.8L74.8,386.3L89.3,413.1Z"/>
+            <path class="mapa-vecino" d="M17.9,447.8L23.6,468.0L16.0,484.0L5.1,492.8L21.6,512.3L39.6,517.3L48.0,536.3L65.8,549.6L69.7,561.0L64.4,577.9L49.4,572.4L36.6,574.1L40.5,587.8L22.4,593.6L26.2,603.5L23.4,607.2L30.2,608.3L29.1,612.2L33.8,612.7L30.1,617.5L42.8,626.8L40.7,643.3L48.3,658.1L93.7,656.3L95.6,673.0L106.8,677.5L104.0,694.4L106.7,709.9L118.3,727.8L84.5,747.3L95.0,772.4L103.0,779.2L95.8,791.6L79.0,804.3L66.8,832.3L60.9,834.0L64.4,850.8L73.6,858.7L57.1,871.2L40.7,875.7L21.6,863.5L10.0,863.6L-0.2,856.6L-6.4,858.4L-9.5,851.0L-12.8,856.8L-27.4,855.3L-35.7,859.8L-34.4,854.3L-28.8,852.9L-36.3,852.5L-33.8,844.6L-34.1,849.8L-25.4,850.3L-26.6,840.9L-15.8,822.5L-16.4,797.8L-11.2,801.2L-18.6,792.7L-21.7,779.9L-23.6,759.7L-20.7,753.4L-24.3,755.7L-25.1,753.0L-23.9,744.1L-21.1,746.1L-25.8,733.9L-23.0,728.9L-27.0,728.6L-27.7,724.1L-37.5,723.6L-34.6,714.7L-20.5,713.3L-7.6,695.5L-18.1,668.9L-20.6,670.4L-30.0,652.5L-28.9,645.0L-24.0,648.4L-21.0,645.5L-21.9,636.1L-16.6,634.7L-14.3,621.7L-21.4,605.5L-27.7,604.5L-33.1,609.9L-37.4,596.3L-48.6,587.9L-50.8,589.6L-47.1,576.9L-71.7,549.4L-64.2,529.3L-50.6,524.1L-53.4,508.3L-45.9,510.1L-36.9,523.7L-17.3,495.1L-1.4,485.0L-7.5,455.9L-15.3,448.6L-19.0,434.9L-26.7,425.9L-18.5,410.0L-5.0,427.1L5.7,433.9L12.2,445.8L17.9,447.8Z"/>
+            <path class="mapa-vecino" d="M418.2,361.6L423.2,368.1L433.7,364.1L439.2,368.2L451.0,416.1L477.0,442.1L479.2,475.5L469.2,484.8L471.9,491.7L467.7,504.4L468.5,526.1L474.2,536.5L500.1,540.1L499.0,550.2L511.0,573.5L498.7,572.2L492.6,578.5L489.2,575.7L477.7,589.3L461.5,586.4L459.3,576.8L448.9,578.0L429.3,569.4L433.3,559.1L429.2,551.3L433.6,543.4L416.9,514.7L393.7,515.0L386.4,523.1L366.3,516.9L355.0,504.2L376.6,505.5L383.2,495.6L382.5,487.5L389.6,481.3L387.3,475.1L378.9,471.5L376.7,462.7L383.0,433.6L376.7,432.3L377.3,440.8L372.0,444.3L367.7,437.9L371.1,427.8L364.1,420.9L365.3,410.7L372.9,406.1L376.4,396.4L377.3,362.5L396.6,360.0L414.8,348.3L418.2,361.6Z"/>
+            <path class="mapa-vecino" d="M340.0,463.5L344.2,478.5L349.5,483.7L342.1,502.8L355.7,504.2L366.3,516.9L386.4,523.1L393.7,515.0L416.9,514.7L433.6,543.4L429.2,551.3L433.3,559.1L429.3,569.4L448.9,578.0L459.3,576.8L461.5,586.4L466.9,585.6L468.4,596.9L463.2,628.0L451.5,633.7L439.8,618.3L436.1,621.3L444.3,632.7L441.1,651.9L418.7,677.5L396.3,677.3L389.8,689.9L381.2,692.6L377.0,701.0L370.2,690.5L379.7,678.1L375.9,670.5L366.7,665.6L357.0,680.4L356.3,700.6L352.4,704.4L343.3,698.9L329.7,704.4L320.2,702.8L306.5,689.8L299.7,686.9L294.9,691.4L290.8,670.0L281.1,672.8L273.6,669.3L264.8,650.3L280.5,636.3L275.6,621.9L278.2,617.4L301.5,602.7L308.7,592.6L330.4,575.8L324.1,547.5L326.6,527.9L334.3,516.9L337.5,500.6L331.2,469.3L340.0,463.5Z"/>
+            <path class="mapa-depto" d="M232.9,238.9L228.7,249.3L224.2,247.5L216.6,239.5L204.9,234.7L193.9,225.5L191.9,215.4L195.1,203.7L194.3,196.6L213.0,186.5L234.1,167.2L242.5,178.0L242.8,182.7L246.9,186.7L245.0,196.1L245.3,220.1L238.7,227.4L232.9,238.9Z" style="fill:var(--lavanda)"/>
+            <text class="mapa-depto-nombre" x="186" y="183" text-anchor="middle">Atlántico</text>
+            <path class="mapa-depto" d="M204.0,232.6L204.9,234.7L216.6,239.5L224.2,247.5L228.7,249.3L225.2,263.0L233.9,265.1L240.4,272.6L240.4,275.2L234.4,279.3L230.8,284.3L237.7,298.9L235.3,305.9L242.3,314.9L238.9,320.8L239.1,332.1L252.0,335.2L266.6,352.6L273.9,350.7L277.5,355.8L283.6,354.1L287.9,356.2L289.1,357.7L287.7,360.3L293.7,361.0L300.4,369.0L305.2,371.7L305.0,374.1L310.5,374.8L314.7,373.1L318.0,377.1L332.3,379.3L331.4,384.4L332.9,389.5L338.2,397.1L335.7,413.2L342.5,430.9L343.1,446.9L342.7,451.8L339.1,457.3L339.9,462.0L331.6,468.7L330.8,472.2L337.5,499.0L335.6,513.2L330.5,524.3L326.6,527.9L327.3,536.9L324.6,548.6L295.2,576.5L288.4,577.1L282.8,574.9L282.8,570.8L277.3,558.0L277.4,543.9L283.7,536.6L281.1,527.9L272.9,541.9L269.3,543.3L258.6,532.1L262.9,514.7L272.3,505.3L266.6,495.3L266.1,484.5L236.3,455.5L241.2,453.6L241.5,451.1L246.7,447.4L252.4,447.0L256.9,443.5L257.9,437.9L261.2,438.8L264.1,433.3L257.4,404.8L262.5,397.9L260.9,391.0L250.4,376.3L240.1,372.1L235.7,367.8L228.3,353.8L227.0,334.0L219.8,323.7L215.7,320.2L207.9,317.6L197.3,308.1L187.1,307.4L183.6,308.6L183.1,313.0L181.3,312.0L181.2,306.2L185.9,298.1L186.2,289.6L176.2,286.3L172.1,287.2L172.1,275.5L167.4,270.9L169.3,263.3L164.7,266.3L160.8,265.3L160.3,263.0L162.9,263.7L163.9,260.7L168.2,259.5L165.4,255.6L166.9,251.6L149.9,262.6L156.5,255.3L159.6,246.1L162.4,248.7L167.5,245.7L166.8,238.8L162.9,235.4L168.4,227.3L169.9,233.0L171.5,231.3L167.7,218.9L173.4,216.6L173.4,213.6L179.3,208.5L190.7,203.2L193.0,196.6L194.3,196.6L195.1,203.7L191.9,215.4L193.5,225.0L204.0,232.6Z" style="fill:var(--agua)"/>
+            <text class="mapa-depto-nombre" x="310" y="489" text-anchor="middle">Bolívar</text>
+            <path class="mapa-depto" d="M391.8,189.4L394.1,197.4L392.6,202.2L397.1,199.7L399.3,200.6L403.4,207.3L406.4,207.2L411.7,211.5L407.8,215.7L405.9,222.2L398.8,228.4L402.0,236.9L410.4,232.3L421.8,235.9L436.5,233.8L425.8,249.8L426.1,261.6L418.8,280.6L418.1,288.2L423.5,292.0L423.2,294.0L417.3,299.8L407.2,320.9L402.7,322.9L397.5,331.0L397.9,333.4L391.6,339.8L383.9,358.4L377.3,362.5L374.8,378.6L376.4,396.4L372.3,403.4L372.9,406.1L364.8,412.0L364.9,424.7L367.8,427.9L371.1,427.8L370.5,433.3L367.7,437.9L372.0,444.3L377.3,440.8L376.7,432.3L383.0,433.6L383.9,437.9L377.5,455.1L376.7,462.7L379.5,465.2L378.9,471.5L387.3,475.1L389.6,481.3L388.4,484.9L382.5,487.5L383.2,495.6L376.6,505.5L369.2,506.5L359.8,503.0L342.1,502.8L343.5,494.2L349.5,483.7L344.2,478.5L344.4,475.3L339.9,467.9L341.2,463.3L339.1,462.3L339.1,457.3L342.7,451.8L342.8,432.7L335.7,413.2L338.2,397.1L334.3,392.6L331.4,384.4L332.5,378.7L337.1,371.0L331.4,363.9L329.2,357.0L321.4,355.7L323.6,349.2L320.0,340.6L304.4,327.3L314.7,316.8L339.0,316.8L337.7,309.9L333.3,301.8L333.7,297.6L317.7,281.8L308.9,268.4L313.7,254.8L315.4,254.7L326.5,239.0L345.3,234.2L346.5,230.6L350.6,230.1L354.3,224.6L357.3,223.5L355.6,209.4L359.7,200.2L357.4,198.7L351.5,199.0L351.1,197.0L361.0,190.6L369.8,188.5L391.8,189.4Z" style="fill:var(--durazno)"/>
+            <text class="mapa-depto-nombre" x="380" y="348" text-anchor="middle">Cesar</text>
+            <path class="mapa-depto" d="M138.0,332.7L149.6,334.8L151.4,338.8L149.8,342.1L151.8,341.8L154.4,345.5L157.7,344.7L167.9,352.3L173.3,351.0L172.9,357.3L177.6,358.6L177.4,361.9L184.4,362.0L189.4,369.2L195.3,369.7L198.5,378.0L199.0,388.5L187.4,389.0L179.6,392.7L185.7,399.8L183.2,403.0L188.5,426.4L199.0,426.5L200.2,428.3L198.3,434.0L204.2,436.9L215.1,429.9L215.6,427.4L229.9,430.5L232.4,434.8L239.2,438.4L240.0,445.9L242.7,450.0L241.2,453.6L236.3,455.5L228.9,466.2L224.1,470.0L197.1,472.6L193.9,478.1L186.6,483.2L185.4,489.3L172.6,494.2L173.0,497.4L169.7,504.3L165.5,504.2L161.5,501.6L155.0,503.7L149.9,516.7L135.9,536.1L117.0,539.7L85.8,539.8L79.5,533.9L72.3,521.5L68.2,510.4L68.6,505.6L71.0,491.5L77.7,477.7L80.7,461.7L85.7,451.7L100.4,431.2L98.3,417.8L85.1,409.7L80.1,391.7L74.8,386.3L81.4,383.5L83.7,379.8L91.4,375.2L94.3,367.5L100.0,361.5L101.2,352.9L107.0,348.0L108.6,343.0L125.1,334.0L138.0,332.7Z" style="fill:var(--menta)"/>
+            <text class="mapa-depto-nombre" x="174" y="504" text-anchor="middle">Córdoba</text>
+            <path class="mapa-depto" d="M557.9,32.6L563.4,33.9L568.2,38.4L584.0,41.7L587.7,44.4L598.5,64.8L600.1,71.2L599.1,73.9L591.5,81.1L585.1,83.7L576.4,92.5L575.9,93.8L579.1,93.0L578.0,96.0L522.4,110.3L494.6,160.7L485.0,159.6L474.6,162.4L469.9,166.2L452.1,207.6L436.5,233.8L421.8,235.9L410.4,232.3L402.0,236.9L398.8,228.4L405.9,222.2L407.8,215.7L411.7,211.5L406.4,207.2L403.4,207.3L399.3,200.6L397.1,199.7L392.6,202.2L394.1,197.4L391.8,189.4L373.3,187.9L355.9,192.3L352.2,181.3L351.7,166.4L352.0,162.3L357.8,156.7L358.7,150.2L383.2,149.1L422.3,119.6L430.6,118.6L433.9,116.3L434.8,113.0L444.4,105.6L464.2,100.4L467.1,97.2L474.2,97.4L484.9,91.7L487.4,88.2L491.5,87.2L491.7,82.8L501.2,65.9L500.8,59.3L497.4,55.0L517.4,51.9L515.2,57.0L516.1,61.8L520.6,61.0L523.4,57.6L528.0,56.9L524.3,50.0L519.2,49.0L527.2,41.4L530.9,39.1L531.5,45.6L537.2,42.0L540.5,36.8L543.2,40.2L544.4,37.2L547.0,37.3L549.5,34.5L546.5,35.0L545.7,32.8L540.5,35.1L541.7,32.9L548.3,31.4L557.9,32.6Z" style="fill:var(--mantequilla)"/>
+            <text class="mapa-depto-nombre" x="482" y="149" text-anchor="middle">La Guajira</text>
+            <path class="mapa-depto" d="M310.8,142.2L316.8,141.9L334.0,149.7L358.7,150.2L357.8,156.7L352.0,162.3L351.5,176.6L355.9,192.3L361.0,190.6L350.9,197.9L359.7,200.2L355.6,209.4L357.3,223.5L354.3,224.6L350.6,230.1L346.5,230.6L345.3,234.2L329.3,237.1L324.2,241.1L319.1,250.1L312.8,256.3L308.9,268.4L317.7,281.8L333.7,297.6L333.3,301.8L338.8,313.3L337.7,317.8L314.7,316.8L304.4,327.3L320.0,340.6L323.6,349.2L321.4,355.7L329.2,357.0L331.4,363.9L336.3,369.1L336.6,373.6L332.3,379.3L318.0,377.1L314.7,373.1L310.5,374.8L305.0,374.1L305.2,371.7L300.4,369.0L293.7,361.0L287.7,360.3L289.1,357.7L287.9,356.2L283.6,354.1L277.5,355.8L273.9,350.7L266.6,352.6L252.0,335.2L239.1,332.1L238.9,320.8L242.3,314.9L235.3,305.9L237.7,298.9L230.8,284.3L234.4,279.3L240.4,275.2L240.4,272.6L233.9,265.1L226.4,264.0L225.0,261.9L230.5,243.7L237.3,229.7L245.7,218.7L245.0,196.1L246.9,186.7L242.8,182.7L242.5,178.0L234.7,167.7L266.5,178.9L277.7,179.4L287.9,177.5L294.3,171.2L295.2,163.7L293.0,154.0L298.4,148.5L299.5,144.7L301.9,145.2L306.7,141.0L310.8,142.2Z" style="fill:var(--menta)"/>
+            <text class="mapa-depto-nombre" x="298" y="268" text-anchor="middle">Magdalena</text>
+            <path class="mapa-depto" d="M171.7,286.5L186.2,289.6L185.9,298.1L180.8,308.4L182.2,313.1L183.9,312.2L183.6,308.6L194.8,307.4L200.3,309.3L207.9,317.6L215.7,320.2L219.8,323.7L227.0,334.0L228.3,353.8L235.7,367.8L240.1,372.1L250.4,376.3L259.8,388.8L262.5,397.9L257.4,404.8L264.1,433.3L261.2,438.8L257.9,437.9L256.9,443.5L252.4,447.0L248.7,446.3L242.7,450.0L240.0,445.9L239.2,438.4L232.4,434.8L229.9,430.5L215.6,427.4L215.1,429.9L204.2,436.9L198.3,434.0L200.2,428.3L199.0,426.5L189.8,426.6L187.4,424.9L187.7,419.1L183.2,403.0L185.7,399.8L179.6,392.7L187.4,389.0L199.0,388.5L198.5,378.0L195.3,369.7L189.4,369.2L184.4,362.0L177.4,361.9L177.6,358.6L172.9,357.3L173.3,351.0L167.9,352.3L157.7,344.7L154.4,345.5L151.8,341.8L149.8,342.1L151.4,338.8L149.6,334.8L154.8,333.0L162.4,315.7L158.3,306.6L149.6,304.3L156.5,296.3L156.9,290.4L161.4,279.4L166.0,276.0L165.3,269.7L161.6,266.8L168.7,263.0L167.4,270.9L172.1,275.5L171.7,286.5Z" style="fill:var(--coral)"/>
+            <text class="mapa-depto-nombre" x="200" y="385" text-anchor="middle">Sucre</text>
+            <path class="mapa-linea" data-sat="la-guajira" d="M128,100 Q308.5,39.5 429,121"/>
+            <path class="mapa-linea" data-sat="magdalena" d="M128,100 Q244,54.5 300,151"/>
+            <path class="mapa-linea" data-sat="valledupar" d="M128,100 Q291.5,93 395,228"/>
+            <path class="mapa-linea" data-sat="pueblo-bello" d="M128,100 Q274.5,95.5 361,233"/>
+            <path class="mapa-linea" data-sat="atlantico" d="M128,100 Q208,77 228,196"/>
+            <path class="mapa-linea" data-sat="bolivar" d="M128,100 Q178.5,97 169,236"/>
+            <path class="mapa-linea" data-sat="sucre" d="M128,100 Q184,151.5 180,345"/>
+            <path class="mapa-linea" data-sat="cordoba" d="M128,100 Q160,179 132,400"/>
 
             <circle class="mapa-municipio" data-sat="la-guajira" cx="461" cy="159" r="4.5"/>
-            <g class="mapa-pin" data-sat="la-guajira" transform="translate(429 121)"><circle r="14"/><text y="5" text-anchor="middle">1</text></g>
-            <g class="mapa-pin" data-sat="magdalena" transform="translate(300 151)"><circle r="14"/><text y="5" text-anchor="middle">2</text></g>
-            <g class="mapa-pin" data-sat="valledupar" transform="translate(395 228)"><circle r="14"/><text y="5" text-anchor="middle">3</text></g>
-            <g class="mapa-pin" data-sat="pueblo-bello" transform="translate(361 233)"><circle r="14"/><text y="5" text-anchor="middle">4</text></g>
+            <g class="mapa-pin" data-sat="la-guajira" transform="translate(429 121)" tabindex="-1"><circle r="13"/><text y="5" text-anchor="middle">1</text></g>
+            <g class="mapa-pin" data-sat="magdalena" transform="translate(300 151)" tabindex="-1"><circle r="13"/><text y="5" text-anchor="middle">2</text></g>
+            <g class="mapa-pin" data-sat="valledupar" transform="translate(395 228)" tabindex="-1"><circle r="13"/><text y="5" text-anchor="middle">3</text></g>
+            <g class="mapa-pin" data-sat="pueblo-bello" transform="translate(361 233)" tabindex="-1"><circle r="13"/><text y="5" text-anchor="middle">4</text></g>
             <circle class="mapa-municipio" data-sat="atlantico" cx="232" cy="237" r="4.5"/>
-            <g class="mapa-pin" data-sat="atlantico" transform="translate(228 196)"><circle r="14"/><text y="5" text-anchor="middle">5</text></g>
+            <g class="mapa-pin" data-sat="atlantico" transform="translate(228 196)" tabindex="-1"><circle r="13"/><text y="5" text-anchor="middle">5</text></g>
             <circle class="mapa-municipio" data-sat="bolivar" cx="190" cy="277" r="4.5"/>
-            <g class="mapa-pin" data-sat="bolivar" transform="translate(169 236)"><circle r="14"/><text y="5" text-anchor="middle">6</text></g>
+            <g class="mapa-pin" data-sat="bolivar" transform="translate(169 236)" tabindex="-1"><circle r="13"/><text y="5" text-anchor="middle">6</text></g>
             <circle class="mapa-municipio" data-sat="sucre" cx="162" cy="323" r="4.5"/>
-            <g class="mapa-pin" data-sat="sucre" transform="translate(180 345)"><circle r="14"/><text y="5" text-anchor="middle">7</text></g>
+            <g class="mapa-pin" data-sat="sucre" transform="translate(180 345)" tabindex="-1"><circle r="13"/><text y="5" text-anchor="middle">7</text></g>
             <circle class="mapa-municipio" data-sat="cordoba" cx="114" cy="458" r="4.5"/>
-            <g class="mapa-pin" data-sat="cordoba" transform="translate(132 400)"><circle r="14"/><text y="5" text-anchor="middle">8</text></g>
+            <g class="mapa-pin" data-sat="cordoba" transform="translate(132 400)" tabindex="-1"><circle r="13"/><text y="5" text-anchor="middle">8</text></g>
 
-            <g class="mapa-st" transform="translate(160 64)">
-                <rect x="-78" y="-22" width="156" height="44" rx="22"/>
-                <use href="#isotipo-neg" x="-68" y="-14" width="28" height="28"/>
-                <text x="10" y="-2" text-anchor="middle">Secretaría</text>
-                <text x="10" y="13" text-anchor="middle">Técnica</text>
+            <g class="mapa-st" transform="translate(128 78)">
+                <rect x="-74" y="-22" width="148" height="44" rx="22"/>
+                <use href="#isotipo-neg" x="-64" y="-14" width="28" height="28"/>
+                <text x="12" y="-2" text-anchor="middle">Secretaría</text>
+                <text x="12" y="13" text-anchor="middle">Técnica</text>
             </g>
         </svg>
                         <figcaption>Mapa esquemático. Las líneas muestran cómo la Secretaría Técnica acompaña a cada satélite.</figcaption>
@@ -322,73 +351,91 @@
             </div>
         </section>
 
-        <!-- Talleres para emprendedoras y formación del equipo -->
+        <!-- 4 · Talleres para emprendedoras: tarjetas tipo catálogo -->
         <section id="rutas" class="seccion seccion-blanca con-decor" aria-labelledby="titulo-rutas">
             <div class="patron-puntos decor decor-derecha" aria-hidden="true"></div>
             <div class="contenedor">
-                <div class="cabeza aparece">
-                    <p class="eyebrow">Talleres para emprendedoras</p>
-                    <h2 id="titulo-rutas">Dos rutas, una semana a la vez.</h2>
-                    <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
-                    <p>Cada semana trae su guía y sus plantillas para descargar. Tu dinamizadora te acompaña en cada paso.</p>
-                </div>
-                <div class="rejilla r2">
-                    <article id="ruta-hacer" class="ruta aparece">
-                        <div class="ruta-cab bg-durazno">
-                            <span class="chip" style="background:rgba(255,255,255,.55)">6 semanas · en tu negocio</span>
-                            <h3>Ruta HACER</h3>
-                            <p>Ordena tus costos, tu precio y tus ventas con tu dinamizadora.</p>
-                        </div>
-                        <div class="ruta-cuerpo">
-                            <ul class="lista-check">
-                                <li>Calcula lo que te cuesta producir y fija tu precio</li>
-                                <li>Separa el dinero de tu casa y el de tu negocio</li>
-                                <li>Haz tu plan para vender más y crecer</li>
-                            </ul>
-                            <div class="ruta-pie">
-                                <a class="btn btn-primario" href="rutas/hacer/">Ver las 6 semanas</a>
-                            </div>
-                        </div>
-                    </article>
-                    <article id="ruta-ser" class="ruta aparece">
-                        <div class="ruta-cab bg-lavanda">
-                            <span class="chip" style="background:rgba(255,255,255,.55)">4 talleres · en grupo</span>
-                            <h3>Ruta SER</h3>
-                            <p>Confianza, decisiones, liderazgo y ahorro con otras emprendedoras.</p>
-                        </div>
-                        <div class="ruta-cuerpo">
-                            <ul class="lista-check">
-                                <li>Reconócete como gerenta de tu negocio</li>
-                                <li>Conoce tus derechos y las rutas de atención</li>
-                                <li>Los talleres virtuales quedan grabados</li>
-                            </ul>
-                            <div class="ruta-pie">
-                                <a class="btn btn-primario" href="rutas/ser/">Ver los 4 talleres</a>
-                            </div>
-                        </div>
-                    </article>
-                </div>
-                <div class="calc-destacada aparece" id="recursos">
-                    <div>
-                        <h3>Biblioteca de recursos</h3>
-                        <p>13 plantillas gratuitas y una calculadora de punto de equilibrio.</p>
+                <div class="cabeza-fila aparece">
+                    <div class="cabeza">
+                        <p class="eyebrow"><span class="indice">03</span> Talleres para emprendedoras</p>
+                        <h2 id="titulo-rutas">Cuatro talleres para <em>crecer juntas.</em></h2>
+                        <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
                     </div>
-                    <a class="btn btn-bosque" href="recursos/">Abrir la biblioteca</a>
+                    <a class="btn btn-borde" href="rutas/ser/">Ver todos los talleres</a>
                 </div>
-                <div id="cursos-equipo" class="equipo-bloque aparece">
-                    <div>
-                        <p class="eyebrow">Equipo del CIC</p>
-                        <h3>Cursos para dinamizadoras y secretarias</h3>
-                        <p class="texto-suave">Cada módulo tiene su video, su material de estudio y un cuestionario. Entran con su cédula si están en la base de datos del equipo.</p>
-                        <div class="botones"><a class="btn btn-bosque" href="cursos/">Ver los cursos</a></div>
-                    </div>
-                    <ul class="equipo-cursos">
-                        <li><a href="cursos/gestion-cic/"><span class="punto bg-agua"></span><span><b>Gestión del CIC</b><small>5 módulos</small></span></a></li>
-                        <li><a href="cursos/acompanar-hacer/"><span class="punto bg-durazno"></span><span><b>Acompañar la ruta HACER</b><small>6 semanas</small></span></a></li>
-                        <li><a href="cursos/facilitar-ser/"><span class="punto bg-lavanda"></span><span><b>Facilitar la ruta SER</b><small>4 talleres</small></span></a></li>
-                    </ul>
+                <div class="catalogo">
+                    <a class="tarjeta-taller aparece" href="rutas/ser/#taller-1">
+                        <div class="taller-portada bg-lavanda"><div class="patron-hojas" aria-hidden="true"></div><span class="taller-num">1</span><span class="chip chip-claro">Presencial</span></div>
+                        <div class="taller-cuerpo"><p class="taller-meta">Taller SER 1 · Semana 1</p><h3>De la subsistencia a la gerencia</h3><p>Te reconoces como gerenta de tu negocio y piensas en tu proyecto de vida.</p><span class="taller-enlace">Ver el taller <span aria-hidden="true">→</span></span></div>
+                    </a>
+                    <a class="tarjeta-taller aparece" href="rutas/ser/#taller-2">
+                        <div class="taller-portada bg-agua"><div class="patron-hojas" aria-hidden="true"></div><span class="taller-num">2</span><span class="chip chip-claro">Virtual · queda grabado</span></div>
+                        <div class="taller-cuerpo"><p class="taller-meta">Taller SER 2 · Semana 3</p><h3>De la visión de túnel a la visión panorámica</h3><p>Aprendes a tomar decisiones con información y sin miedo.</p><span class="taller-enlace">Ver el taller <span aria-hidden="true">→</span></span></div>
+                    </a>
+                    <a class="tarjeta-taller aparece" href="rutas/ser/#taller-3">
+                        <div class="taller-portada bg-coral"><div class="patron-hojas" aria-hidden="true"></div><span class="taller-num">3</span><span class="chip chip-claro">Presencial</span></div>
+                        <div class="taller-cuerpo"><p class="taller-meta">Taller SER 3 · Semana 5</p><h3>Mi liderazgo, mis derechos, mi protección</h3><p>Conoces tus derechos y las rutas de atención de tu municipio.</p><span class="taller-enlace">Ver el taller <span aria-hidden="true">→</span></span></div>
+                    </a>
+                    <a class="tarjeta-taller aparece" href="rutas/ser/#taller-4">
+                        <div class="taller-portada bg-mantequilla"><div class="patron-hojas" aria-hidden="true"></div><span class="taller-num">4</span><span class="chip chip-claro">Virtual · queda grabado</span></div>
+                        <div class="taller-cuerpo"><p class="taller-meta">Taller SER 4 · Semana 6</p><h3>La confianza que sostiene</h3><p>Fortaleces la confianza en el grupo para ahorrar y crecer juntas.</p><span class="taller-enlace">Ver el taller <span aria-hidden="true">→</span></span></div>
+                    </a>
+                </div>
+
+                <div class="rejilla r2 duo-bloques">
+                    <a class="bloque-foto aparece" href="rutas/hacer/">
+                        <img class="foto-duo" style="filter:url(#duo-durazno)" referrerpolicy="no-referrer" loading="lazy" width="800" height="500" alt="" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgnlDPWIXl4bQVqs74nRqDFAzFGXWFCXTPt3sufw3YsOl0hgW36kFEL6xA7w77UPSlcg5uB-P3bYXrSdZugbnzhbLOXxE9JwKIDIGS8LMBof2JiftJH_sC7GpVCMHYwPjVDHZiIHVb60XQ/s800/IMG_6618.JPG">
+                        <span class="bloque-foto-texto"><span class="chip chip-claro">6 visitas · en tu negocio</span><b>Acompañamiento en tu negocio</b><span>Tu dinamizadora te visita cada semana con sus herramientas.</span></span>
+                    </a>
+                    <a class="bloque-foto bloque-foto-color aparece" href="recursos/">
+                        <div class="patron-hojas animado" aria-hidden="true"></div>
+                        <span class="bloque-foto-texto"><span class="chip chip-claro">Gratis</span><b>Biblioteca de recursos</b><span>Herramientas explicadas paso a paso y una calculadora de punto de equilibrio.</span></span>
+                    </a>
                 </div>
             </div>
+        </section>
+
+        <!-- 5 · Equipo del CIC: acceso solo con cédula y contraseña -->
+        <section id="cursos-equipo" class="seccion bloque-equipo" aria-labelledby="titulo-equipo">
+            <div class="patron-hojas animado" aria-hidden="true"></div>
+            <div class="contenedor">
+                <div class="split split-equipo">
+                    <div class="aparece">
+                        <p class="eyebrow eyebrow-claro"><span class="indice">04</span> Equipo del CIC</p>
+                        <h2 id="titulo-equipo">Formación para quienes <em>acompañan.</em></h2>
+                        <p class="lead">Dinamizadoras y Secretaría Técnica avanzan curso a curso. Cada uno se abre al aprobar el anterior.</p>
+                        <div class="botones">
+                            <button type="button" class="btn btn-claro" data-abrir="ingresar" data-perfil="dinamizadora">Soy dinamizadora</button>
+                            <button type="button" class="btn btn-borde-claro" data-abrir="ingresar" data-perfil="secretaria">Soy secretaria</button>
+                        </div>
+                    </div>
+                    <ol class="escalera lista-limpia aparece" aria-label="Recorrido del equipo">
+                        <li><span class="escalera-num">1</span><span><b>Activa tu cuenta</b><small>Con cédula, código y contraseña</small></span></li>
+                        <li><span class="escalera-num">2</span><span><b>Gestión del CIC</b><small>5 módulos con cuestionario</small></span></li>
+                        <li><span class="escalera-num">3</span><span><b>Transferencia o formación</b><small>Según tu perfil</small></span></li>
+                        <li><span class="escalera-num">4</span><span><b>Rutas HACER y SER</b><small>Para acompañar a las emprendedoras</small></span></li>
+                    </ol>
+                </div>
+                <p class="candado-nota aparece"><svg aria-hidden="true"><use href="#candado"/></svg> Los cursos solo se ven al ingresar con cédula y contraseña.</p>
+            </div>
+        </section>
+
+        <!-- 6 · Galería: mujeres que florecen -->
+        <section class="seccion galeria-seccion" aria-labelledby="titulo-galeria">
+            <div class="contenedor">
+                <div class="cabeza aparece">
+                    <p class="eyebrow"><span class="indice">05</span> En el territorio</p>
+                    <h2 id="titulo-galeria">Mujeres que <em>florecen.</em></h2>
+                    <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
+                </div>
+                <div class="galeria">
+                    <figure class="galeria-item galeria-alta aparece"><img class="foto-duo" style="filter:url(#duo-verde)" referrerpolicy="no-referrer" loading="lazy" width="600" height="800" alt="Facilitadora conversando con un grupo de mujeres" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgkaFUGQ0lPFM6brzHzL_IpVWq1-TNBT09i9fsvGLFzL9xLCLwIwXAvQrNSRSFfO0YGUrww76EF6ipz-koMBblKLzogX8BmWFiyR5SAm5yjcVIxCCxAXAslyDUhedAtzoGcDtzMJ2Xzapk/s800/IMG_6604.JPG"><figcaption>Aprender en grupo</figcaption></figure>
+                    <figure class="galeria-item aparece"><img class="foto-duo" style="filter:url(#duo-coral)" referrerpolicy="no-referrer" loading="lazy" width="800" height="600" alt="Mujeres de la Red en un taller" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEicEkPOKCm_sE-jU7pciFF2BYTM6QwPMDneMMFKks7sapmv17WIn0rzCAw_O-QWl62bQCkdrrB9Vboed1-2YI24qd3sS_cV5OhRVkEnccxOJZpaBHiG-j52MkSkLGb7h19tBVGtq3_w2p4/s800/IMG_6584.JPG"><figcaption>Talleres SER</figcaption></figure>
+                    <figure class="galeria-item aparece"><img class="foto-duo" style="filter:url(#duo-durazno)" referrerpolicy="no-referrer" loading="lazy" width="800" height="600" alt="Emprendedoras atentas en una sesión" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgZ6XmgMPuMbbJRwkFLRYZPOKWcJGlk5gcSWAM9IGCDVm27Zy3I3IAiUwh9HF5Z-RUJk15hNWiCijwvXpVXB51lFmUI0EoAPs87PPfiLCHjtMEtemSH2jjJpho54M0t1cnNAAzT5C0qebk/s800/IMG_6578.JPG"><figcaption>La Red de Mujeres del Caribe</figcaption></figure>
+                    <figure class="galeria-item galeria-ancha aparece"><img class="foto-duo" style="filter:url(#duo-verde)" referrerpolicy="no-referrer" loading="lazy" width="1000" height="500" alt="Grupo de mujeres trabajando con papelógrafos" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgnlDPWIXl4bQVqs74nRqDFAzFGXWFCXTPt3sufw3YsOl0hgW36kFEL6xA7w77UPSlcg5uB-P3bYXrSdZugbnzhbLOXxE9JwKIDIGS8LMBof2JiftJH_sC7GpVCMHYwPjVDHZiIHVb60XQ/s800/IMG_6618.JPG"><figcaption>Trabajo en equipo</figcaption></figure>
+                </div>
+            </div>
+            <div class="marquesina" aria-hidden="true"><div class="marquesina-pista"><span>Riohacha</span><span>Albania</span><span>Santa Marta</span><span>Valledupar</span><span>Pueblo Bello</span><span>Baranoa</span><span>Campo de la Cruz</span><span>Cartagena</span><span>María la Baja</span><span>Sincelejo</span><span>Tolú</span><span>Montería</span><span>Tierralta</span><span>Riohacha</span><span>Albania</span><span>Santa Marta</span><span>Valledupar</span><span>Pueblo Bello</span><span>Baranoa</span><span>Campo de la Cruz</span><span>Cartagena</span><span>María la Baja</span><span>Sincelejo</span><span>Tolú</span><span>Montería</span><span>Tierralta</span></div></div>
         </section>
 
         <!-- Aliados -->
@@ -518,7 +565,7 @@
                 </div>
                 <div>
                     <h2>Equipo del CIC</h2>
-                    <ul><li><a href="cursos/">Cursos del equipo</a></li><li><a href="cursos/gestion-cic/">Gestión del CIC</a></li><li><a href="cursos/acompanar-hacer/">Acompañar HACER</a></li><li><a href="cursos/facilitar-ser/">Facilitar SER</a></li></ul>
+                    <ul><li><a href="cursos/">Cursos del equipo</a></li><li><a href="#ingresar-dinamizadora">Ingreso dinamizadoras</a></li><li><a href="#ingresar-secretaria">Ingreso Secretaría</a></li></ul>
                 </div>
                 <div>
                     <h2>El CIC</h2>
@@ -700,11 +747,11 @@
         };
         // Cursos del equipo: cada módulo tiene un código que también identifica su video (ver GUIA_VIDEOS.md)
         const CURSOS = {
-            gestion: { titulo: 'Gestión del CIC', color: 'bg-agua', prefijo: 'GES-M', meta: '5 módulos · ≈ 2 horas', pagina: 'cursos/gestion-cic/', ancla: 'modulo',
+            gestion: { titulo: 'Gestión del CIC', color: 'bg-agua', prefijo: 'GES-M', meta: '5 módulos · ≈ 2 horas', pagina: null, ancla: 'modulo',
                 modulos: [['Módulo 1 · Introducción a la gestión de centros de innovación', '20 min'], ['Módulo 2 · El ecosistema emprendedor y el papel del CIC', '25 min'], ['Módulo 3 · Cómo opera el centro', '25 min'], ['Módulo 4 · La información del centro', '15 min'], ['Módulo 5 · Los pilares en acción', '35 min']] },
-            'acompanar-hacer': { titulo: 'Acompañar la ruta HACER', color: 'bg-durazno', prefijo: 'HAC-S', meta: '6 semanas · una por sesión', pagina: 'cursos/acompanar-hacer/', ancla: 'semana',
+            'acompanar-hacer': { titulo: 'Acompañar la ruta HACER', color: 'bg-durazno', prefijo: 'HAC-S', meta: '6 semanas · una por sesión', pagina: null, ancla: 'semana',
                 modulos: DATOS.hacer.map((s) => [`Semana ${s.n} · ${s.titulo}`, s.tema]) },
-            'facilitar-ser': { titulo: 'Facilitar la ruta SER', color: 'bg-lavanda', prefijo: 'SER-T', meta: '4 talleres en grupo', pagina: 'cursos/facilitar-ser/', ancla: 'taller',
+            'facilitar-ser': { titulo: 'Facilitar la ruta SER', color: 'bg-lavanda', prefijo: 'SER-T', meta: '4 talleres en grupo', pagina: null, ancla: 'taller',
                 modulos: DATOS.ser.map((t) => [`Taller ${t.n} · ${t.titulo}`, t.modalidad]) },
         };
         // Formación de la Secretaría Técnica: guías y presentaciones de la transferencia (carpeta del Drive)

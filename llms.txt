@@ -11,10 +11,7 @@
 - Al ingresar, cada emprendedora ve «Mi semana»: la semana que le toca, su satélite, su dinamizadora, sus descargas y las grabaciones de los talleres virtuales.
 
 ## Cursos del equipo (dinamizadoras y Secretaría Técnica)
-- [Cursos del equipo](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/): acceso con cédula para quienes están en la base de datos del equipo. Cada módulo tiene un video.
-- [Gestión del CIC](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/gestion-cic/): 5 módulos (≈ 2 h) sobre cómo funciona el centro.
-- [Acompañar la ruta HACER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/acompanar-hacer/): preparación de las 6 sesiones con las emprendedoras.
-- [Facilitar la ruta SER](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/cursos/facilitar-ser/): preparación de los 4 talleres grupales.
+- Cursos del equipo: solo para dinamizadoras y Secretaría Técnica, con cédula y contraseña. No son públicos.
 
 ## Otras páginas
 - [Biblioteca de recursos](https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/recursos/): 13 plantillas gratuitas y una calculadora de punto de equilibrio.

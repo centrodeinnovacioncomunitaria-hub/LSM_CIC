@@ -9,6 +9,7 @@ use strict;
 use warnings;
 use utf8;
 use Exporter 'import';
+use MapaCaribe qw(%CONTORNOS @VECINOS);
 our @EXPORT_OK = qw(@SATELITES @HACER @SER @PILARES descarga mapa_caribe satelites_lista bloque_mapa pilares_lista);
 
 # ---------------------------------------------------------------- Satélites
@@ -120,39 +121,46 @@ my %DEPARTAMENTOS = (
 
 # Mapa SVG con los departamentos, los municipios, los 8 satélites y su conexión con la Secretaría Técnica.
 sub mapa_caribe {
-    my ($st_x, $st_y) = (160, 64);   # Secretaría Técnica, en el mar
+    my ($st_x, $st_y) = (128, 78);   # Secretaría Técnica, en el mar Caribe (arriba a la izquierda)
+    my %color = map { $_ => $DEPARTAMENTOS{$_}{color} } keys %DEPARTAMENTOS;
+    # Etiquetas que se corren para no tapar los satélites ni salirse del mapa
+    my %corrimiento = ('Atlántico' => [-36, -26], 'Magdalena' => [6, 16], 'Cesar' => [14, 26], 'Bolívar' => [42, 86], 'Sucre' => [-8, 16], 'Córdoba' => [34, 64], 'La Guajira' => [10, 18]);
+    my $vecinos = join "\n", map { qq{            <path class="mapa-vecino" d="$_"/>} } @VECINOS;
     my $deptos = join "\n", map {
-        my $d = $DEPARTAMENTOS{$_};
-        my ($lx, $ly) = _xy(@{ $d->{etiqueta} });
-        qq{            <polygon class="mapa-depto" points="@{[ _poligono(@{ $d->{borde} }) ]}" style="fill:$d->{color}"/>\n}
+        my $c = $CONTORNOS{$_};
+        my ($dx, $dy) = @{ $corrimiento{$_} || [0, 0] };
+        my ($lx, $ly) = ($c->{centro}[0] + $dx, $c->{centro}[1] + $dy);
+        qq{            <path class="mapa-depto" d="$c->{d}" style="fill:$color{$_}"/>\n}
       . qq{            <text class="mapa-depto-nombre" x="$lx" y="$ly" text-anchor="middle">$_</text>}
-    } sort keys %DEPARTAMENTOS;
+    } sort keys %CONTORNOS;
     my ($lineas, $pines) = ('', '');
     my $n = 0;
     for my $s (@SATELITES) {
         $n++;
         my ($px, $py) = _xy(@{ $s->{municipios}[0] }[1, 2]);
-        my ($cx, $cy) = (($st_x + $px) / 2, ($st_y + $py) / 2 - 40);
+        my ($cx, $cy) = (($st_x + $px) / 2 + 30, ($st_y + $py) / 2 - 60);
         $lineas .= qq{            <path class="mapa-linea" data-sat="$s->{id}" d="M$st_x,@{[ $st_y + 22 ]} Q$cx,$cy $px,$py"/>\n};
         for my $m (@{ $s->{municipios} }[1 .. $#{ $s->{municipios} }]) {
             my ($mx, $my) = _xy(@$m[1, 2]);
             $pines .= qq{            <circle class="mapa-municipio" data-sat="$s->{id}" cx="$mx" cy="$my" r="4.5"/>\n};
         }
-        $pines .= qq{            <g class="mapa-pin" data-sat="$s->{id}" transform="translate($px $py)"><circle r="14"/><text y="5" text-anchor="middle">$n</text></g>\n};
+        $pines .= qq{            <g class="mapa-pin" data-sat="$s->{id}" transform="translate($px $py)" tabindex="-1"><circle r="13"/><text y="5" text-anchor="middle">$n</text></g>\n};
     }
     return <<"SVG";
-        <svg class="mapa-svg" viewBox="20 10 600 580" role="img" aria-labelledby="mapa-titulo mapa-desc">
+        <svg class="mapa-svg" viewBox="40 20 560 560" role="img" aria-labelledby="mapa-titulo mapa-desc">
             <title id="mapa-titulo">Mapa de los satélites del CIC en la región Caribe</title>
-            <desc id="mapa-desc">Mapa esquemático de siete departamentos del Caribe colombiano. La Secretaría Técnica se conecta con 8 satélites: La Guajira, Magdalena, Valledupar, Pueblo Bello, Atlántico, Bolívar, Sucre y Córdoba.</desc>
-            <text class="mapa-mar" x="70" y="200">Mar Caribe</text>
+            <desc id="mapa-desc">Mapa de los siete departamentos del Caribe colombiano. La Secretaría Técnica se conecta con 8 satélites: La Guajira, Magdalena, Valledupar, Pueblo Bello, Atlántico, Bolívar, Sucre y Córdoba.</desc>
+            <rect class="mapa-agua" x="40" y="20" width="560" height="560" rx="24"/>
+            <text class="mapa-mar" x="300" y="70">Mar Caribe</text>
+$vecinos
 $deptos
 $lineas
 $pines
             <g class="mapa-st" transform="translate($st_x $st_y)">
-                <rect x="-78" y="-22" width="156" height="44" rx="22"/>
-                <use href="#isotipo-neg" x="-68" y="-14" width="28" height="28"/>
-                <text x="10" y="-2" text-anchor="middle">Secretaría</text>
-                <text x="10" y="13" text-anchor="middle">Técnica</text>
+                <rect x="-74" y="-22" width="148" height="44" rx="22"/>
+                <use href="#isotipo-neg" x="-64" y="-14" width="28" height="28"/>
+                <text x="12" y="-2" text-anchor="middle">Secretaría</text>
+                <text x="12" y="13" text-anchor="middle">Técnica</text>
             </g>
         </svg>
 SVG

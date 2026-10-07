@@ -54,7 +54,7 @@ my $html = cabeza(P => $P, titulo => 'El CIC · qué es, cómo funciona y sus 8 
                     <p class="biblio-cifras"><span><b>5</b>en la Secretaría Técnica</span><span><b>8</b>satélites</span><span><b>24</b>dinamizadoras</span><span><b>200</b>emprendedoras</span></p>
                 </div>
             </section>
-            <nav class="subnav-cic" aria-label="En esta página"><ol><li><a href="#como-funciona">Cómo funciona</a></li><li><a href="#satelites">Los 8 satélites</a></li><li><a href="#pilares">Pilares</a></li><li><a href="#ciclo">El ciclo</a></li></ol></nav>
+            <nav class="subnav-cic subnav-fija" aria-label="En esta página"><ol><li><a href="#como-funciona">Cómo funciona</a></li><li><a href="#satelites">Los 8 satélites</a></li><li><a href="#pilares">Pilares</a></li><li><a href="#ciclo">El ciclo</a></li></ol></nav>
         </div>
 
         <section id="como-funciona" class="bloque" aria-labelledby="t-como">
@@ -80,7 +80,7 @@ my $html = cabeza(P => $P, titulo => 'El CIC · qué es, cómo funciona y sus 8 
             </div>
         </section>
 
-        <section id="satelites" class="bloque" aria-labelledby="t-satelites">
+        <section id="satelites" class="bloque bloque-banda" aria-labelledby="t-satelites">
             <div class="contenedor">
                 <p class="eyebrow">Territorio</p>
                 <h2 id="t-satelites" style="margin-top:.4rem">8 satélites en 13 municipios del Caribe</h2>
@@ -102,7 +102,7 @@ $pilares
             </div>
         </section>
 
-        <section id="ciclo" class="bloque" aria-labelledby="t-ciclo">
+        <section id="ciclo" class="bloque bloque-banda" aria-labelledby="t-ciclo">
             <div class="contenedor">
                 <p class="eyebrow">El ciclo</p>
                 <h2 id="t-ciclo" style="margin-top:.4rem">Seis meses en cuatro fases</h2>

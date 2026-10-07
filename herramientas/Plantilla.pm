@@ -46,10 +46,9 @@ sub nav {
                 <div class="submenu">
                     <button type="button" class="submenu-btn$cursos" aria-expanded="false" aria-controls="sub-cursos">Equipo $f</button>
                     <ul id="sub-cursos" class="submenu-lista" hidden>
-                        <li><a href="${P}cursos/gestion-cic/"@{[ $cur->('gestion') ]}><span class="punto bg-agua"></span><span><b>Gestión del CIC</b><small>5 módulos</small></span></a></li>
-                        <li><a href="${P}cursos/acompanar-hacer/"@{[ $cur->('acompanar-hacer') ]}><span class="punto bg-durazno"></span><span><b>Acompañar la ruta HACER</b><small>6 semanas</small></span></a></li>
-                        <li><a href="${P}cursos/facilitar-ser/"@{[ $cur->('facilitar-ser') ]}><span class="punto bg-lavanda"></span><span><b>Facilitar la ruta SER</b><small>4 talleres</small></span></a></li>
-                        <li><a class="todas" href="${P}cursos/"@{[ $cur->('cursos') ]}>Cursos del equipo</a></li>
+                        <li><a href="${P}#ingresar-dinamizadora"><span class="punto bg-durazno"></span><span><b>Soy dinamizadora</b><small>Ingresa con tu cédula</small></span></a></li>
+                        <li><a href="${P}#ingresar-secretaria"><span class="punto bg-agua"></span><span><b>Soy secretaria</b><small>Ingresa con tu cédula</small></span></a></li>
+                        <li><a class="todas" href="${P}cursos/"@{[ $cur->('cursos') ]}>Cursos del equipo · con contraseña</a></li>
                     </ul>
                 </div>
                 <a href="${P}#ayuda">Ayuda</a>
@@ -77,7 +76,7 @@ sub pie {
                 </div>
                 <div>
                     <h2>Equipo del CIC</h2>
-                    <ul><li><a href="${P}cursos/">Cursos del equipo</a></li><li><a href="${P}cursos/gestion-cic/">Gestión del CIC</a></li><li><a href="${P}cursos/acompanar-hacer/">Acompañar HACER</a></li><li><a href="${P}cursos/facilitar-ser/">Facilitar SER</a></li></ul>
+                    <ul><li><a href="${P}cursos/">Cursos del equipo</a></li><li><a href="${P}#ingresar-dinamizadora">Ingreso dinamizadoras</a></li><li><a href="${P}#ingresar-secretaria">Ingreso Secretaría</a></li></ul>
                 </div>
                 <div>
                     <h2>El CIC</h2>

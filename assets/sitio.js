@@ -169,4 +169,47 @@
         m.addEventListener('click', (e) => { const t = e.target.closest('[data-sat]'); if (t) activar(t.dataset.sat); });
         $$('.satelite-btn, .mapa-pin', m).forEach((el) => el.addEventListener('mouseenter', () => activar(el.dataset.sat)));
     });
+
+    // Barra de avance de lectura: muestra cuánto falta de la página
+    const barra = document.createElement('div');
+    barra.className = 'barra-progreso';
+    barra.setAttribute('aria-hidden', 'true');
+    document.body.prepend(barra);
+    let pendiente = false;
+    const avance = () => {
+        pendiente = false;
+        const total = document.documentElement.scrollHeight - innerHeight;
+        barra.style.transform = `scaleX(${total > 0 ? Math.min(1, scrollY / total) : 0})`;
+    };
+    addEventListener('scroll', () => { if (!pendiente) { pendiente = true; requestAnimationFrame(avance); } }, { passive: true });
+    avance();
+
+    // Carruseles con botones anterior / siguiente
+    $$('[data-carrusel]').forEach((c) => {
+        const pista = document.getElementById(`carrusel-${c.dataset.carrusel}`);
+        if (!pista) return;
+        $$('.carrusel-btn', c).forEach((b) => b.addEventListener('click', () => {
+            const paso = (pista.firstElementChild?.offsetWidth || 240) + 16;
+            pista.scrollBy({ left: Number(b.dataset.dir) * paso, behavior: 'smooth' });
+        }));
+    });
+
+    // «En esta página»: resalta la sección que se está leyendo
+    $$('.subnav-fija').forEach((nav) => {
+        const lista = $('ol', nav);
+        const enlaces = $$('a[href^="#"]', nav);
+        const secciones = enlaces.map((a) => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
+        if (!('IntersectionObserver' in window) || !secciones.length) return;
+        const vistas = new Set();
+        const io = new IntersectionObserver((es) => {
+            es.forEach((e) => (e.isIntersecting ? vistas.add(e.target.id) : vistas.delete(e.target.id)));
+            const actual = secciones.find((s) => vistas.has(s.id));
+            enlaces.forEach((a) => {
+                const si = !!actual && a.getAttribute('href') === `#${actual.id}`;
+                a.classList.toggle('activo', si);
+                if (si && lista) lista.scrollLeft = a.offsetLeft - 16;
+            });
+        }, { rootMargin: '-35% 0px -55% 0px' });
+        secciones.forEach((s) => io.observe(s));
+    });
 })();
