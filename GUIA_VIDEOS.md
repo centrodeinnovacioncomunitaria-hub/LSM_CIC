@@ -16,7 +16,7 @@ Las emprendedoras **no** necesitan videos de las guías: sus guías y plantillas
 Cada módulo de un curso del equipo se abre en *Mis cursos* (solo cuando el anterior está aprobado) y muestra cuatro pasos:
 
 1. **Video** (8 a 15 minutos). Primero aparece solo la imagen; el video se carga cuando la persona toca ▶, así no gasta datos quien no lo va a ver. Debajo, el botón «Ya vi el video».
-2. **Material de estudio**: se descarga del espacio privado `material-equipo` (ver CONFIGURAR_ACCESO.md, paso 3) y «Ver el tema» abre la página pública del módulo.
+2. **Material de estudio**: se abre con los enlaces de Google Drive de cada unidad (ver CONFIGURAR_FIREBASE.md, paso 5) y «Ver el tema» abre la página pública del módulo.
 3. **Cuestionario**: 5 preguntas, se aprueba con 4 de 5 y hay 2 intentos. Se activa cuando la persona vio el video y repasó el material. Lo califica el servidor.
 4. **Actividad** (Gestión) o **verificación de la sesión** (HACER y SER): texto o enlace a la evidencia, que revisa la Secretaría Técnica.
 
@@ -30,7 +30,7 @@ En **YouTube**, en el canal de centrodeinnovacioncomunitaria@gmail.com, con visi
 - La plataforma muestra el enlace únicamente a quien inició sesión y le corresponde (equipo, o emprendedoras de ese satélite).
 - YouTube adapta la calidad a la señal del celular, es gratis y no tiene límite de espacio.
 
-Importante: «No listado» no es privado del todo. Si alguien copia el enlace y lo comparte, otra persona podría verlo. Por eso **en los videos no se muestran cédulas, teléfonos ni datos personales**. Si en el futuro se necesita privacidad total, se puede pasar a un servicio con enlaces firmados (por ejemplo, Supabase Storage o Vimeo) sin cambiar la plataforma.
+Importante: «No listado» no es privado del todo. Si alguien copia el enlace y lo comparte, otra persona podría verlo. Por eso **en los videos no se muestran cédulas, teléfonos ni datos personales**. Si en el futuro se necesita privacidad total, se puede pasar a un servicio con enlaces firmados (por ejemplo, Vimeo) sin cambiar la plataforma.
 
 ## 4. Convención de nombres
 
@@ -78,6 +78,7 @@ Para **reemplazar** un video, se publica otro con el mismo módulo: el código e
 
 ## 7. Dónde vive cada cosa (para el equipo técnico)
 
-- Tabla `videos` en Supabase (migración `supabase/migrations/20261006000000_cic_semana_videos.sql`): código, título, ID de YouTube, duración, audiencia, curso, unidad, satélite y fecha. La base de datos rechaza códigos que no sigan la convención.
+- Colección `videos` en Firestore (Firebase): código, título, ID de YouTube o de Google Drive, duración, audiencia, curso, unidad, satélite y fecha. La Cloud Function `cicAcceso` (`functions/logica.js`) rechaza códigos que no sigan la convención.
+- También se aceptan videos de Google Drive compartidos como «Cualquier persona con el enlace»: se pega su enlace igual que uno de YouTube.
 - Permisos: el equipo ve los videos de sus cursos; cada emprendedora ve las grabaciones de su satélite y las generales; solo la Secretaría Técnica publica, cambia o quita.
 - El reproductor está en `index.html` (funciones `reproductor`, `traerVideos` y `pintarVideos`). Usa `youtube-nocookie.com` para no dejar cookies de seguimiento antes de reproducir.

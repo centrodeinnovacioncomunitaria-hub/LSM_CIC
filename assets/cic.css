@@ -1057,3 +1057,8 @@ h2 em { font-style: normal; color: var(--coralp); background: linear-gradient(tr
 .franja-datos span { display: block; margin-top: .35rem; color: var(--musgo); font-size: .9rem; }
 @media (max-width: 800px) { .franja-foto { grid-template-columns: 1fr; gap: 1.8rem; } .franja-datos { grid-template-columns: 1fr 1fr 1fr; } .franja-datos b { font-size: 1.5rem; } }
 @media (max-width: 960px) { .subnav-fija { top: 4.2rem; } }
+
+/* Activación: separador entre el enlace al correo y el código */
+.separador-o { display: flex; align-items: center; gap: .7rem; margin: 1.3rem 0 .2rem; color: var(--musgo); font-size: .85rem; text-align: center; }
+.separador-o::before, .separador-o::after { content: ""; flex: 1; border-top: 1px solid var(--linea); }
+.separador-o span { max-width: 22rem; }

@@ -1,0 +1,10 @@
+rules_version = '2';
+// La página nunca lee ni escribe Firestore directamente: todo pasa por la Cloud Function «cicAcceso»,
+// que verifica quién es cada persona y aplica las reglas de los cursos. Por eso aquí se niega todo.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{documento=**} {
+      allow read, write: if false;
+    }
+  }
+}

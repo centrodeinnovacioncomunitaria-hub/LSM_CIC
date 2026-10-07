@@ -21,12 +21,14 @@ El portal tiene tres espacios:
 | `perl herramientas/generar_cursos.pl` | Genera `cursos/` y las páginas de los tres cursos del equipo. |
 | `perl herramientas/aplicar_plantilla.pl` | Aplica menú y pie al inicio y a la biblioteca, y llena en el inicio los bloques del mapa y los pilares. |
 
-## Base de datos (Supabase)
+## Acceso y cursos (Firebase)
 
-- `supabase/migrations/20260928000000_cic_acceso.sql`: directorio del equipo, perfiles y permisos.
-- `supabase/migrations/20261006000000_cic_semana_videos.sql`: satélites, semana actual, dinamizadora asignada, `mi_dinamizadora()`, `fijar_semana()` y la tabla `videos`.
-- `supabase/functions/cic-acceso/`: ingreso con cédula, inscripción (el satélite sale del municipio), cambio y restablecimiento de contraseña.
-- Pasos para activarlo: `../CONFIGURAR_ACCESO.md`. Los datos personales (directorio y asignación de satélites) están en `privado_NO_SUBIR`, fuera del repositorio.
+- `functions/logica.js`: todas las reglas (ingreso con cédula, inscripción, enlace al correo y códigos, cursos, cuestionarios, evidencias, constancias). `functions/prueba.js` la prueba sin conexión: `cd functions && npm install && node prueba.js`.
+- `functions/index.js`: la Cloud Function `cicAcceso`; `functions/cuentas.js`: Firebase Authentication.
+- `functions/cargar.js`: carga el directorio, el banco de preguntas y el material (archivos privados), e invita al equipo por correo.
+- `herramientas/firebase/directorio_desde_excel.js`: convierte el Excel del equipo en `privado_NO_SUBIR/directorio.json`.
+- `firestore.rules`: la página no lee Firestore directamente; todo pasa por la función.
+- Pasos para activarlo: `../CONFIGURAR_FIREBASE.md`. Los datos personales y el banco de preguntas están en `privado_NO_SUBIR`, fuera del repositorio.
 
 ## Qué se publica y qué no
 

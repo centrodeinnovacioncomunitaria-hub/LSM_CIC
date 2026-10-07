@@ -1,3 +1,0 @@
-# La función revisa la sesión por su cuenta (ingresar y registro se llaman sin sesión).
-[functions.cic-acceso]
-verify_jwt = false

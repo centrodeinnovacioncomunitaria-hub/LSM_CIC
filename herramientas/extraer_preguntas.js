@@ -1,11 +1,12 @@
 // Extrae el banco de preguntas oficial de los cursos del equipo desde los textos de material_cursos/_texto
-// y escribe un SQL PRIVADO (con las respuestas correctas) para cargar en Supabase.
-// Uso: node herramientas/extraer_preguntas.js ../material_cursos/_texto ../privado_NO_SUBIR/banco_preguntas.sql
+// y escribe un archivo PRIVADO (con las respuestas correctas) para cargar en Firebase.
+// Uso: node herramientas/extraer_preguntas.js ../material_cursos/_texto ../privado_NO_SUBIR/banco_preguntas.json
+// (con extensión .json lo carga herramientas/firebase/cargar.js; con .sql, el formato anterior de Supabase)
 // El archivo resultante NUNCA se sube a GitHub: contiene la clave de respuestas.
 const fs = require('fs');
 const path = require('path');
 const [dir, salida] = process.argv.slice(2);
-if (!dir || !salida) { console.error('Uso: node extraer_preguntas.js <carpeta _texto> <salida.sql>'); process.exit(1); }
+if (!dir || !salida) { console.error('Uso: node extraer_preguntas.js <carpeta _texto> <salida.json>'); process.exit(1); }
 
 // Une las celdas de las tablas exportadas ("\n | ") en filas separadas por "|"
 const filas = (t) => t.replace(/\r/g, '').replace(/\n \| /g, '|').split('\n');
@@ -78,5 +79,5 @@ ${banco.map((p) => `  (${q(p.curso)}, ${p.unidad}, ${p.n}, ${q(p.enunciado)}, ${
 commit;
 `;
 fs.mkdirSync(path.dirname(salida), { recursive: true });
-fs.writeFileSync(salida, sql);
+fs.writeFileSync(salida, salida.endsWith('.json') ? JSON.stringify(banco, null, 1) : sql);
 console.log('Escrito:', salida);

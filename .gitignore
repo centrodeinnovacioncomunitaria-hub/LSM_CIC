@@ -5,10 +5,21 @@
 privado*/
 directorio_equipo_cic.sql
 .env
-supabase/.temp/
+.firebase/
 
 # Las plantillas públicas de las rutas sí se publican
 !descargas/**/*.xlsx
 
 # Banco de preguntas con respuestas: solo en privado_NO_SUBIR, nunca aquí
 banco_preguntas*.sql
+
+# Firebase: llaves de servicio, variables y dependencias
+*-firebase-adminsdk-*.json
+cuenta-servicio*.json
+functions/.env
+functions/node_modules/
+herramientas/firebase/node_modules/
+.firebase/
+firebase-debug*.log
+banco_preguntas*.json
+directorio*.json

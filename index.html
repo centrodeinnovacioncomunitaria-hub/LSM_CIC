@@ -613,7 +613,7 @@
             <p id="acceso-mensaje" class="mensaje error" role="alert" hidden></p>
 
             <form id="form-ingresar" method="post" action="#" role="tabpanel" aria-labelledby="pestana-ingresar" novalidate>
-                <p id="pista-equipo" class="nota" style="background:rgba(158,208,183,.4)" hidden><strong>¿Primera vez?</strong> Toca «Activar mi cuenta» y usa el código de 6 números que te llegó al correo o que te envió la Secretaría Técnica.</p>
+                <p id="pista-equipo" class="nota" style="background:rgba(158,208,183,.4)" hidden><strong>¿Primera vez?</strong> Toca «Activar mi cuenta», escribe tu cédula y te llegará a tu correo un enlace para crear tu contraseña.</p>
                 <label class="etiqueta" for="in-cedula">Número de cédula</label>
                 <input class="campo" id="in-cedula" name="cedula" inputmode="numeric" autocomplete="username" maxlength="15" placeholder="Solo números, sin puntos" required>
                 <label class="etiqueta" for="in-clave">Contraseña</label>
@@ -629,12 +629,13 @@
             </form>
 
             <form id="form-codigo" method="post" action="#" novalidate hidden aria-labelledby="codigo-titulo">
-                <h3 id="codigo-titulo" class="subtitulo-dialogo">Crea tu contraseña con un código</h3>
+                <h3 id="codigo-titulo" class="subtitulo-dialogo">Crea tu contraseña</h3>
                 <p class="texto-suave" id="codigo-ayuda">Sirve para activar tu cuenta la primera vez o para recuperar tu contraseña.</p>
                 <label class="etiqueta" for="co-cedula">Número de cédula</label>
                 <input class="campo" id="co-cedula" name="cedula" inputmode="numeric" autocomplete="username" maxlength="15" placeholder="Solo números, sin puntos" required>
-                <button type="button" id="pedir-codigo" class="btn btn-borde ancho">Enviarme el código al correo</button>
-                <small class="ayuda-campo">¿No tienes correo registrado? Pídele el código a la Secretaría Técnica o a tu dinamizadora por WhatsApp.</small>
+                <button type="button" id="pedir-codigo" class="btn btn-primario ancho">Enviarme el enlace a mi correo</button>
+                <small class="ayuda-campo">Abre el correo, toca el enlace, crea tu contraseña y vuelve aquí a ingresar. Si no llega, revisa «Spam».</small>
+                <p class="separador-o"><span>¿No tienes correo? Usa el código que te dio la Secretaría Técnica o tu dinamizadora</span></p>
                 <label class="etiqueta" for="co-codigo">Código de 6 números</label>
                 <input class="campo campo-codigo" id="co-codigo" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required>
                 <label class="etiqueta" for="co-clave">Crea tu contraseña</label>
@@ -643,7 +644,7 @@
                     <button type="button" class="ver" aria-controls="co-clave" aria-pressed="false">Ver</button>
                 </div>
                 <small id="co-clave-ayuda" class="ayuda-campo">Mínimo 8 letras o números, distinta de tu cédula.</small>
-                <button type="submit" class="btn btn-primario ancho">Guardar contraseña y entrar</button>
+                <button type="submit" class="btn btn-borde ancho">Guardar contraseña con el código y entrar</button>
                 <button type="button" id="volver-ingresar" class="texto-boton">Volver a ingresar con mi contraseña</button>
             </form>
 
@@ -696,7 +697,9 @@
 
         const CFG = window.CIC_CONFIG || {};
         const DATOS = window.CIC_DATOS || { satelites: [], hacer: [], ser: [] };
-        const DEMO = !(CFG.supabaseUrl && CFG.supabaseAnonKey);
+        const FB = CFG.firebase || {};
+        const DEMO = !(FB.apiKey && FB.projectId);
+        const FUNCION = CFG.funcionUrl || (FB.projectId ? `https://us-central1-${FB.projectId}.cloudfunctions.net/cicAcceso` : '');
 
         // ================= Portal público =================
         const menu = $('#menu-btn'), nav = $('#nav-publica');
@@ -779,35 +782,52 @@
             });
         })();
 
-        // ================= Conexión con Supabase =================
-        const CLAVE_SESION = 'cic-sesion';
-        let sb = null;
+        // ================= Conexión con Firebase =================
+        // La página solo usa Firebase Authentication; los datos pasan por la Cloud Function «cicAcceso».
+        const CLAVE_SESION = 'cic-sesion'; // marca local: evita cargar Firebase a quien nunca ha ingresado
+        const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
+        let auth = null;
         let perfil = null;
 
+        const cargarScript = (src) => new Promise((ok, mal) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = ok;
+            s.onerror = () => mal(new Error('No se pudo conectar con el servicio de acceso. Revisa tu internet.'));
+            document.head.appendChild(s);
+        });
         async function conectar() {
-            if (DEMO || sb) return sb;
-            await new Promise((ok, mal) => {
-                const s = document.createElement('script');
-                s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
-                s.onload = ok;
-                s.onerror = () => mal(new Error('No se pudo conectar con el servicio de acceso. Revisa tu internet.'));
-                document.head.appendChild(s);
-            });
-            sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth: { persistSession: true, storageKey: CLAVE_SESION } });
-            sb.auth.onAuthStateChange((evento) => { if (evento === 'SIGNED_OUT' && perfil) mostrarPublico(); });
-            return sb;
+            if (DEMO || auth) return auth;
+            await cargarScript(SDK + 'firebase-app-compat.js');
+            await cargarScript(SDK + 'firebase-auth-compat.js');
+            const app = window.firebase.apps.length ? window.firebase.app() : window.firebase.initializeApp(FB);
+            const a = app.auth();
+            a.languageCode = 'es';
+            if (CFG.emuladorAuth) a.useEmulator(CFG.emuladorAuth); // solo para pruebas locales
+            await a.setPersistence(window.firebase.auth.Auth.Persistence.LOCAL);
+            a.onAuthStateChanged((u) => { if (!u && perfil) mostrarPublico(); });
+            auth = a;
+            return auth;
         }
+        // Espera a que Firebase diga si hay una sesión guardada
+        const usuarioActual = () => new Promise((ok) => { const fin = auth.onAuthStateChanged((u) => { fin(); ok(u); }); });
         async function token() {
-            const { data } = await sb.auth.getSession();
-            return data.session ? data.session.access_token : null;
+            return auth && auth.currentUser ? auth.currentUser.getIdToken() : null;
+        }
+        // Tras verificar la contraseña en el servidor, abre la sesión de Firebase en este navegador
+        async function abrirSesion(cuenta, clave) {
+            await auth.signInWithEmailAndPassword(cuenta, clave);
+            guardar(localStorage, CLAVE_SESION, 1);
         }
         async function llamar(accion, datos = {}, conSesion = false) {
+            if (!DEMO) await conectar();
             const t = conSesion ? await token() : null;
+            if (conSesion && !t) { const e = new Error('Tu sesión terminó. Vuelve a ingresar.'); e.codigo = 'sesion'; throw e; }
             let r;
             try {
-                r = await fetch(`${CFG.supabaseUrl.replace(/\/$/, '')}/functions/v1/${CFG.funcion || 'cic-acceso'}`, {
+                r = await fetch(FUNCION, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseAnonKey, Authorization: `Bearer ${t || CFG.supabaseAnonKey}` },
+                    headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) },
                     body: JSON.stringify({ accion, ...datos }),
                 });
             } catch (e) {
@@ -821,7 +841,6 @@
             }
             return j;
         }
-        const CAMPOS_PERFIL = 'id, cedula, nombre, rol, cargo, correo, celular, departamento, municipio, negocio, satelite, semana_actual, debe_cambiar_clave';
 
         // ---------- Diálogo de ingreso e inscripción ----------
         const dialogo = $('#acceso');
@@ -884,10 +903,10 @@
             modo('codigo');
             $('#codigo-titulo').textContent = activar ? 'Activa tu cuenta' : 'Recupera tu contraseña';
             $('#codigo-ayuda').textContent = activar
-                ? 'Usa el código de 6 números que te llegó al correo o que te envió la Secretaría Técnica, y crea tu contraseña.'
-                : 'Te enviamos un código a tu correo registrado. Si no tienes correo, pídeselo a tu dinamizadora o a la Secretaría Técnica por WhatsApp.';
+                ? 'Escribe tu cédula y te enviaremos a tu correo un enlace para crear tu contraseña.'
+                : 'Escribe tu cédula y te enviaremos a tu correo un enlace para crear una contraseña nueva.';
             if (ced) $('#co-cedula').value = ced;
-            setTimeout(() => $(ced ? '#co-codigo' : '#co-cedula').focus(), 30);
+            setTimeout(() => $(ced ? '#pedir-codigo' : '#co-cedula').focus(), 30);
         }
         $('#olvide').addEventListener('click', () => abrirCodigo(false));
         $('#activar-cuenta').addEventListener('click', () => abrirCodigo(true));
@@ -899,11 +918,9 @@
             const b = $('#pedir-codigo');
             b.disabled = true;
             try {
-                if (DEMO) { mensaje('Demostración: en la plataforma real te llegaría un código al correo. Para probar, escribe 123456.', 'ok'); return; }
-                await conectar();
-                const r = await llamar('solicitar-codigo', { cedula });
+                if (DEMO) { mensaje('Demostración: en la plataforma real te llegaría un enlace al correo. Para probar con un código, escribe 123456 abajo.', 'ok'); return; }
+                const r = await llamar('solicitar-enlace', { cedula });
                 mensaje(r.mensaje, 'ok');
-                $('#co-codigo').focus();
             } catch (e) { mensaje(e.message); } finally { setTimeout(() => { b.disabled = false; }, DEMO ? 0 : 30000); }
         });
         $('#form-codigo').addEventListener('submit', (ev) => {
@@ -923,9 +940,8 @@
                     aviso('Demostración: así se activa una cuenta. No se guardó ninguna contraseña.');
                     return;
                 }
-                await conectar();
                 const r = await llamar('activar', { cedula, codigo, clave });
-                await sb.auth.setSession(r.sesion);
+                await abrirSesion(r.cuenta, clave);
                 entrar(r.perfil);
                 aviso('Listo: tu contraseña quedó guardada.');
             });
@@ -957,12 +973,11 @@
             ocupado(f, async () => {
                 if (DEMO) {
                     const nombres = { emprendedora: 'Emprendedora de prueba', dinamizadora: 'Dinamizadora de prueba', secretaria: 'Secretaría de prueba' };
-                    entrar({ id: 'demo', cedula, nombre: nombres[rol], rol, departamento: 'Magdalena', municipio: 'Santa Marta', satelite: 'magdalena', semana_actual: 1, correo: '', celular: '', debe_cambiar_clave: rol !== 'emprendedora' && clave === cedula });
+                    entrar({ id: 'demo', cedula, nombre: nombres[rol], rol, departamento: 'Magdalena', municipio: 'Santa Marta', satelite: 'magdalena', semana_actual: 1, correo: '', celular: '', debe_cambiar_clave: false });
                     return;
                 }
-                await conectar();
                 const r = await llamar('ingresar', { cedula, clave, rol });
-                await sb.auth.setSession(r.sesion);
+                await abrirSesion(r.cuenta, clave);
                 entrar(r.perfil);
             });
         });
@@ -989,9 +1004,8 @@
                     aviso('Así se verá tu panel. Recuerda: en la demostración no se guarda tu inscripción.');
                     return;
                 }
-                await conectar();
                 const r = await llamar('registro', d);
-                await sb.auth.setSession(r.sesion);
+                await abrirSesion(r.cuenta, d.clave);
                 entrar(r.perfil);
                 aviso('¡Bienvenida al CIC! Tu inscripción quedó hecha.');
             });
@@ -1048,7 +1062,8 @@
             window.scrollTo(0, 0);
         }
         $('#btn-salir').addEventListener('click', async () => {
-            if (sb) await sb.auth.signOut().catch(() => {});
+            guardar(localStorage, CLAVE_SESION, null);
+            if (auth) await auth.signOut().catch(() => {});
             mostrarPublico();
             aviso('Cerraste tu sesión.');
         });
@@ -1085,10 +1100,17 @@
             const m = t.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/);
             return m ? m[1] : (/^[\w-]{11}$/.test(t) ? t : null);
         };
+        // Videos de Google Drive (compartidos como «Cualquier persona con el enlace»)
+        const idDrive = (url) => {
+            const t = String(url || '').trim();
+            const m = t.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:.*&)?id=)([\w-]{20,})/);
+            return m ? m[1] : null;
+        };
+        const verVideo = (v) => v.youtube_id ? `https://youtu.be/${v.youtube_id}` : `https://drive.google.com/file/d/${v.drive_id}/view`;
         const reproductor = (v) => `
-            <div class="video-lite" data-yt="${esc(v.youtube_id)}" data-titulo="${esc(v.titulo)}">
+            <div class="video-lite" ${v.youtube_id ? `data-yt="${esc(v.youtube_id)}"` : `data-drive="${esc(v.drive_id)}"`} data-titulo="${esc(v.titulo)}">
                 <button type="button" class="video-lite-btn" aria-label="Reproducir el video: ${esc(v.titulo)}">
-                    <img src="https://i.ytimg.com/vi/${esc(v.youtube_id)}/hqdefault.jpg" alt="" loading="lazy" referrerpolicy="no-referrer">
+                    <img src="${v.youtube_id ? `https://i.ytimg.com/vi/${esc(v.youtube_id)}/hqdefault.jpg` : `https://drive.google.com/thumbnail?id=${esc(v.drive_id)}&sz=w800`}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'">
                     <span class="video-boton" aria-hidden="true"></span>
                 </button>
                 <p class="video-pie">${esc(v.titulo)}${v.duracion_min ? ` · ${esc(v.duracion_min)} min` : ''}</p>
@@ -1099,7 +1121,7 @@
             if (!b) return;
             const c = b.closest('.video-lite');
             const f = document.createElement('iframe');
-            f.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(c.dataset.yt)}?autoplay=1&rel=0`;
+            f.src = c.dataset.yt ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(c.dataset.yt)}?autoplay=1&rel=0` : `https://drive.google.com/file/d/${encodeURIComponent(c.dataset.drive)}/preview`;
             f.title = c.dataset.titulo;
             f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
             f.allowFullscreen = true;
@@ -1108,9 +1130,7 @@
         });
         async function traerVideos() {
             if (DEMO) return leer(sessionStorage, 'cic-demo-videos') || [];
-            const { data, error } = await sb.from('videos').select('*').order('codigo');
-            if (error) throw new Error('No pudimos cargar los videos. Intenta de nuevo.');
-            return data || [];
+            return (await llamar('videos', {}, true)).videos || [];
         }
 
         // ---------- Mi semana (emprendedoras) ----------
@@ -1123,9 +1143,7 @@
             </a>`).join('');
         async function miDinamizadora() {
             if (DEMO) return { nombre: 'Tu dinamizadora (ejemplo)', cargo: 'Acompañamiento y fortalecimiento económico', celular: '' };
-            const { data, error } = await sb.rpc('mi_dinamizadora');
-            if (error) return null;
-            return (data && data[0]) || null;
+            try { return (await llamar('mi-dinamizadora', {}, true)).dinamizadora; } catch (e) { return null; }
         }
         // El próximo taller depende de la semana en que va (la marca su dinamizadora)
         const proximoTaller = () => DATOS.ser.find((t) => t.semana >= semanaActual()) || DATOS.ser[DATOS.ser.length - 1];
@@ -1191,15 +1209,11 @@
             { nombre: 'Rosa Elena Pérez (ejemplo)', cedula: '10000001', rol: 'emprendedora', departamento: 'Magdalena', municipio: 'Santa Marta', satelite: 'magdalena', semana_actual: 2, negocio: 'Arepas La Esquina', celular: '', creado_en: '2026-09-20' },
             { nombre: 'Luz Marina Díaz (ejemplo)', cedula: '10000002', rol: 'emprendedora', departamento: 'Magdalena', municipio: 'Santa Marta', satelite: 'magdalena', semana_actual: 1, negocio: 'Confecciones Luz', celular: '', creado_en: '2026-09-22' },
             { nombre: 'Yesenia Charris (ejemplo)', cedula: '10000003', rol: 'emprendedora', departamento: 'Atlántico', municipio: 'Baranoa', satelite: 'atlantico', semana_actual: 3, negocio: 'Tienda Mi Barrio', celular: '', creado_en: '2026-09-25' },
-            { nombre: 'Dinamizadora de ejemplo', cedula: '10000004', rol: 'dinamizadora', departamento: 'Magdalena', satelite: 'magdalena', cargo: 'Acompañamiento y fortalecimiento económico', celular: '', creado_en: '2026-09-18', debe_cambiar_clave: true },
+            { nombre: 'Dinamizadora de ejemplo', cedula: '10000004', rol: 'dinamizadora', departamento: 'Magdalena', satelite: 'magdalena', cargo: 'Acompañamiento y fortalecimiento económico', celular: '', creado_en: '2026-09-18', debe_cambiar_clave: false },
         ];
         async function traerPerfiles() {
             if (DEMO) return perfil.rol === 'dinamizadora' ? EJEMPLO.filter((p) => p.rol === 'emprendedora' && p.departamento === perfil.departamento) : EJEMPLO;
-            let q = sb.from('perfiles').select('nombre, cedula, rol, cargo, correo, celular, departamento, municipio, satelite, semana_actual, negocio, creado_en, debe_cambiar_clave').order('nombre');
-            if (perfil.rol === 'dinamizadora') q = q.eq('rol', 'emprendedora');
-            const { data, error } = await q;
-            if (error) throw new Error('No pudimos cargar la lista. Intenta de nuevo.');
-            return data || [];
+            return (await llamar('perfiles', {}, true)).perfiles || [];
         }
         const whatsapp = (cel) => { const d = soloDigitos(cel); return d.length >= 10 ? `https://wa.me/57${d.slice(-10)}` : null; };
         const fecha = (f) => { const d = new Date(f); return isNaN(d) ? '' : d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }); };
@@ -1220,8 +1234,7 @@
             try {
                 if (DEMO) { const p = EJEMPLO.find((x) => x.cedula === s.dataset.semana); if (p) p.semana_actual = semana; }
                 else {
-                    const { error } = await sb.rpc('fijar_semana', { p_cedula: s.dataset.semana, p_semana: semana });
-                    if (error) throw new Error('No pudimos guardar la semana. Intenta de nuevo.');
+                    await llamar('fijar-semana', { cedula: s.dataset.semana, semana }, true);
                 }
                 aviso(`Listo: ahora ve la semana ${semana}.${DEMO ? ' (demostración)' : ''}`);
             } catch (err) { aviso(err.message); }
@@ -1271,11 +1284,10 @@
             v.innerHTML = `
                 <h2>Seguimiento del centro</h2>
                 <p class="vista-intro">Cuentas activas en la plataforma. Las personas del equipo aparecen cuando ingresan por primera vez.</p>
-                <div class="rejilla r4 movil-2">
+                <div class="rejilla r3 movil-2">
                     <div class="tarjeta kpi"><b>${emp.length}</b><span>emprendedoras inscritas</span></div>
                     <div class="tarjeta kpi"><b>${din.length}<small style="font-size:1rem" class="texto-suave">/24</small></b><span>dinamizadoras que ya ingresaron</span></div>
                     <div class="tarjeta kpi"><b>${porSat.filter(([, n]) => n).length}<small style="font-size:1rem" class="texto-suave">/8</small></b><span>satélites con emprendedoras</span></div>
-                    <div class="tarjeta kpi"><b>${lista.filter((p) => p.debe_cambiar_clave).length}</b><span>cuentas con contraseña antigua (cédula)</span></div>
                 </div>
                 <div class="tarjeta" style="margin-top:1.5rem">
                     <h3 style="font-size:1.15rem;margin-bottom:1rem">Emprendedoras por satélite</h3>
@@ -1320,7 +1332,7 @@
             try { lista = await traerVideos(); } catch (e) { v.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; return; }
             v.innerHTML = `
                 <h2>Videos de la plataforma</h2>
-                <p class="vista-intro">Sube el video a YouTube como «No listado», copia su enlace y pégalo aquí. El código se arma solo y sigue la convención de <a class="enlace" href="https://github.com/centrodeinnovacioncomunitaria-hub/LSM_CIC/blob/main/GUIA_VIDEOS.md" target="_blank" rel="noopener">la guía de videos</a>.</p>
+                <p class="vista-intro">Sube el video a YouTube como «No listado» (o a Google Drive, compartido como «Cualquier persona con el enlace»), copia su enlace y pégalo aquí. El código se arma solo y sigue la convención de <a class="enlace" href="https://github.com/centrodeinnovacioncomunitaria-hub/LSM_CIC/blob/main/GUIA_VIDEOS.md" target="_blank" rel="noopener">la guía de videos</a>.</p>
                 <div class="rejilla r2" style="align-items:start">
                     <form id="form-video" class="tarjeta" novalidate>
                         <h3 style="font-size:1.2rem">Publicar un video</h3>
@@ -1340,7 +1352,7 @@
                             <label class="etiqueta" for="vi-fecha">Fecha del taller</label>
                             <input class="campo" id="vi-fecha" name="fecha" type="date">
                         </div>
-                        <label class="etiqueta" for="vi-url">Enlace de YouTube</label>
+                        <label class="etiqueta" for="vi-url">Enlace de YouTube o de Google Drive</label>
                         <input class="campo" id="vi-url" name="url" inputmode="url" placeholder="https://youtu.be/…" required>
                         <div class="dos-campos">
                             <div><label class="etiqueta" for="vi-duracion">Duración (minutos)</label><input class="campo" id="vi-duracion" name="duracion" inputmode="numeric" maxlength="3"></div>
@@ -1351,7 +1363,7 @@
                     </form>
                     <div>
                         <h3 style="font-size:1.2rem;margin-bottom:.8rem">Publicados (${lista.length})</h3>
-                        ${lista.length ? `<ul class="lista-videos">${lista.map((x) => `<li><span class="codigo">${esc(x.codigo)}</span><span><b>${esc(x.titulo)}</b><small>${x.audiencia === 'equipo' ? 'Equipo' : 'Emprendedoras'}${x.duracion_min ? ` · ${esc(x.duracion_min)} min` : ''}</small></span><a class="enlace" href="https://youtu.be/${esc(x.youtube_id)}" target="_blank" rel="noopener">Ver</a><button type="button" class="boton-texto" data-quitar="${esc(x.codigo)}">Quitar</button></li>`).join('')}</ul>` : '<p class="tarjeta vacio">Todavía no hay videos publicados.</p>'}
+                        ${lista.length ? `<ul class="lista-videos">${lista.map((x) => `<li><span class="codigo">${esc(x.codigo)}</span><span><b>${esc(x.titulo)}</b><small>${x.audiencia === 'equipo' ? 'Equipo' : 'Emprendedoras'}${x.duracion_min ? ` · ${esc(x.duracion_min)} min` : ''}</small></span><a class="enlace" href="${esc(verVideo(x))}" target="_blank" rel="noopener">Ver</a><button type="button" class="boton-texto" data-quitar="${esc(x.codigo)}">Quitar</button></li>`).join('')}</ul>` : '<p class="tarjeta vacio">Todavía no hay videos publicados.</p>'}
                     </div>
                 </div>`;
             const f = $('#form-video');
@@ -1368,10 +1380,11 @@
                 const m = $('#vi-mensaje');
                 const decir = (t, ok) => { m.textContent = t; m.className = 'mensaje ' + (ok ? 'ok' : 'error'); m.hidden = false; };
                 const yt = idYoutube(f.url.value);
-                if (!yt) return decir('Pega el enlace del video de YouTube (por ejemplo, https://youtu.be/abc123XYZ_0).');
+                const dr = yt ? null : idDrive(f.url.value);
+                if (!yt && !dr) return decir('Pega el enlace del video de YouTube (https://youtu.be/…) o de Google Drive (https://drive.google.com/file/d/…).');
                 if (f.tipo.value === 'emprendedoras' && !f.fecha.value) return decir('Escribe la fecha del taller.');
                 const fila = {
-                    codigo: codigoVideo(f), titulo: tituloVideo(f), youtube_id: yt,
+                    codigo: codigoVideo(f), titulo: tituloVideo(f), youtube_id: yt, drive_id: dr,
                     duracion_min: Number(soloDigitos(f.duracion.value)) || null,
                     audiencia: f.tipo.value, curso: f.tipo.value === 'equipo' ? f.curso.value : 'grabaciones',
                     unidad: f.tipo.value === 'equipo' ? Number(f.unidad.value) + 1 : Number(f.taller.value),
@@ -1383,8 +1396,7 @@
                         const l = (leer(sessionStorage, 'cic-demo-videos') || []).filter((x) => x.codigo !== fila.codigo);
                         guardar(sessionStorage, 'cic-demo-videos', [...l, fila].sort((a, b) => a.codigo.localeCompare(b.codigo)));
                     } else {
-                        const { error } = await sb.from('videos').upsert(fila, { onConflict: 'codigo' });
-                        if (error) throw new Error('No pudimos publicar el video. Revisa que tu sesión siga activa.');
+                        await llamar('guardar-video', { video: fila }, true);
                     }
                     aviso(`Video ${fila.codigo} publicado.${DEMO ? ' (demostración: solo en esta pestaña)' : ''}`);
                     pintarVideos();
@@ -1392,10 +1404,10 @@
                 } catch (e) { decir(e.message); }
             });
             $$('[data-quitar]', v).forEach((b) => b.addEventListener('click', async () => {
-                if (!confirm(`¿Quitar el video ${b.dataset.quitar} de la plataforma? En YouTube sigue existiendo.`)) return;
+                if (!confirm(`¿Quitar el video ${b.dataset.quitar} de la plataforma? El archivo sigue existiendo en YouTube o Drive.`)) return;
                 try {
                     if (DEMO) guardar(sessionStorage, 'cic-demo-videos', (leer(sessionStorage, 'cic-demo-videos') || []).filter((x) => x.codigo !== b.dataset.quitar));
-                    else { const { error } = await sb.from('videos').delete().eq('codigo', b.dataset.quitar); if (error) throw new Error('No pudimos quitar el video.'); }
+                    else await llamar('quitar-video', { codigo: b.dataset.quitar }, true);
                     aviso(`Video ${b.dataset.quitar} quitado.`);
                     pintarVideos();
                     pintarCursos();
@@ -1445,8 +1457,7 @@
                 if (correo && !f.correo.checkValidity()) return aviso('Revisa tu correo electrónico.');
                 try {
                     if (!DEMO) {
-                        const { error } = await sb.from('perfiles').update({ correo: correo || null, celular: celular || null }).eq('id', perfil.id);
-                        if (error) throw new Error('No pudimos guardar tus datos. Intenta de nuevo.');
+                        await llamar('actualizar-contacto', { correo, celular }, true);
                     }
                     perfil.correo = correo; perfil.celular = celular;
                     if (DEMO) guardar(sessionStorage, 'cic-demo', perfil);
@@ -1469,6 +1480,7 @@
                 boton.disabled = true;
                 try {
                     const r = DEMO ? { demo: true } : await llamar('cambiar-clave', { clave_actual: actual, clave_nueva: nueva }, true);
+                    if (!DEMO) await abrirSesion(r.cuenta, nueva); // la sesión sigue abierta con la contraseña nueva
                     perfil.debe_cambiar_clave = false;
                     if (DEMO) guardar(sessionStorage, 'cic-demo', perfil);
                     $('#aviso-clave').hidden = true;
@@ -1507,7 +1519,7 @@
             pintar('<p class="texto-suave" role="status">Consultando…</p>');
             if (!d.open) d.showModal();
             try {
-                const r = DEMO ? { valida: /DEMO/.test(codigo), iniciales: 'D. P.', curso: 'Gestión del CIC', emitida_en: new Date().toISOString() } : (await conectar(), await llamar('verificar', { codigo }));
+                const r = DEMO ? { valida: /DEMO/.test(codigo), iniciales: 'D. P.', curso: 'Gestión del CIC', emitida_en: new Date().toISOString() } : await llamar('verificar', { codigo });
                 pintar(r.valida
                     ? `<p class="mensaje ok">Constancia válida.</p><p style="margin-top:.8rem">Expedida a <b>${esc(r.iniciales)}</b> por aprobar <b>${esc(r.curso)}</b> el ${esc(fecha(r.emitida_en))}.</p><p class="ayuda-campo">Por privacidad solo se muestran las iniciales.</p>`
                     : '<p class="mensaje error">No encontramos una constancia con ese código. Revisa que esté bien escrito.</p>');
@@ -1531,11 +1543,10 @@
             if (!hay) return;
             try {
                 await conectar();
-                const { data } = await sb.auth.getSession();
-                if (!data.session) return;
-                const { data: p, error } = await sb.from('perfiles').select(CAMPOS_PERFIL).eq('id', data.session.user.id).single();
-                if (error || !p) { await sb.auth.signOut(); return; }
-                entrar(p);
+                if (!(await usuarioActual())) { guardar(localStorage, CLAVE_SESION, null); return; }
+                const r = await llamar('mi-perfil', {}, true).catch(() => null);
+                if (!r || !r.perfil) { await auth.signOut(); guardar(localStorage, CLAVE_SESION, null); return; }
+                entrar(r.perfil);
             } catch (e) { /* se queda en el portal público */ }
         })().finally(abrirPorEnlace);
     })();
