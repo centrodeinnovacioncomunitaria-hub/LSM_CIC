@@ -88,7 +88,7 @@ async function vaciar(coleccion) {
   const invitar = opcion('invitar');
   if (invitar) {
     if (!env.CIC_API_KEY) throw new Error('Para invitar, primero pega la clave web en functions/.env (CIC_API_KEY).');
-    const cuentas = crearCuentas(getAuth(), () => env.CIC_API_KEY, () => env.CIC_SITIO || 'https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/');
+    const cuentas = crearCuentas(getAuth(), () => env.CIC_API_KEY, () => env.CIC_SITIO || 'https://cicredmujeresdelcaribe.org/');
     const logica = crearLogica({ db, cuentas });
     const cedulas = invitar === true ? (await db.collection('directorio').get()).docs.map((d) => d.id) : [String(invitar)];
     let enviados = 0;

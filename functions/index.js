@@ -15,7 +15,7 @@ initializeApp();
 // Clave web de Firebase (la misma de assets/config.js) y dirección de la página.
 // Van en functions/.env (ver .env.ejemplo).
 const API_KEY = defineString('CIC_API_KEY');
-const SITIO = defineString('CIC_SITIO', { default: 'https://centrodeinnovacioncomunitaria-hub.github.io/LSM_CIC/' });
+const SITIO = defineString('CIC_SITIO', { default: 'https://cicredmujeresdelcaribe.org/' });
 const ORIGENES = defineString('CIC_ORIGENES', { default: 'https://cicredmujeresdelcaribe.org,https://www.cicredmujeresdelcaribe.org,https://centrodeinnovacioncomunitaria-hub.github.io,http://localhost:8080,http://127.0.0.1:8080' });
 
 const cuentas = crearCuentas(getAuth(), () => API_KEY.value(), () => SITIO.value());
