@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261022">
+    <link rel="stylesheet" href="assets/cic.css?v=20261023">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -707,11 +707,11 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261022"></script>
-    <script src="assets/datos-cic.js?v=20261022"></script>
-    <script src="assets/sitio.js?v=20261022"></script>
-    <script src="assets/cursos-equipo.js?v=20261022"></script>
-    <script src="assets/emprendimientos.js?v=20261022"></script>
+    <script src="./config.js?v=20261023"></script>
+    <script src="assets/datos-cic.js?v=20261023"></script>
+    <script src="assets/sitio.js?v=20261023"></script>
+    <script src="assets/cursos-equipo.js?v=20261023"></script>
+    <script src="assets/emprendimientos.js?v=20261023"></script>
     <script>
     (() => {
         'use strict';
@@ -1143,27 +1143,16 @@
             return m ? m[1] : null;
         };
         const verVideo = (v) => v.youtube_id ? `https://youtu.be/${v.youtube_id}` : `https://drive.google.com/file/d/${v.drive_id}/view`;
+        // Reproductor listo de una vez (un solo toque en celulares); se carga cuando se acerca a la pantalla.
+        // La franja transparente tapa la barra superior, donde Drive y YouTube ponen el botón para abrir el video aparte.
         const reproductor = (v) => `
-            <div class="video-lite" ${v.youtube_id ? `data-yt="${esc(v.youtube_id)}"` : `data-drive="${esc(v.drive_id)}"`} data-titulo="${esc(v.titulo)}">
-                <button type="button" class="video-lite-btn" aria-label="Reproducir el video: ${esc(v.titulo)}">
-                    <img src="${v.youtube_id ? `https://i.ytimg.com/vi/${esc(v.youtube_id)}/hqdefault.jpg` : `https://drive.google.com/thumbnail?id=${esc(v.drive_id)}&sz=w800`}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'">
-                    <span class="video-boton" aria-hidden="true"></span>
-                </button>
+            <div class="video-lite">
+                <div class="video-lite-marco">
+                    <iframe src="${v.youtube_id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.youtube_id)}?rel=0&modestbranding=1&playsinline=1` : `https://drive.google.com/file/d/${encodeURIComponent(v.drive_id)}/preview`}" title="${esc(v.titulo)}" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                    <span class="video-tapa" aria-hidden="true"></span>
+                </div>
                 <p class="video-pie">${esc(v.titulo)}${v.duracion_min ? ` · ${esc(v.duracion_min)} min` : ''}</p>
             </div>`;
-        // El video real se carga solo al tocarlo: así no gasta datos quien no lo ve
-        document.addEventListener('click', (e) => {
-            const b = e.target.closest('.video-lite-btn');
-            if (!b) return;
-            const c = b.closest('.video-lite');
-            const f = document.createElement('iframe');
-            f.src = c.dataset.yt ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(c.dataset.yt)}?autoplay=1&rel=0` : `https://drive.google.com/file/d/${encodeURIComponent(c.dataset.drive)}/preview`;
-            f.title = c.dataset.titulo;
-            f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
-            f.allowFullscreen = true;
-            b.replaceWith(f);
-            f.focus();
-        });
         async function traerVideos() {
             if (DEMO) return leer(sessionStorage, 'cic-demo-videos') || [];
             return (await llamar('videos', {}, true)).videos || [];

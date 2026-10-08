@@ -1452,3 +1452,10 @@ button.descarga:disabled, button.archivo:disabled { opacity: .6; cursor: progres
 .emp-quitar { color: var(--coralp); }
 @media (max-width: 640px) { .emp-actividades { grid-template-columns: 1fr; } .emp-ficha-lado { min-width: 0; width: 100%; } }
 .emp-tabla td small { display: block; color: var(--musgo); font-size: .8rem; }
+
+/* Reproductor: franja transparente sobre la barra superior (bloquea «abrir en otra ventana», desde donde se descarga) */
+.video-lite-marco { position: relative; border-radius: 1rem; overflow: hidden; background: var(--bosque); }
+.video-lite-marco iframe { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; }
+.video-tapa { position: absolute; top: 0; left: 0; right: 0; height: 3.6rem; z-index: 2; background: transparent; }
+.video-grande iframe { z-index: 1; }
+@media (max-width: 640px) { .video-tapa { height: 2.8rem; } }

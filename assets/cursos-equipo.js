@@ -222,24 +222,74 @@
         </div>`;
     }
 
+    // ---------- Reproductor de video ----------
+    // Se muestra de una vez (un solo toque en celulares). Encima va una franja transparente que tapa la barra superior
+    // del reproductor: ahí Drive y YouTube ponen el botón que abre el video aparte, desde donde se podría descargar.
+    const fuenteVideo = (v) => (v.youtube_id
+        ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.youtube_id)}?rel=0&modestbranding=1&playsinline=1`
+        : `https://drive.google.com/file/d/${encodeURIComponent(v.drive_id)}/preview`);
+    const marcoVideo = (v, titulo) => `<iframe src="${esc(fuenteVideo(v))}" title="${esc(titulo || v.titulo || 'Video')}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe><span class="video-tapa" aria-hidden="true"></span>`;
+    // El tiempo mínimo empieza cuando la persona toca el video, o cuando lleva unos segundos en pantalla
+    // (en algunos celulares el toque dentro del reproductor no se puede detectar).
+    function vigilarInicio(caja, alIniciar) {
+        let hecho = false, espera = null, obs = null;
+        const iniciar = () => {
+            if (hecho || !caja.isConnected) return;
+            hecho = true;
+            window.removeEventListener('blur', alSalir);
+            if (obs) obs.disconnect();
+            clearTimeout(espera);
+            alIniciar();
+        };
+        const alSalir = () => setTimeout(() => { if (document.activeElement && caja.contains(document.activeElement)) iniciar(); }, 0);
+        window.addEventListener('blur', alSalir);
+        if ('IntersectionObserver' in window) {
+            obs = new IntersectionObserver((es) => {
+                const visible = es.some((x) => x.isIntersecting && x.intersectionRatio >= 0.6);
+                clearTimeout(espera);
+                if (visible) espera = setTimeout(iniciar, 4000);
+            }, { threshold: [0, 0.6, 1] });
+            obs.observe(caja);
+        }
+    }
+    // Repinta la vista sin recargar el video que ya está sonando: se reemplaza todo alrededor del reproductor
+    function pintarConservandoVideo(html) {
+        const vivo = C.vista.querySelector('.video-grande');
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        const nuevo = tmp.querySelector('.video-grande');
+        const completo = () => { C.vista.innerHTML = html; };
+        if (!vivo || !nuevo || !vivo.querySelector('iframe') || !nuevo.querySelector('iframe') || vivo.dataset.fuente !== nuevo.dataset.fuente) return completo();
+        const ruta = [];
+        for (let n = nuevo; n !== tmp; n = n.parentNode) ruta.unshift([...n.parentNode.childNodes].indexOf(n));
+        let l = C.vista, nn = tmp;
+        for (const i of ruta) {
+            if (!l || l.childNodes.length !== nn.childNodes.length) return completo();
+            l = l.childNodes[i]; nn = nn.childNodes[i];
+        }
+        if (l !== vivo) return completo();
+        let L = C.vista, N = tmp;
+        for (const i of ruta) {
+            const vivos = [...L.childNodes], nuevos = [...N.childNodes];
+            nuevos.forEach((h, j) => { if (j !== i) L.replaceChild(h, vivos[j]); });
+            if (L !== C.vista && N.className !== undefined) L.className = N.className;
+            L = vivos[i]; N = nuevos[i];
+        }
+    }
+
     // ---------- Video de bienvenida: obligatorio antes del curso Gestión del CIC ----------
     const bienvenidaPendiente = () => !!(estado.bienvenida && estado.bienvenida.requerida && !estado.bienvenida.hecha);
     function tarjetaBienvenida() {
         const bv = estado.bienvenida;
         const v = porCodigo.BIENVENIDA;
-        const fuente = v.youtube_id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.youtube_id)}?rel=0&autoplay=1` : `https://drive.google.com/file/d/${encodeURIComponent(v.drive_id)}/preview`;
-        const portada = v.youtube_id ? `https://i.ytimg.com/vi/${esc(v.youtube_id)}/hqdefault.jpg` : `https://drive.google.com/thumbnail?id=${esc(v.drive_id)}&sz=w1280`;
         return `<section class="tarjeta bienvenida" aria-labelledby="t-bienvenida">
             <div class="bienvenida-texto">
                 <p class="eyebrow">Paso obligatorio · antes del curso Gestión del CIC</p>
                 <h3 id="t-bienvenida">Bienvenida al Centro de Innovación Comunitaria</h3>
                 <p class="texto-suave">Mira el video de presentación completo${v.duracion_min ? ` (unos ${esc(v.duracion_min)} minutos)` : ''}. Al terminar se habilita tu compromiso y, con él, el módulo 1.</p>
             </div>
-            <div class="video-grande" data-fuente="${esc(fuente)}" data-titulo="${esc(v.titulo || 'Bienvenida al CIC')}">
-                ${bv.iniciada ? `<iframe src="${esc(fuente)}" title="${esc(v.titulo || 'Bienvenida al CIC')}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`
-                    : `<button type="button" class="video-grande-btn" data-bienvenida-play aria-label="Reproducir el video de bienvenida"><img src="${portada}" alt="" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'"><span class="video-boton" aria-hidden="true"></span><span class="video-grande-txt">Reproducir el video de bienvenida</span></button>`}
-            </div>
-            <div class="video-estado" id="bienvenida-estado" aria-live="polite">${bv.iniciada ? estadoReloj(bv.faltan, bv.segundos, 'tu compromiso') : '<p class="texto-suave">Toca el video para empezar.</p>'}</div>
+            <div class="video-grande" data-fuente="${esc(fuenteVideo(v))}">${marcoVideo(v, v.titulo || 'Bienvenida al CIC')}</div>
+            <div class="video-estado" id="bienvenida-estado" aria-live="polite">${bv.iniciada ? estadoReloj(bv.faltan, bv.segundos, 'tu compromiso') : '<p class="texto-suave">Dale play al video para empezar.</p>'}</div>
         </section>`;
     }
     const estadoReloj = (faltan, total, que) => `<p class="reloj-video"><span class="reloj-barra"><span style="width:${100 - Math.round(faltan / total * 100)}%"></span></span> Mira el video completo: ${esc(que)} se habilita en <b data-faltan="${faltan}">${minSeg(faltan)}</b>.</p>`;
@@ -262,16 +312,14 @@
                 pintarResumen();
             }, 1000);
         };
-        const play = v.querySelector('[data-bienvenida-play]');
-        if (play) play.addEventListener('click', async () => {
-            const caja = play.closest('.video-grande');
-            caja.innerHTML = `<iframe src="${esc(caja.dataset.fuente)}" title="${esc(caja.dataset.titulo)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+        const caja = v.querySelector('.bienvenida .video-grande');
+        if (estado.bienvenida.iniciada) correr(estado.bienvenida.faltan, estado.bienvenida.segundos);
+        else if (caja) vigilarInicio(caja, async () => {
             try { estado = await api('bienvenida', { paso: 'iniciar' }); } catch (e) { C.aviso(e.message); return; }
             const bv = estado.bienvenida;
             v.querySelector('#bienvenida-estado').innerHTML = estadoReloj(bv.faltan, bv.segundos, 'tu compromiso');
             correr(bv.faltan, bv.segundos);
         });
-        else if (estado.bienvenida.iniciada) correr(estado.bienvenida.faltan, estado.bienvenida.segundos);
     }
 
     // ---------- Resumen: un bloque por curso con sus módulos ----------
@@ -369,7 +417,7 @@
         const siguiente = lista[unidad];
         const anterior = lista[unidad - 2];
 
-        C.vista.innerHTML = `<div class="leccion">
+        pintarConservandoVideo(`<div class="leccion">
             <nav class="leccion-migas" aria-label="Ruta"><button type="button" class="boton-texto" data-volver>← Mis cursos</button><span aria-hidden="true">›</span><span>${esc(c.titulo)}</span></nav>
             <div class="leccion-rejilla">
                 <div class="leccion-principal">
@@ -424,25 +472,18 @@
                     }).join('')}</ol>
                 </aside>
             </div>
-        </div>`;
+        </div>`);
         enlazarLeccion(e, vid);
         cargarMaterial();
     }
 
     // Video grande: se carga al tocarlo y desde ese momento corre el tiempo mínimo que controla el servidor
     function reproductorGrande(v, e) {
-        const fuente = v.youtube_id
-            ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.youtube_id)}?rel=0&autoplay=1`
-            : `https://drive.google.com/file/d/${encodeURIComponent(v.drive_id)}/preview`;
-        const portada = v.youtube_id ? `https://i.ytimg.com/vi/${esc(v.youtube_id)}/hqdefault.jpg` : `https://drive.google.com/thumbnail?id=${esc(v.drive_id)}&sz=w1280`;
         const visto = e.video_visto && e.estado !== 'pausada';
-        return `<div class="video-grande" data-fuente="${esc(fuente)}" data-titulo="${esc(v.titulo)}">
-                ${visto || e.video_iniciado ? `<iframe src="${esc(fuente)}" title="${esc(v.titulo)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe>`
-                    : `<button type="button" class="video-grande-btn" data-reproducir aria-label="Reproducir el video: ${esc(v.titulo)}"><img src="${portada}" alt="" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'"><span class="video-boton" aria-hidden="true"></span><span class="video-grande-txt">Reproducir el video${v.duracion_min ? ` · ${esc(v.duracion_min)} min` : ''}</span></button>`}
-            </div>
+        return `<div class="video-grande" data-fuente="${esc(fuenteVideo(v))}">${marcoVideo(v)}</div>
             <div class="video-estado" aria-live="polite">${visto ? '<p class="paso-ok">✓ Video visto</p>'
                 : e.video_iniciado ? `<p class="reloj-video"><span class="reloj-barra"><span style="width:${100 - Math.round(e.video_faltan / e.video_segundos * 100)}%"></span></span> Mira el video completo: la evaluación se habilita en <b data-faltan="${e.video_faltan}">${minSeg(e.video_faltan)}</b>.</p>`
-                : `<p class="texto-suave">Toca el video para empezar. La evaluación se habilita cuando lo hayas visto completo${v.duracion_min ? ` (unos ${esc(v.duracion_min)} minutos)` : ''}.</p>`}</div>`;
+                : `<p class="texto-suave">Dale play al video. La evaluación se habilita cuando lo hayas visto completo${v.duracion_min ? ` (unos ${esc(v.duracion_min)} minutos)` : ''}.</p>`}</div>`;
     }
 
     function bloqueEvaluacion(e, conVideo) {
@@ -536,10 +577,8 @@
             const s = v.querySelector(`#paso-${a.dataset.irPaso}`);
             if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }));
-        const rep = v.querySelector('[data-reproducir]');
-        if (rep) rep.addEventListener('click', async () => {
-            const caja = rep.closest('.video-grande');
-            caja.innerHTML = `<iframe src="${esc(caja.dataset.fuente)}" title="${esc(caja.dataset.titulo)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+        const cajaVideo = v.querySelector('#paso-video .video-grande');
+        if (cajaVideo && !e.video_iniciado && !(e.video_visto && e.estado !== 'pausada')) vigilarInicio(cajaVideo, async () => {
             try { estado = await api('iniciar-video', datos); } catch (x) { C.aviso(x.message); return; }
             const est = estado.cursos[datos.curso][datos.unidad - 1];
             v.querySelector('.video-estado').innerHTML = `<p class="reloj-video"><span class="reloj-barra"><span style="width:${100 - Math.round(est.video_faltan / est.video_segundos * 100)}%"></span></span> Mira el video completo: la evaluación se habilita en <b data-faltan="${est.video_faltan}">${minSeg(est.video_faltan)}</b>.</p>`;
