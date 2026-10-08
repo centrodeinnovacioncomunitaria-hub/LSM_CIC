@@ -1302,60 +1302,98 @@ button.descarga:disabled, button.archivo:disabled { opacity: .6; cursor: progres
 .bienvenida-texto { margin-bottom: 1rem; }
 .bienvenida-texto h3 { margin: .5rem 0 .4rem; }
 
-/* ---------- Modelo del CIC: el ser envuelve, tres pilares crecen y el ecosistema los sostiene ---------- */
-.modelo-cic { --pad: clamp(1rem, 3vw, 2.6rem); position: relative; isolation: isolate; overflow: hidden; margin-top: 1.4rem; padding: clamp(1.6rem, 4vw, 2.8rem) var(--pad) 0; border-radius: 3rem 3rem 2.2rem 2.2rem; background: linear-gradient(180deg, rgba(189, 178, 228, .38), rgba(255, 255, 255, .5) 62%); }
-.modelo-halo { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
-.modelo-halo span { position: absolute; border-radius: 50%; filter: blur(48px); opacity: .55; animation: halo-flotar 16s ease-in-out infinite alternate; }
-.modelo-halo span:nth-child(1) { width: 38%; aspect-ratio: 1; left: -6%; top: -10%; background: var(--lavanda); }
-.modelo-halo span:nth-child(2) { width: 30%; aspect-ratio: 1; right: -4%; top: 6%; background: var(--durazno); animation-delay: -5s; opacity: .4; }
-.modelo-halo span:nth-child(3) { width: 34%; aspect-ratio: 1; left: 34%; top: 30%; background: var(--menta); animation-delay: -9s; opacity: .3; }
-@keyframes halo-flotar { from { transform: translate(0, 0) scale(1); } to { transform: translate(4%, 6%) scale(1.08); } }
-
-.modelo-ser { display: flex; align-items: center; gap: 1.1rem; max-width: 46rem; margin: 0 auto clamp(1.8rem, 4vw, 2.6rem); padding: .9rem 1.7rem .9rem .9rem; border-radius: 2rem; background: rgba(255, 255, 255, .78); backdrop-filter: blur(8px); box-shadow: 0 18px 36px -28px rgba(46, 74, 62, .55); }
-.modelo-ser-icono { position: relative; display: grid; place-items: center; width: 3.8rem; height: 3.8rem; flex-shrink: 0; border-radius: 50%; background: #fff; }
-.modelo-ser-icono::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px dashed #9d90d4; animation: girar 22s linear infinite; }
-.modelo-ser-icono svg { width: 2.4rem; height: 2.4rem; }
-.modelo-ser small { display: block; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #6f61b0; }
-.modelo-ser h3 { font-size: clamp(1.05rem, 2vw, 1.3rem); margin: .1rem 0 .2rem; }
-.modelo-ser p { margin: 0; color: var(--musgo); font-size: .92rem; }
-@keyframes girar { to { transform: rotate(360deg); } }
-
-.modelo-pilares { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(.9rem, 2.4vw, 1.8rem); align-items: stretch; }
-.pilar-org { position: relative; display: flex; flex-direction: column; align-items: flex-start; height: 100%; padding: 1.5rem 1.4rem 1.5rem; background: #fff; border-radius: 2.4rem; box-shadow: 0 20px 40px -30px rgba(46, 74, 62, .55); transition: transform .35s cubic-bezier(.3, .7, .2, 1), box-shadow .35s; }
-.pilar-org:nth-child(1) { border-radius: 2.4rem 2.4rem 2.4rem .9rem; }
-.pilar-org:nth-child(3) { border-radius: 2.4rem 2.4rem .9rem 2.4rem; }
-.pilar-org:hover, .js .pilar-org.visible:hover { transform: translateY(-6px); box-shadow: var(--sombra); }
-.pilar-forma { position: relative; display: grid; place-items: center; width: 4.4rem; height: 4.4rem; margin-bottom: 1rem; border-radius: 46% 54% 52% 48% / 55% 45% 55% 45%; background: var(--suave); animation: forma-flotar 6s ease-in-out infinite; }
-.pilar-org:nth-child(2) .pilar-forma { animation-delay: -2s; border-radius: 55% 45% 48% 52% / 45% 55% 45% 55%; }
-.pilar-org:nth-child(3) .pilar-forma { animation-delay: -4s; }
-.pilar-forma svg { width: 2.7rem; height: 2.7rem; overflow: visible; }
-.pilar-forma svg > * { fill: rgba(255, 255, 255, .75); stroke: var(--fuerte); stroke-width: 3; stroke-dasharray: 5 4; stroke-linejoin: round; stroke-linecap: round; transition: stroke-dashoffset 1.2s ease; }
-.pilar-org:hover .pilar-forma svg > * { stroke-dashoffset: -18; }
-@keyframes forma-flotar { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-5px) rotate(-3deg); } }
-.pilar-org h3 { font-size: 1.14rem; margin: 0 0 .55rem; }
-.pilar-org ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; color: var(--musgo); font-size: .92rem; line-height: 1.45; }
-.pilar-org li { position: relative; padding-left: 1.05rem; }
-.pilar-org li::before { content: ""; position: absolute; left: 0; top: .55em; width: .45rem; height: .45rem; border-radius: 50%; background: var(--fuerte); opacity: .75; }
-.pilar-menta { --suave: rgba(158, 208, 183, .45); --fuerte: #4f9a78; }
-.pilar-coral { --suave: rgba(238, 152, 132, .35); --fuerte: var(--coralp); }
-.pilar-mantequilla { --suave: rgba(244, 225, 161, .7); --fuerte: #b08a1e; }
-
-.modelo-raices { display: block; width: 100%; height: 4.5rem; overflow: visible; }
-.modelo-raices path { fill: none; stroke: #4f9e95; stroke-width: 2; stroke-dasharray: 3 7; stroke-linecap: round; vector-effect: non-scaling-stroke; opacity: .7; animation: savia 3s linear infinite; }
-@keyframes savia { to { stroke-dashoffset: -20; } }
-.modelo-suelo { position: relative; margin: -1.2rem calc(-1 * var(--pad)) 0; }
-.modelo-onda { display: block; width: 100%; margin-bottom: -1px; height: clamp(2.2rem, 4vw, 3.4rem); }
-.modelo-onda path { fill: rgba(153, 207, 200, .55); }
-.modelo-suelo-texto { margin-top: -3px; position: relative; padding: .4rem var(--pad) clamp(1.6rem, 3vw, 2.2rem); background: rgba(153, 207, 200, .55); text-align: center; }
-.modelo-suelo-texto .chip { background: rgba(255, 255, 255, .7); text-transform: none; letter-spacing: 0; }
-.modelo-suelo-texto h3 { font-size: clamp(1.25rem, 2.6vw, 1.7rem); margin: .5rem 0 .25rem; }
-.modelo-suelo-texto p { margin: 0 auto; max-width: 34rem; color: var(--bosque); opacity: .85; }
+/* ---------- Modelo del CIC en tarjetas: el ser, tres pilares y la base ---------- */
+.pilares-cards { display: grid; gap: clamp(1rem, 2.4vw, 1.5rem); margin-top: 1.4rem; }
+.pc-etiqueta { margin: 0 0 .2rem; font-size: .74rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--fuerte, var(--coralp)); }
+.pc-ancha { display: flex; align-items: center; gap: 1.2rem; padding: 1.3rem 1.6rem; border-radius: 1.6rem; border: 1px solid var(--linea); box-shadow: 0 14px 30px -26px rgba(46, 74, 62, .45); }
+.pc-ancha h3 { font-size: clamp(1.15rem, 2.2vw, 1.4rem); margin: 0 0 .2rem; }
+.pc-ancha p:last-child { margin: 0; color: var(--musgo); }
+.pc-icono { display: grid; place-items: center; width: 3.4rem; height: 3.4rem; flex-shrink: 0; border-radius: 50%; background: #fff; }
+.pc-icono svg { width: 1.7rem; height: 1.7rem; }
+.pc-ser { --fuerte: #6f61b0; background: rgba(189, 178, 228, .35); }
+.pc-ser .pc-icono svg { fill: var(--coral); }
+.pc-base { --fuerte: #2f7a70; background: rgba(153, 207, 200, .4); }
+.pc-base .pc-icono { color: #2f7a70; }
+.pc-pilares { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 2.4vw, 1.5rem); }
+.pc-pilar { display: flex; flex-direction: column; padding: .9rem .9rem 1.4rem; background: #fff; border: 1px solid var(--linea); border-radius: 1.6rem; box-shadow: 0 14px 30px -26px rgba(46, 74, 62, .45); transition: transform .35s cubic-bezier(.3, .7, .2, 1), box-shadow .35s; }
+.pc-pilar:hover, .js .pc-pilar.visible:hover { transform: translateY(-6px); box-shadow: var(--sombra); }
+.pc-figura { display: grid; place-items: center; aspect-ratio: 16 / 9; margin-bottom: 1rem; border-radius: 1.1rem; background: var(--tinte); transition: background .4s; }
+.pc-figura svg { width: 3.4rem; height: 3.4rem; overflow: visible; transition: transform .4s cubic-bezier(.3, .7, .2, 1); }
+.pc-figura svg > * { fill: rgba(255, 255, 255, .85); stroke: var(--fuerte); stroke-width: 3.5; stroke-linejoin: round; }
+.pc-pilar:hover .pc-figura { background: var(--tinte-fuerte); }
+.pc-pilar:hover .pc-figura svg { transform: scale(1.12) rotate(-4deg); }
+.pc-pilar .pc-etiqueta, .pc-pilar h3, .pc-pilar ul { margin-left: .4rem; margin-right: .4rem; }
+.pc-pilar h3 { font-size: 1.12rem; margin-top: 0; margin-bottom: .55rem; }
+.pc-pilar ul { list-style: none; margin-top: 0; margin-bottom: 0; padding: 0; display: grid; gap: .4rem; color: var(--musgo); font-size: .92rem; line-height: 1.45; }
+.pc-pilar li { position: relative; padding-left: 1.05rem; }
+.pc-pilar li::before { content: ""; position: absolute; left: 0; top: .55em; width: .45rem; height: .45rem; border-radius: 50%; background: var(--fuerte); opacity: .8; }
+.pc-menta { --tinte: rgba(158, 208, 183, .4); --tinte-fuerte: rgba(158, 208, 183, .7); --fuerte: #4f9a78; }
+.pc-coral { --tinte: rgba(238, 152, 132, .3); --tinte-fuerte: rgba(238, 152, 132, .55); --fuerte: var(--coralp); }
+.pc-mantequilla { --tinte: rgba(244, 225, 161, .55); --tinte-fuerte: rgba(244, 225, 161, .9); --fuerte: #a8841c; }
 @media (max-width: 860px) {
-    .modelo-ser { flex-direction: column; text-align: center; padding: 1.2rem; }
-    .modelo-pilares { grid-template-columns: 1fr; }
-    .pilar-org, .pilar-org:nth-child(n) { border-radius: 2rem; }
-    .modelo-raices { height: 2.4rem; }
-    .modelo-raices path:not(:nth-child(2)) { display: none; }
-    .modelo-suelo { margin-top: -.6rem; }
+    .pc-pilares { grid-template-columns: 1fr; }
+    .pc-figura { aspect-ratio: 16 / 6; }
+    .pc-ancha { align-items: flex-start; padding: 1.2rem; }
+    .pc-icono { width: 2.8rem; height: 2.8rem; }
 }
-@media (prefers-reduced-motion: reduce) { .modelo-halo span, .modelo-ser-icono::after, .pilar-forma, .modelo-raices path { animation: none; } }
+/* Figura grande dentro de cada tarjeta, con el texto centrado encima */
+.pc-pilar { position: relative; padding: 1.2rem; min-height: 24rem; justify-content: center; align-items: center; text-align: center; }
+.pc-forma { position: absolute; inset: 1.1rem; display: flex; align-items: center; justify-content: center; }
+.pc-forma svg { width: 100%; height: 100%; overflow: visible; transition: transform .45s cubic-bezier(.3, .7, .2, 1); }
+.pc-forma svg > * { fill: var(--tinte); stroke: var(--fuerte); stroke-width: 2.5; stroke-dasharray: 7 6; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: fill .4s; }
+.pc-pilar:hover .pc-forma svg { transform: scale(1.03); }
+.pc-pilar:hover .pc-forma svg > * { fill: var(--tinte-fuerte); }
+.pc-texto { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
+.pc-pilar .pc-etiqueta, .pc-pilar h3, .pc-pilar ul { margin-left: 0; margin-right: 0; }
+.pc-pilar h3 { font-size: 1.2rem; }
+.pc-pilar ul { justify-items: center; gap: .35rem; font-size: .9rem; }
+.pc-pilar li { padding-left: 0; }
+.pc-pilar li::before { position: static; display: inline-block; vertical-align: middle; margin: 0 .45rem .15rem 0; }
+.pc-triangulo .pc-texto { width: 58%; margin-top: 30%; }
+.pc-cuadrado .pc-texto { width: 76%; }
+.pc-circulo .pc-texto { width: 64%; }
+@media (max-width: 860px) {
+    .pc-pilar { min-height: 0; aspect-ratio: 1 / 1; max-width: 23rem; width: 100%; justify-self: center; }
+    .pc-triangulo .pc-texto { width: 60%; margin-top: 26%; }
+    .pc-pilar h3 { font-size: 1.08rem; }
+    .pc-pilar ul { font-size: .86rem; }
+}
+/* Animaciones e interacción de las figuras */
+.pc-pilar { overflow: hidden; outline: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pc-pilar:focus-visible { box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--fuerte); }
+.pc-forma { transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--s, 1)); transition: transform .25s ease-out; }
+.pc-pilar:hover .pc-forma, .pc-pilar:focus-visible .pc-forma { --s: 1.04; }
+.pc-pilar:hover .pc-forma svg { transform: none; }
+.pc-forma svg { animation: pc-flotar 6s ease-in-out infinite; }
+.pc-pilar:nth-child(2) .pc-forma svg { animation-delay: -2s; }
+.pc-pilar:nth-child(3) .pc-forma svg { animation-delay: -4s; }
+@keyframes pc-flotar { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-7px) rotate(1.5deg); } }
+.pc-forma svg > * { animation: pc-borde 16s linear infinite; }
+.pc-pilar:hover .pc-forma svg > *, .pc-pilar:focus-visible .pc-forma svg > * { animation-duration: 5s; fill: var(--tinte-fuerte); }
+@keyframes pc-borde { to { stroke-dashoffset: -260; } }
+.pc-texto { transform: translate(var(--tx, 0px), var(--ty, 0px)); transition: transform .25s ease-out; }
+.pc-pilar h3 { transition: color .3s; }
+.pc-pilar:hover h3 { color: var(--fuerte); }
+.js .pc-pilar:not(.visible) .pc-forma { opacity: 0; transform: scale(.55) rotate(-30deg); }
+.js .pc-pilar:not(.visible) .pc-texto { opacity: 0; transform: translateY(16px); }
+.js .pc-pilar.visible .pc-forma { animation: pc-entrar .9s cubic-bezier(.34, 1.56, .64, 1) both; }
+.js .pc-pilar.visible .pc-texto { animation: pc-texto .6s .35s ease-out both; }
+.js .pc-pilar.visible:nth-child(2) .pc-forma { animation-delay: .12s; } .js .pc-pilar.visible:nth-child(2) .pc-texto { animation-delay: .47s; }
+.js .pc-pilar.visible:nth-child(3) .pc-forma { animation-delay: .24s; } .js .pc-pilar.visible:nth-child(3) .pc-texto { animation-delay: .59s; }
+@keyframes pc-entrar { from { opacity: 0; transform: scale(.55) rotate(-30deg); } to { opacity: 1; transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--s, 1)); } }
+@keyframes pc-texto { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translate(var(--tx, 0px), var(--ty, 0px)); } }
+.pc-pilar.animado .pc-forma, .pc-pilar.animado .pc-texto { animation: none; }
+.pc-onda { position: absolute; z-index: 0; width: 1rem; height: 1rem; margin: -.5rem 0 0 -.5rem; border-radius: 50%; background: var(--fuerte); opacity: .3; pointer-events: none; animation: pc-onda .8s ease-out forwards; }
+@keyframes pc-onda { to { transform: scale(40); opacity: 0; } }
+.pc-pilar.latido .pc-forma svg { animation: pc-latido .55s ease; }
+@keyframes pc-latido { 0% { transform: scale(1); } 35% { transform: scale(1.08); } 65% { transform: scale(.97); } 100% { transform: scale(1); } }
+.pc-ancha .pc-icono { transition: transform .4s cubic-bezier(.34, 1.56, .64, 1); }
+.pc-ancha:hover .pc-icono { transform: scale(1.12) rotate(-8deg); }
+.pc-ser .pc-icono svg { animation: latido-suave 2.8s ease-in-out infinite; }
+@keyframes latido-suave { 0%, 100% { transform: scale(1); } 14% { transform: scale(1.15); } 28% { transform: scale(1); } 42% { transform: scale(1.08); } }
+.pc-base .pc-icono svg { transform-origin: 50% 100%; animation: mecer 4s ease-in-out infinite; }
+@keyframes mecer { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .pc-forma svg, .pc-forma svg > *, .pc-ser .pc-icono svg, .pc-base .pc-icono svg, .js .pc-pilar.visible .pc-forma, .js .pc-pilar.visible .pc-texto { animation: none !important; }
+    .pc-forma, .pc-texto { transform: none !important; }
+}

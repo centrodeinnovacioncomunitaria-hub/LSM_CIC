@@ -91,7 +91,7 @@ our %MODELO = (
     base_texto => 'Cada satélite conoce y activa los actores de su territorio.',
 );
 our @PILARES = (
-    { forma => 'triangulo', color => 'menta',       titulo => 'Acompañamiento',          puntos => ['Modelo de negocio.', 'Gestión financiera.'] },
+    { forma => 'circulo',   color => 'menta',       titulo => 'Acompañamiento',          puntos => ['Modelo de negocio.', 'Gestión financiera.'] },
     { forma => 'cuadrado',  color => 'coral',       titulo => 'Acceso a mercados',       puntos => ['Clusters, núcleos, programas y demás relacionados con la vinculación al mercado.', 'Relaciones públicas y relaciones externas.'] },
     { forma => 'circulo',   color => 'mantequilla', titulo => 'Acceso a financiamiento', puntos => ['Unidades de microfinanciamiento comunitario.', 'Educación financiera.', 'Nuevas fuentes de financiación.'] },
 );
@@ -190,32 +190,32 @@ sub bloque_mapa {
 HTML
 }
 
-# Bloque del modelo (inicio y El CIC): el ser envuelve todo como un halo, los tres pilares crecen
-# de la misma raíz y se apoyan en el ecosistema emprendedor, dibujado como un suelo ondulado.
+# Bloque del modelo (inicio y El CIC) en tarjetas: arriba el ser (lo que lo envuelve todo), en el medio
+# los tres pilares y abajo la base del ecosistema emprendedor.
 my %FIGURA = (
-    triangulo => q{<polygon points="32,5 60,55 4,55" />},
-    cuadrado  => q{<rect x="7" y="7" width="50" height="50" rx="9" />},
-    circulo   => q{<circle cx="32" cy="32" r="26" />},
+    triangulo => q{<svg viewBox="0 0 100 92"><path d="M50,5 Q53,5 55,9 L96,82 Q98,88 92,88 L8,88 Q2,88 4,82 L45,9 Q47,5 50,5 Z" /></svg>},
+    cuadrado  => q{<svg viewBox="0 0 100 100"><rect x="4" y="4" width="92" height="92" rx="16" /></svg>},
+    circulo   => q{<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" /></svg>},
 );
 sub pilares_lista {
+    my $n = 0;
     my $tarjetas = join "\n", map {
         my $p = $_;
+        $n++;
         my $puntos = join '', map { "<li>$_</li>" } @{ $p->{puntos} };
-        qq{                        <li class="pilar-org pilar-$p->{color} aparece"><span class="pilar-forma" aria-hidden="true"><svg viewBox="0 0 64 64">$FIGURA{$p->{forma}}</svg></span><h3>$p->{titulo}</h3><ul>$puntos</ul></li>}
+        qq{                        <li class="pc-pilar pc-$p->{color} pc-$p->{forma} aparece" tabindex="0"><div class="pc-forma" aria-hidden="true">$FIGURA{$p->{forma}}</div><div class="pc-texto"><p class="pc-etiqueta">Pilar $n</p><h3>$p->{titulo}</h3><ul>$puntos</ul></div></li>}
     } @PILARES;
-    return qq{                <div class="modelo-cic aparece">
-                    <div class="modelo-halo" aria-hidden="true"><span></span><span></span><span></span></div>
-                    <div class="modelo-ser">
-                        <span class="modelo-ser-icono" aria-hidden="true"><svg><use href="#isotipo"/></svg></span>
-                        <div><small>Lo que envuelve todo el modelo</small><h3>$MODELO{marco}</h3><p>$MODELO{marco_texto}</p></div>
+    return qq{                <div class="pilares-cards">
+                    <div class="pc-ancha pc-ser aparece">
+                        <span class="pc-icono" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 5.3 3.2 1.7-2 3.2-3.2 5.3-3.2 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z"/></svg></span>
+                        <div><p class="pc-etiqueta">Lo que lo envuelve todo</p><h3>Habilidades del ser</h3><p>$MODELO{marco_texto}</p></div>
                     </div>
-                    <ol class="modelo-pilares lista-limpia escalonado">
+                    <ol class="pc-pilares lista-limpia escalonado">
 $tarjetas
                     </ol>
-                    <svg class="modelo-raices" viewBox="0 0 1200 80" preserveAspectRatio="none" aria-hidden="true"><path d="M200,0 C200,46 400,30 420,80"/><path d="M600,0 C590,30 610,50 600,80"/><path d="M1000,0 C1000,46 800,30 780,80"/></svg>
-                    <div class="modelo-suelo">
-                        <svg class="modelo-onda" viewBox="0 0 1200 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0,34 C150,8 300,8 450,26 C600,44 750,50 900,30 C1020,14 1110,14 1200,24 L1200,60 L0,60 Z"/></svg>
-                        <div class="modelo-suelo-texto"><span class="chip">La base</span><h3>$MODELO{base}</h3><p>$MODELO{base_texto}</p></div>
+                    <div class="pc-ancha pc-base aparece">
+                        <span class="pc-icono" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22V11M12 11c0-4 3-7 8-7 0 5-3 8-8 7zM12 14c0-3-2.5-5.5-7-5.5 0 4 2.5 6.5 7 5.5zM4 22h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        <div><p class="pc-etiqueta">La base</p><h3>$MODELO{base}</h3><p>$MODELO{base_texto}</p></div>
                     </div>
                 </div>};
 }
