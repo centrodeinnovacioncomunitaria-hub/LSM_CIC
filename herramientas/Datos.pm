@@ -82,12 +82,18 @@ our @SER = (
 );
 
 # ---------------------------------------------------------------- Pilares
+# Estructura del modelo: el «software social» (habilidades del ser) envuelve tres pilares
+# que se apoyan sobre la apropiación del ecosistema emprendedor.
+our %MODELO = (
+    marco => 'Instalación del software social: habilidades del ser',
+    marco_texto => 'Confianza, liderazgo, derechos y cuidado de cada mujer: el ser envuelve todo el modelo.',
+    base => 'Apropiación del ecosistema emprendedor',
+    base_texto => 'Cada satélite conoce y activa los actores de su territorio.',
+);
 our @PILARES = (
-    ['bg-menta',       'Acompañamiento integral',   'Cada emprendedora recibe acompañamiento en su negocio: autoestima, modelo de negocio y finanzas.'],
-    ['bg-coral',       'Acceso a mercados',         'Conectar los negocios con clientes nuevos, ferias, gremios y aliados comerciales.'],
-    ['bg-mantequilla', 'Acceso a financiamiento',   'Educación financiera y ahorro y crédito en grupo, para no depender del «gota a gota».'],
-    ['bg-agua',        'Apropiación del ecosistema','Cada satélite conoce y activa los actores de su territorio.'],
-    ['bg-lavanda',     'Desarrollo del ser',        'La base de todo: confianza, liderazgo, derechos y cuidado de cada mujer.'],
+    { forma => 'circulo',   color => 'menta',       titulo => 'Acompañamiento',          puntos => ['Modelo de negocio.', 'Gestión financiera.'] },
+    { forma => 'cuadrado',  color => 'coral',       titulo => 'Acceso a mercados',       puntos => ['Clusters, núcleos, programas y demás relacionados con la vinculación al mercado.', 'Relaciones públicas y relaciones externas.'] },
+    { forma => 'circulo',   color => 'mantequilla', titulo => 'Acceso a financiamiento', puntos => ['Unidades de microfinanciamiento comunitario.', 'Educación financiera.', 'Nuevas fuentes de financiación.'] },
 );
 
 # ---------------------------------------------------------------- Mapa de la región Caribe
@@ -184,16 +190,39 @@ sub bloque_mapa {
 HTML
 }
 
-# Tarjetas de los cinco pilares (inicio y El CIC).
+# Bloque del modelo (inicio y El CIC) en tarjetas: arriba el ser (lo que lo envuelve todo), en el medio
+# los tres pilares en tarjetas de texto y abajo la base del ecosistema emprendedor.
+my @ICONO = (
+    q{<path d="M12 21s-7-4.4-9-8.6C1.6 9.3 3.4 6 6.6 6c1.9 0 3.2 1 4.2 2.4" /><path d="M8.5 13.5l2.2 2.2a1.6 1.6 0 002.3 0l4.5-4.5a2 2 0 00-2.8-2.8l-.7.7-1.3-1.3a2 2 0 00-2.8 0L8 9.8" />},
+    q{<path d="M4 10l1.5-5h13L20 10" /><path d="M4 10a2.7 2.7 0 005.3 0 2.7 2.7 0 005.4 0 2.7 2.7 0 005.3 0" /><path d="M5.5 12.5V20h13v-7.5" /><path d="M10 20v-4h4v4" />},
+    q{<ellipse cx="9" cy="7" rx="6" ry="2.6" /><path d="M3 7v4c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6V7" /><path d="M9 13.6c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6v4c0 1.4-2.7 2.6-6 2.6s-6-1.2-6-2.6z" />},
+);
+my @FRASE = (
+    'Su dinamizadora la acompaña en su propio negocio, semana a semana.',
+    'Conectar los negocios con clientes, ferias, gremios y aliados.',
+    'Recursos para crecer, sin depender del «gota a gota».',
+);
 sub pilares_lista {
     my $n = 0;
-    return join "
-", map {
-        my ($color, $titulo, $texto) = @$_;
-        $n++;
-        my $base = $titulo eq q{Desarrollo del ser} ? q{ pilar-base} : q{};
-        qq{                    <li class="tarjeta pilar aparece$base"><span class="numero $color">$n</span><h3>$titulo</h3><p>$texto</p></li>}
+    my $tarjetas = join "\n", map {
+        my $p = $_;
+        my $i = $n++;
+        my $puntos = join '', map { "<li>$_</li>" } @{ $p->{puntos} };
+        qq{                        <li class="pt-tarjeta pt-$p->{color} aparece"><div class="pt-cabeza"><span class="pt-icono" aria-hidden="true"><svg viewBox="0 0 24 24">$ICONO[$i]</svg></span><span class="pt-num">Pilar $n</span></div><h3>$p->{titulo}</h3><p class="pt-frase">$FRASE[$i]</p><ul>$puntos</ul></li>}
     } @PILARES;
+    return qq{                <div class="pilares-cards">
+                    <div class="pc-ancha pc-ser aparece">
+                        <span class="pc-icono" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 5.3 3.2 1.7-2 3.2-3.2 5.3-3.2 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z"/></svg></span>
+                        <div><p class="pc-etiqueta">Lo que lo envuelve todo</p><h3>Habilidades del ser</h3><p>$MODELO{marco_texto}</p></div>
+                    </div>
+                    <ol class="pt-pilares lista-limpia escalonado">
+$tarjetas
+                    </ol>
+                    <div class="pc-ancha pc-base aparece">
+                        <span class="pc-icono" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22V11M12 11c0-4 3-7 8-7 0 5-3 8-8 7zM12 14c0-3-2.5-5.5-7-5.5 0 4 2.5 6.5 7 5.5zM4 22h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                        <div><p class="pc-etiqueta">La base</p><h3>$MODELO{base}</h3><p>$MODELO{base_texto}</p></div>
+                    </div>
+                </div>};
 }
 
 # Lista accesible de satélites que acompaña al mapa.
