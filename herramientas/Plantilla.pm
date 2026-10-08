@@ -34,6 +34,7 @@ sub nav {
     my $cursos = $grupo->(qw(cursos gestion acompanar-hacer facilitar-ser));
     return <<"HTML";
             <nav id="nav-publica" class="nav" aria-label="Principal">
+                <a href="${P}#inicio">Inicio</a>
                 <div class="submenu">
                     <button type="button" class="submenu-btn$talleres" aria-expanded="false" aria-controls="sub-talleres">Talleres $f</button>
                     <ul id="sub-talleres" class="submenu-lista" hidden>
@@ -42,7 +43,6 @@ sub nav {
                     </ul>
                 </div>
                 <a href="${P}recursos/"@{[ $cur->('recursos') ]}>Recursos</a>
-                <a href="${P}#inicio">El CIC</a>
                 <a href="${P}foro/"@{[ $cur->('foro') ]}>Foro</a>
                 <div class="submenu">
                     <button type="button" class="submenu-btn$cursos" aria-expanded="false" aria-controls="sub-cursos">Equipo $f</button>
@@ -133,7 +133,7 @@ sub cabeza {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght\@6..12,400;6..12,600;6..12,700&family=Quicksand:wght\@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="${P}assets/cic.css?v=20261024">
+    <link rel="stylesheet" href="${P}assets/cic.css?v=20261025">
 $jsonld    <script>document.documentElement.classList.add('js');</script>
 </head>
 HTML
@@ -164,6 +164,6 @@ HTML
 }
 
 # Pie, guion del sitio y cierre de la página.
-sub final_pagina { my $P = shift; return "\n" . pie($P) . qq{\n    <script src="${P}assets/sitio.js?v=20261024"></script>\n</body>\n</html>\n} }
+sub final_pagina { my $P = shift; return "\n" . pie($P) . qq{\n    <script src="${P}assets/sitio.js?v=20261025"></script>\n</body>\n</html>\n} }
 
 1;
