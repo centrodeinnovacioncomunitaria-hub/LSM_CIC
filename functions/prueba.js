@@ -60,7 +60,10 @@ function cuentasFalsas() {
   const db = firestoreFalso();
   const cuentas = cuentasFalsas();
   const catalogo = { archivos: { 'hacer-1-guia': { archivo: 'guias/hacer-1-guia.pdf', nombre: 'Guía de la semana 1', tipo: 'PDF', publico: 'emprendedoras' }, 'gestion-guia': { archivo: 'material/gestion.pdf', nombre: 'Guía de estudio', tipo: 'PDF', publico: 'equipo' }, 'ser-1-estudio': { archivo: 'material/ser-1.pdf', nombre: 'Estudio SER 1', tipo: 'PDF', publico: 'equipo' } }, material: { gestion_general: ['gestion-guia'], 'facilitar-ser_1': ['ser-1-estudio'] } };
-  const { atender } = crearLogica({ db, cuentas, ahora: () => reloj, catalogo, leerArchivo: (r) => Buffer.from('%PDF ' + r) });
+  const enDrive = []; // llamadas al puente de Drive
+  let driveCaido = false;
+  const drive = async (c) => { if (driveCaido) throw new Error('sin conexión'); enDrive.push(c); return c.accion === 'subir' ? { ok: true, id: `drv${enDrive.length}`, url: `https://drive.google.com/file/d/drv${enDrive.length}/view` } : { ok: true }; };
+  const { atender } = crearLogica({ db, cuentas, ahora: () => reloj, catalogo, leerArchivo: (r) => Buffer.from('%PDF ' + r), drive });
   const pedir = async (accion, datos = {}, token = null) => atender({ accion, ...datos }, token);
   // Responde un intento con n respuestas correctas (las opciones llegan en orden aleatorio)
   const responder = (q, n) => q.preguntas.map((p, i) => (i < n ? p.opciones.indexOf('bien') : p.opciones.findIndex((o) => o !== 'bien')));
@@ -399,6 +402,27 @@ function cuentasFalsas() {
   await falla('seguimiento', { cedula: '44444444' }, tDina, 403); // ya no la tiene asignada
   assert.equal((await ok('mis-emprendimientos', {}, tDina)).emprendimientos.length, 0);
   paso('Emprendimientos: la Secretaría asigna por satélite; la dinamizadora chulea actividades y sube acta y herramienta');
+
+  // ---------- Copia en Google Drive ----------
+  const subidas = enDrive.filter((c) => c.accion === 'subir');
+  assert.ok(subidas.length >= 3, 'cada documento subido se copia en Drive');
+  assert.deepEqual(subidas[0].ruta, ['Magdalena · Santa Marta', 'Rosa Emprendedora · CC 44444444', 'HACER · Semana 1']);
+  assert.equal(subidas[0].nombre, 'Acta de la sesión · 2026-10-08.pdf');
+  assert.equal(subidas[1].reemplazar, 'drv1', 'al reemplazar, el archivo anterior va a la papelera de Drive');
+  assert.ok(enDrive.some((c) => c.accion === 'quitar'), 'al quitar un documento, también sale de Drive');
+  await ok('asignar', { cedulas: ['44444444'], dinamizadora: '22222222' }, tSara);
+  driveCaido = true;
+  sg = await ok('subir-documento', { ...act, tipo: 'herramienta', mime: 'image/jpeg', nombre: 'a1.jpg', base64: '/9j/4AAQ' }, tDina);
+  assert.equal(sg.actividades[0].documentos.herramienta.drive_pendiente, true, 'si Drive falla, el documento queda en la plataforma y pendiente');
+  assert.equal((await ok('emprendimientos', {}, tSara)).drive.pendientes, 1);
+  await falla('sincronizar-drive', {}, tDina, 403);
+  driveCaido = false;
+  const sync = await ok('sincronizar-drive', {}, tSara);
+  assert.deepEqual(sync, { enviados: 1, pendientes: 0 });
+  sg = await ok('seguimiento', { cedula: '44444444' }, tDina);
+  assert.ok(sg.actividades[0].documentos.herramienta.drive_url.startsWith('https://drive.google.com/'));
+  await ok('asignar', { cedulas: ['44444444'], dinamizadora: null }, tSara);
+  paso('Documentos de seguimiento: copia en Google Drive por satélite, emprendimiento y semana; pendientes se reenvían');
 
   // ---------- Mi cuenta ----------
   await falla('cambiar-clave', { clave_actual: 'mala', clave_nueva: 'OtraClave2026' }, tDina, 401);

@@ -84,7 +84,7 @@ const publico = (id, p) => ({
   creado_en: p.creado_en || null, debe_cambiar_clave: false,
 });
 
-function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archivos: {}, material: {} }, leerArchivo = () => null }) {
+function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archivos: {}, material: {} }, leerArchivo = () => null, drive = null }) {
   const CATALOGO = catalogo;
   const hoy = () => ahora().toISOString();
   const enMinutos = (m) => new Date(ahora().getTime() + m * 60000).toISOString();
@@ -502,7 +502,22 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     { tipo: 'acta', nombre: 'Acta de la sesión', detalle: 'Firmada por la emprendedora y la dinamizadora (foto o PDF).' },
     { tipo: 'herramienta', nombre: `Herramienta${a.herramientas.length > 1 ? 's' : ''} ${a.herramientas.join(', ')} diligenciada${a.herramientas.length > 1 ? 's' : ''}`, detalle: 'Foto o PDF de la herramienta trabajada en la sesión.' },
   ];
-  const metaDocumento = (m) => (m ? { nombre: m.nombre, mime: m.mime, bytes: m.bytes, subido_en: m.subido_en } : null);
+  const metaDocumento = (m) => (m ? { nombre: m.nombre, mime: m.mime, bytes: m.bytes, subido_en: m.subido_en, drive_url: m.drive_url || null, drive_pendiente: !!m.drive_pendiente } : null);
+  // Copia en Google Drive: «CIC · Documentos de seguimiento / Satélite / Emprendimiento · CC / HACER · Semana N»
+  const driveActivo = () => !!(drive && (!drive.activo || drive.activo()));
+  const nombreSatelite = (id) => (SATELITES[id] ? `${SATELITES[id].departamento} · ${SATELITES[id].municipios.join(' y ')}` : 'Sin satélite');
+  const rutaDrive = (e, a) => [nombreSatelite(e.satelite), `${e.nombre} · CC ${e.cedula}`, a.ruta === 'hacer' ? `HACER · Semana ${a.n}` : `SER · Taller ${a.n}`];
+  const nombreDrive = (a, tipo, mime, fecha) => `${tipo === 'acta' ? 'Acta de la sesión' : `Herramientas ${a.herramientas.join('-')}`}${fecha ? ` · ${fecha}` : ''}.${TIPOS_ARCHIVO[mime] || 'bin'}`;
+  async function copiarEnDrive(e, a, tipo, mime, base64, fecha, anterior) {
+    if (!driveActivo()) return {};
+    try {
+      const r = await drive({ accion: 'subir', ruta: rutaDrive(e, a), nombre: nombreDrive(a, tipo, mime, fecha), mime, base64, reemplazar: (anterior && anterior.drive_id) || null });
+      return r && r.id ? { drive_id: r.id, drive_url: r.url || null, drive_pendiente: false } : { drive_pendiente: true };
+    } catch (err) {
+      console.error('No se pudo copiar en Drive:', err.message);
+      return { drive_pendiente: true };
+    }
+  }
   function avanceDe(filas) {
     const ejecutadas = filas.filter((x) => x.ejecutada === true);
     return {
@@ -538,7 +553,37 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     return {
       dinamizadoras,
       emprendimientos: emp.map((x) => filaEmprendimiento(x, avance, nombres)).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+      drive: { activo: driveActivo(), pendientes: driveActivo() ? (await documentosSinDrive()).length : 0 },
     };
+  }
+  async function documentosSinDrive() {
+    const faltan = [];
+    for (const x of await lista(col('seguimiento'))) {
+      for (const t of TIPOS_DOCUMENTO) { const m = x.documentos && x.documentos[t]; if (m && !m.drive_id) faltan.push([x, t]); }
+    }
+    return faltan;
+  }
+  // Envía a Drive los documentos que aún no tienen copia (los de antes del puente o los que fallaron). Por tandas.
+  async function sincronizarDrive(token) {
+    const p = await usuarioDelToken(token);
+    if (p.rol !== 'secretaria' && !esAdmin(p)) throw new Falla(403, 'permiso', 'Solo la Secretaría Técnica envía documentos a Drive.');
+    if (!driveActivo()) throw new Falla(400, 'drive', 'La copia en Google Drive todavía no está configurada.');
+    const faltan = await documentosSinDrive();
+    let enviados = 0;
+    for (const [x, t] of faltan.slice(0, 15)) {
+      const e = await perfilPorId(x.emprendedora);
+      const a = actividadDe(x.ruta, x.n);
+      if (!e || !a) continue;
+      const m = x.documentos[t];
+      let base64 = '';
+      for (let i = 0; i < m.partes; i++) { const parte = await datos(col('documentos').doc(`${idSeguimiento(x.emprendedora, a)}_${t}_${i}`)); base64 += parte ? parte.parte : ''; }
+      const enDrive = await copiarEnDrive(e, a, t, m.mime, base64, x.fecha, null);
+      if (!enDrive.drive_id) continue;
+      const fila = await datos(col('seguimiento').doc(idSeguimiento(x.emprendedora, a)));
+      await col('seguimiento').doc(idSeguimiento(x.emprendedora, a)).set({ ...fila, documentos: { ...fila.documentos, [t]: { ...fila.documentos[t], ...enDrive } } });
+      enviados++;
+    }
+    return { enviados, pendientes: (await documentosSinDrive()).length };
   }
   async function asignar(token, b) {
     const p = await usuarioDelToken(token);
@@ -637,7 +682,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const anterior = fila.documentos && fila.documentos[b.tipo];
     if (anterior && anterior.partes > partes) await borrarPartes(base, partes, anterior.partes);
     const nombre = (texto(b.nombre, 120) || b.tipo).replace(/[\\/:*?"<>|]+/g, '_');
-    await col('seguimiento').doc(id).set({ ...fila, documentos: { ...(fila.documentos || {}), [b.tipo]: { nombre, mime, bytes, partes, subido_por: p.id, subido_en: hoy() } } });
+    const enDrive = await copiarEnDrive(e, a, b.tipo, mime, base64, fila.fecha, anterior);
+    await col('seguimiento').doc(id).set({ ...fila, documentos: { ...(fila.documentos || {}), [b.tipo]: { nombre, mime, bytes, partes, subido_por: p.id, subido_en: hoy(), ...enDrive } } });
     return verSeguimiento(token, b);
   }
   async function verDocumento(token, b) {
@@ -658,6 +704,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const fila = await datos(col('seguimiento').doc(id));
     const m = fila && fila.documentos && fila.documentos[b.tipo];
     if (m) {
+      if (m.drive_id && driveActivo()) await drive({ accion: 'quitar', id: m.drive_id }).catch((err) => console.error('Drive:', err.message));
       await borrarPartes(`${id}_${b.tipo}`, 0, m.partes);
       const documentos = { ...fila.documentos };
       delete documentos[b.tipo];
@@ -1058,6 +1105,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
         case 'subir-documento': r = await subirDocumento(token, b); break;
         case 'ver-documento': r = await verDocumento(token, b); break;
         case 'quitar-documento': r = await quitarDocumento(token, b); break;
+        case 'sincronizar-drive': r = await sincronizarDrive(token); break;
         // Cursos del equipo
         case 'mi-progreso': r = await miProgreso(token); break;
         case 'marcar': r = await marcar(token, b); break;

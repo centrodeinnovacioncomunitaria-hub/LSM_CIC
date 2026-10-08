@@ -1459,3 +1459,7 @@ button.descarga:disabled, button.archivo:disabled { opacity: .6; cursor: progres
 .video-tapa { position: absolute; top: 0; left: 0; right: 0; height: 3.6rem; z-index: 2; background: transparent; }
 .video-grande iframe { z-index: 1; }
 @media (max-width: 640px) { .video-tapa { height: 2.8rem; } }
+.emp-drive { display: inline-block; margin-top: .25rem; font-size: .8rem; font-weight: 700; color: #2f7a70; }
+.emp-drive-ok { color: #2f7a70 !important; }
+.emp-drive-pend { color: var(--coralp) !important; }
+.emp-drive-barra { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin: 0 0 1rem; padding: .7rem 1rem; border-radius: 1rem; background: rgba(153, 207, 200, .25); border: 1px solid rgba(153, 207, 200, .6); font-size: .9rem; }

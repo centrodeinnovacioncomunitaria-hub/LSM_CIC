@@ -51,6 +51,7 @@
                 <p class="vista-intro">Asigna cada emprendimiento a una dinamizadora de su mismo satélite. Ella marcará si cada actividad se ejecutó y subirá el acta y la herramienta diligenciada.</p></div>
                 <div class="emp-kpis"><span><b>${emp.length}</b> emprendimientos</span><span class="${sin ? 'emp-alerta' : ''}"><b>${sin}</b> sin asignar</span></div>
             </div>
+            ${estadoS.datos.drive && estadoS.datos.drive.activo ? `<p class="emp-drive-barra">📁 Los documentos se guardan también en Google Drive, en la carpeta «CIC · Documentos de seguimiento», ordenados por satélite, emprendimiento y semana.${estadoS.datos.drive.pendientes ? ` <button type="button" class="btn btn-borde btn-pequeno" data-sincronizar>Enviar a Drive ${estadoS.datos.drive.pendientes} pendiente${estadoS.datos.drive.pendientes > 1 ? 's' : ''}</button>` : ''}</p>` : ''}
             <div class="controles">
                 <div style="flex:0 1 13rem"><label class="etiqueta" for="emp-sat">Satélite</label><select id="emp-sat" class="campo"><option value="">Todos</option>${sats.map((s) => `<option value="${esc(s.id)}" ${estadoS.sat === s.id ? 'selected' : ''}>${esc(s.nombre)}</option>`).join('')}</select></div>
                 <div style="flex:0 1 12rem"><label class="etiqueta" for="emp-filtro">Mostrar</label><select id="emp-filtro" class="campo"><option value="">Todos</option><option value="sin" ${estadoS.filtro === 'sin' ? 'selected' : ''}>Sin asignar</option><option value="con" ${estadoS.filtro === 'con' ? 'selected' : ''}>Asignados</option></select></div>
@@ -60,6 +61,16 @@
             <div id="emp-tabla"></div>`;
         pintarTabla(cont);
         $('#emp-sat', cont).addEventListener('change', (e) => { estadoS.sat = e.target.value; estadoS.sel.clear(); pintarTabla(cont); });
+        const sinc = $('[data-sincronizar]', cont);
+        if (sinc) sinc.addEventListener('click', async () => {
+            sinc.disabled = true; sinc.textContent = 'Enviando…';
+            try {
+                const r = await C.llamar('sincronizar-drive', {}, true);
+                C.aviso(r.pendientes ? `Se enviaron ${r.enviados}. Quedan ${r.pendientes}: vuelve a tocar el botón.` : `Listo: se enviaron ${r.enviados} documentos a Google Drive.`);
+                estadoS.datos = await C.llamar('emprendimientos', {}, true);
+                pintarSecretaria(cont);
+            } catch (e) { C.aviso(e.message); sinc.disabled = false; sinc.textContent = 'Enviar a Drive'; }
+        });
         $('#emp-filtro', cont).addEventListener('change', (e) => { estadoS.filtro = e.target.value; pintarTabla(cont); });
         $('#emp-buscar', cont).addEventListener('input', (e) => { estadoS.texto = e.target.value; pintarTabla(cont); });
     }
@@ -176,7 +187,7 @@
                     const m = a.documentos[d.tipo];
                     return `<li class="emp-doc ${m ? 'subido' : ''}">
                         <span class="emp-doc-icono" aria-hidden="true">${m ? '✓' : d.tipo === 'acta' ? '📝' : '🧰'}</span>
-                        <div class="emp-doc-texto"><b>${esc(d.nombre)}</b><small>${m ? `${esc(m.nombre)} · ${kb(m.bytes)}` : esc(d.detalle)}</small></div>
+                        <div class="emp-doc-texto"><b>${esc(d.nombre)}</b><small>${m ? `${esc(m.nombre)} · ${kb(m.bytes)}` : esc(d.detalle)}</small>${m && m.drive_url && C.perfil.rol === 'secretaria' ? `<a class="emp-drive" href="${esc(m.drive_url)}" target="_blank" rel="noopener">Abrir en Google Drive</a>` : m && m.drive_url ? '<small class="emp-drive-ok">✓ Copia guardada en Google Drive</small>' : m && m.drive_pendiente ? '<small class="emp-drive-pend">Copia en Google Drive pendiente</small>' : ''}</div>
                         <div class="emp-doc-acciones">
                             ${m ? `<button type="button" class="boton-texto" data-ver-doc="${d.tipo}">Ver</button>` : ''}
                             <label class="btn ${m ? 'btn-borde' : 'btn-primario'} btn-pequeno emp-subir">${m ? 'Reemplazar' : 'Subir foto o PDF'}<input type="file" accept="image/*,application/pdf" data-subir="${d.tipo}" hidden></label>
