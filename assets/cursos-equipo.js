@@ -646,8 +646,8 @@
             .c{position:relative;width:min(1000px,100%);aspect-ratio:1.414;background:#fff;border-radius:18px;padding:44px 64px 36px;display:flex;flex-direction:column;align-items:center;text-align:center;box-shadow:0 10px 40px rgba(46,74,62,.12);overflow:hidden}
             .c::before{content:"";position:absolute;inset:14px;border:2px solid #9ED0B7;border-radius:12px;pointer-events:none}
             .c::after{content:"";position:absolute;inset:20px;border:1px solid #F4E1A1;border-radius:9px;pointer-events:none}
-            .marca{letter-spacing:.22em;text-transform:uppercase;font-size:12px;font-weight:700;color:#B04A36;margin:0}
-            h1{font-family:Quicksand,Arial,sans-serif;font-size:46px;margin:.15em 0 .05em;letter-spacing:.02em}
+            .logo-cic{display:flex;align-items:center;gap:10px;text-align:left}.logo-cic svg{width:54px;height:54px}.logo-cic b{display:block;font-family:Quicksand,Arial,sans-serif;font-size:38px;line-height:.9;letter-spacing:-.02em}.logo-cic small{display:block;font-family:Quicksand,Arial,sans-serif;font-weight:600;font-size:12px;color:#4F6B5E}
+            h1{font-family:Quicksand,Arial,sans-serif;font-size:44px;margin:.25em 0 .05em;letter-spacing:.02em}
             .sub{font-size:15px;margin:0 0 18px;color:#4F6B5E;text-transform:uppercase;letter-spacing:.14em}
             p{font-size:17px;line-height:1.6;margin:.3em 0;max-width:760px}
             .n{font-family:Quicksand,Arial,sans-serif;font-size:34px;font-weight:700;margin:.25em 0;color:#B04A36;border-bottom:2px solid #F4E1A1;padding:0 28px .1em}
@@ -661,7 +661,7 @@
             @media print{body{background:#fff;padding:0;min-height:0}.c{box-shadow:none;border-radius:0;width:297mm;height:210mm;aspect-ratio:auto}.acciones{display:none}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
             @media (max-width:700px){.c{aspect-ratio:auto;padding:36px 28px}h1{font-size:32px}.n{font-size:26px}.firmas{gap:24px;flex-wrap:wrap}.logos{flex-wrap:wrap;gap:16px}}</style></head>
             <body><div class="c">
-            <p class="marca">Centro de Innovación Comunitaria · CIC</p>
+            <div class="logo-cic"><svg viewBox="12 12 96 96" aria-hidden="true"><path d="M60,104 C30,100 14,78 18,44 C44,50 58,70 60,104 Z" fill="#9ED0B7" style="mix-blend-mode:multiply"/><path d="M60,104 C90,100 106,78 102,44 C76,50 62,70 60,104 Z" fill="#F2B592" style="mix-blend-mode:multiply"/><circle cx="60" cy="30" r="12" fill="#EE9884"/></svg><span><b>cic</b><small>Centro de Innovación Comunitaria</small></span></div>
             <h1>Certificado</h1><p class="sub">de aprobación</p>
             <p>El Centro de Innovación Comunitaria (CIC) de la Red de Mujeres del Caribe y APRODEFA</p>
             <p><b>hacen constar que</b></p>

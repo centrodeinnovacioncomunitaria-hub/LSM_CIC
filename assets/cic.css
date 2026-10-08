@@ -1302,41 +1302,60 @@ button.descarga:disabled, button.archivo:disabled { opacity: .6; cursor: progres
 .bienvenida-texto { margin-bottom: 1rem; }
 .bienvenida-texto h3 { margin: .5rem 0 .4rem; }
 
-/* ---------- Modelo del CIC: el ser envuelve tres pilares que se apoyan en el ecosistema ---------- */
-.modelo-cic { position: relative; margin-top: 2.2rem; padding: 4rem clamp(1.2rem, 3vw, 2.6rem) clamp(1.4rem, 3vw, 2.4rem); border: 3px dotted #9d90d4; border-radius: 2.6rem; background: rgba(255, 255, 255, .55); }
-.modelo-marco { position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: .75rem; width: max-content; max-width: calc(100% - 2rem); margin: 0; padding: .55rem 1.4rem .55rem .55rem; background: #fff; border: 1.5px solid var(--bosque); border-radius: 999px; font: 700 clamp(1rem, 2vw, 1.25rem)/1.3 var(--titulo); box-shadow: 0 12px 26px -20px rgba(46, 74, 62, .5); }
-.modelo-marco .numero { width: 2.3rem; height: 2.3rem; flex-shrink: 0; font-size: 1rem; }
-.modelo-marco-texto { text-align: center; color: var(--musgo); max-width: 40rem; margin: 0 auto 2.2rem; }
-.modelo-figuras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 3vw, 2.4rem); align-items: end; }
-.figura { position: relative; width: 100%; max-width: 20rem; justify-self: center; transition: transform .35s cubic-bezier(.3, .7, .2, 1); }
-.figura-triangulo { aspect-ratio: 200 / 176; }
-.figura-cuadrado, .figura-circulo { aspect-ratio: 1; }
-.figura-forma { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.figura-forma > * { fill: var(--relleno); stroke: var(--trazo); stroke-width: 2.5; stroke-dasharray: 7 6; vector-effect: non-scaling-stroke; stroke-linejoin: round; transition: stroke-dashoffset 1.2s ease; }
-.figura-triangulo .figura-forma > * { stroke-dasharray: 2 6; stroke-linecap: round; }
-.figura:hover .figura-forma > * { stroke-dashoffset: -26; }
-.figura-menta { --relleno: rgba(158, 208, 183, .28); --trazo: #5c9f80; }
-.figura-coral { --relleno: rgba(238, 152, 132, .2); --trazo: var(--coralp); }
-.figura-mantequilla { --relleno: rgba(244, 225, 161, .38); --trazo: #b8952a; }
-.figura-texto { position: absolute; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-.figura-triangulo .figura-texto { left: 21%; right: 21%; top: 40%; bottom: 5%; }
-.figura-cuadrado .figura-texto { inset: 9%; }
-.figura-circulo .figura-texto { inset: 15%; }
-.figura-texto .numero { width: 2.3rem; height: 2.3rem; margin: 0 0 .45rem; font-size: 1rem; }
-.figura-texto h3 { font-size: clamp(.98rem, 1.5vw, 1.1rem); margin: 0 0 .35rem; }
-.figura-texto ul { margin: 0; padding-left: 1.05rem; text-align: left; color: var(--musgo); font-size: clamp(.8rem, 1.15vw, .9rem); line-height: 1.4; display: grid; gap: .15rem; }
-.js .figura.visible:hover, .figura:hover { transform: translateY(-6px); }
-.modelo-base { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 2rem; padding: 1.3rem 1.6rem; border: 2px dashed #4f9e95; border-radius: 1.4rem; background: rgba(153, 207, 200, .25); }
-.modelo-base .numero { width: 2.6rem; height: 2.6rem; flex-shrink: 0; }
-.modelo-base h3 { font-size: clamp(1.2rem, 2.4vw, 1.6rem); margin: 0; }
-.modelo-base p { color: var(--musgo); margin: .15rem 0 0; }
+/* ---------- Modelo del CIC: el ser envuelve, tres pilares crecen y el ecosistema los sostiene ---------- */
+.modelo-cic { --pad: clamp(1rem, 3vw, 2.6rem); position: relative; isolation: isolate; overflow: hidden; margin-top: 1.4rem; padding: clamp(1.6rem, 4vw, 2.8rem) var(--pad) 0; border-radius: 3rem 3rem 2.2rem 2.2rem; background: linear-gradient(180deg, rgba(189, 178, 228, .38), rgba(255, 255, 255, .5) 62%); }
+.modelo-halo { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.modelo-halo span { position: absolute; border-radius: 50%; filter: blur(48px); opacity: .55; animation: halo-flotar 16s ease-in-out infinite alternate; }
+.modelo-halo span:nth-child(1) { width: 38%; aspect-ratio: 1; left: -6%; top: -10%; background: var(--lavanda); }
+.modelo-halo span:nth-child(2) { width: 30%; aspect-ratio: 1; right: -4%; top: 6%; background: var(--durazno); animation-delay: -5s; opacity: .4; }
+.modelo-halo span:nth-child(3) { width: 34%; aspect-ratio: 1; left: 34%; top: 30%; background: var(--menta); animation-delay: -9s; opacity: .3; }
+@keyframes halo-flotar { from { transform: translate(0, 0) scale(1); } to { transform: translate(4%, 6%) scale(1.08); } }
+
+.modelo-ser { display: flex; align-items: center; gap: 1.1rem; max-width: 46rem; margin: 0 auto clamp(1.8rem, 4vw, 2.6rem); padding: .9rem 1.7rem .9rem .9rem; border-radius: 2rem; background: rgba(255, 255, 255, .78); backdrop-filter: blur(8px); box-shadow: 0 18px 36px -28px rgba(46, 74, 62, .55); }
+.modelo-ser-icono { position: relative; display: grid; place-items: center; width: 3.8rem; height: 3.8rem; flex-shrink: 0; border-radius: 50%; background: #fff; }
+.modelo-ser-icono::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px dashed #9d90d4; animation: girar 22s linear infinite; }
+.modelo-ser-icono svg { width: 2.4rem; height: 2.4rem; }
+.modelo-ser small { display: block; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #6f61b0; }
+.modelo-ser h3 { font-size: clamp(1.05rem, 2vw, 1.3rem); margin: .1rem 0 .2rem; }
+.modelo-ser p { margin: 0; color: var(--musgo); font-size: .92rem; }
+@keyframes girar { to { transform: rotate(360deg); } }
+
+.modelo-pilares { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(.9rem, 2.4vw, 1.8rem); align-items: stretch; }
+.pilar-org { position: relative; display: flex; flex-direction: column; align-items: flex-start; height: 100%; padding: 1.5rem 1.4rem 1.5rem; background: #fff; border-radius: 2.4rem; box-shadow: 0 20px 40px -30px rgba(46, 74, 62, .55); transition: transform .35s cubic-bezier(.3, .7, .2, 1), box-shadow .35s; }
+.pilar-org:nth-child(1) { border-radius: 2.4rem 2.4rem 2.4rem .9rem; }
+.pilar-org:nth-child(3) { border-radius: 2.4rem 2.4rem .9rem 2.4rem; }
+.pilar-org:hover, .js .pilar-org.visible:hover { transform: translateY(-6px); box-shadow: var(--sombra); }
+.pilar-forma { position: relative; display: grid; place-items: center; width: 4.4rem; height: 4.4rem; margin-bottom: 1rem; border-radius: 46% 54% 52% 48% / 55% 45% 55% 45%; background: var(--suave); animation: forma-flotar 6s ease-in-out infinite; }
+.pilar-org:nth-child(2) .pilar-forma { animation-delay: -2s; border-radius: 55% 45% 48% 52% / 45% 55% 45% 55%; }
+.pilar-org:nth-child(3) .pilar-forma { animation-delay: -4s; }
+.pilar-forma svg { width: 2.7rem; height: 2.7rem; overflow: visible; }
+.pilar-forma svg > * { fill: rgba(255, 255, 255, .75); stroke: var(--fuerte); stroke-width: 3; stroke-dasharray: 5 4; stroke-linejoin: round; stroke-linecap: round; transition: stroke-dashoffset 1.2s ease; }
+.pilar-org:hover .pilar-forma svg > * { stroke-dashoffset: -18; }
+@keyframes forma-flotar { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-5px) rotate(-3deg); } }
+.pilar-org h3 { font-size: 1.14rem; margin: 0 0 .55rem; }
+.pilar-org ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; color: var(--musgo); font-size: .92rem; line-height: 1.45; }
+.pilar-org li { position: relative; padding-left: 1.05rem; }
+.pilar-org li::before { content: ""; position: absolute; left: 0; top: .55em; width: .45rem; height: .45rem; border-radius: 50%; background: var(--fuerte); opacity: .75; }
+.pilar-menta { --suave: rgba(158, 208, 183, .45); --fuerte: #4f9a78; }
+.pilar-coral { --suave: rgba(238, 152, 132, .35); --fuerte: var(--coralp); }
+.pilar-mantequilla { --suave: rgba(244, 225, 161, .7); --fuerte: #b08a1e; }
+
+.modelo-raices { display: block; width: 100%; height: 4.5rem; overflow: visible; }
+.modelo-raices path { fill: none; stroke: #4f9e95; stroke-width: 2; stroke-dasharray: 3 7; stroke-linecap: round; vector-effect: non-scaling-stroke; opacity: .7; animation: savia 3s linear infinite; }
+@keyframes savia { to { stroke-dashoffset: -20; } }
+.modelo-suelo { position: relative; margin: -1.2rem calc(-1 * var(--pad)) 0; }
+.modelo-onda { display: block; width: 100%; margin-bottom: -1px; height: clamp(2.2rem, 4vw, 3.4rem); }
+.modelo-onda path { fill: rgba(153, 207, 200, .55); }
+.modelo-suelo-texto { margin-top: -3px; position: relative; padding: .4rem var(--pad) clamp(1.6rem, 3vw, 2.2rem); background: rgba(153, 207, 200, .55); text-align: center; }
+.modelo-suelo-texto .chip { background: rgba(255, 255, 255, .7); text-transform: none; letter-spacing: 0; }
+.modelo-suelo-texto h3 { font-size: clamp(1.25rem, 2.6vw, 1.7rem); margin: .5rem 0 .25rem; }
+.modelo-suelo-texto p { margin: 0 auto; max-width: 34rem; color: var(--bosque); opacity: .85; }
 @media (max-width: 860px) {
-    .modelo-cic { padding-top: 4.6rem; }
-    .modelo-figuras { grid-template-columns: 1fr; gap: 1.4rem; }
-    .figura { max-width: 19rem; }
-    .figura-texto ul { font-size: .88rem; }
-    .modelo-base { flex-direction: column; text-align: center; }
+    .modelo-ser { flex-direction: column; text-align: center; padding: 1.2rem; }
+    .modelo-pilares { grid-template-columns: 1fr; }
+    .pilar-org, .pilar-org:nth-child(n) { border-radius: 2rem; }
+    .modelo-raices { height: 2.4rem; }
+    .modelo-raices path:not(:nth-child(2)) { display: none; }
+    .modelo-suelo { margin-top: -.6rem; }
 }
-.modelo-punto { width: 1.1rem; height: 1.1rem; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 5px rgba(255, 255, 255, .8); }
-.modelo-marco { padding-left: 1rem; }
-.modelo-base .modelo-punto { box-shadow: 0 0 0 5px rgba(255, 255, 255, .6); }
+@media (prefers-reduced-motion: reduce) { .modelo-halo span, .modelo-ser-icono::after, .pilar-forma, .modelo-raices path { animation: none; } }

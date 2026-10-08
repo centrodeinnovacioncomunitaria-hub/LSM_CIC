@@ -190,28 +190,33 @@ sub bloque_mapa {
 HTML
 }
 
-# Bloque del modelo (inicio y El CIC): marco del ser, tres figuras y la base del ecosistema.
+# Bloque del modelo (inicio y El CIC): el ser envuelve todo como un halo, los tres pilares crecen
+# de la misma raíz y se apoyan en el ecosistema emprendedor, dibujado como un suelo ondulado.
 my %FIGURA = (
-    triangulo => q{<polygon points="100,6 196,170 4,170" />},
-    cuadrado  => q{<rect x="6" y="6" width="188" height="188" rx="10" />},
-    circulo   => q{<circle cx="100" cy="100" r="94" />},
+    triangulo => q{<polygon points="32,5 60,55 4,55" />},
+    cuadrado  => q{<rect x="7" y="7" width="50" height="50" rx="9" />},
+    circulo   => q{<circle cx="32" cy="32" r="26" />},
 );
 sub pilares_lista {
-    my $n = 0;
-    my $figuras = join "\n", map {
+    my $tarjetas = join "\n", map {
         my $p = $_;
-        $n++;
-        my $caja = $p->{forma} eq 'triangulo' ? '0 0 200 176' : '0 0 200 200';
         my $puntos = join '', map { "<li>$_</li>" } @{ $p->{puntos} };
-        qq{                        <li class="figura figura-$p->{forma} figura-$p->{color} aparece"><svg class="figura-forma" viewBox="$caja" preserveAspectRatio="none" aria-hidden="true">$FIGURA{$p->{forma}}</svg><div class="figura-texto"><span class="numero bg-$p->{color}">$n</span><h3>$p->{titulo}</h3><ul>$puntos</ul></div></li>}
+        qq{                        <li class="pilar-org pilar-$p->{color} aparece"><span class="pilar-forma" aria-hidden="true"><svg viewBox="0 0 64 64">$FIGURA{$p->{forma}}</svg></span><h3>$p->{titulo}</h3><ul>$puntos</ul></li>}
     } @PILARES;
     return qq{                <div class="modelo-cic aparece">
-                    <p class="modelo-marco"><span class="modelo-punto bg-lavanda" aria-hidden="true"></span>$MODELO{marco}</p>
-                    <p class="modelo-marco-texto">$MODELO{marco_texto}</p>
-                    <ol class="modelo-figuras lista-limpia escalonado">
-$figuras
+                    <div class="modelo-halo" aria-hidden="true"><span></span><span></span><span></span></div>
+                    <div class="modelo-ser">
+                        <span class="modelo-ser-icono" aria-hidden="true"><svg><use href="#isotipo"/></svg></span>
+                        <div><small>Lo que envuelve todo el modelo</small><h3>$MODELO{marco}</h3><p>$MODELO{marco_texto}</p></div>
+                    </div>
+                    <ol class="modelo-pilares lista-limpia escalonado">
+$tarjetas
                     </ol>
-                    <div class="modelo-base aparece"><span class="modelo-punto bg-agua" aria-hidden="true"></span><div><h3>$MODELO{base}.</h3><p>$MODELO{base_texto}</p></div></div>
+                    <svg class="modelo-raices" viewBox="0 0 1200 80" preserveAspectRatio="none" aria-hidden="true"><path d="M200,0 C200,46 400,30 420,80"/><path d="M600,0 C590,30 610,50 600,80"/><path d="M1000,0 C1000,46 800,30 780,80"/></svg>
+                    <div class="modelo-suelo">
+                        <svg class="modelo-onda" viewBox="0 0 1200 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0,34 C150,8 300,8 450,26 C600,44 750,50 900,30 C1020,14 1110,14 1200,24 L1200,60 L0,60 Z"/></svg>
+                        <div class="modelo-suelo-texto"><span class="chip">La base</span><h3>$MODELO{base}</h3><p>$MODELO{base_texto}</p></div>
+                    </div>
                 </div>};
 }
 
