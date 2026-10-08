@@ -220,31 +220,4 @@
         }, { rootMargin: '-35% 0px -55% 0px' });
         secciones.forEach((s) => io.observe(s));
     });
-
-    // Tarjetas de pilares: la figura se inclina siguiendo el mouse y, al tocarla, late y suelta una onda
-    const sinMovimiento = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    $$('.pc-pilar').forEach((t) => {
-        const forma = $('.pc-forma', t), texto = $('.pc-texto', t);
-        t.addEventListener('animationend', (e) => { if (e.target === texto) t.classList.add('animado'); });
-        if (sinMovimiento) return;
-        t.addEventListener('pointermove', (e) => {
-            if (e.pointerType !== 'mouse') return;
-            const r = t.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
-            forma.style.setProperty('--ry', (x * 14).toFixed(1) + 'deg');
-            forma.style.setProperty('--rx', (-y * 14).toFixed(1) + 'deg');
-            texto.style.setProperty('--tx', (x * 10).toFixed(1) + 'px');
-            texto.style.setProperty('--ty', (y * 10).toFixed(1) + 'px');
-        });
-        t.addEventListener('pointerleave', () => { ['--rx', '--ry'].forEach((v) => forma.style.removeProperty(v)); ['--tx', '--ty'].forEach((v) => texto.style.removeProperty(v)); });
-        const tocar = (x, y) => {
-            const onda = document.createElement('span');
-            onda.className = 'pc-onda';
-            onda.style.left = x + 'px'; onda.style.top = y + 'px';
-            t.appendChild(onda);
-            onda.addEventListener('animationend', () => onda.remove());
-            t.classList.remove('latido'); void t.offsetWidth; t.classList.add('latido');
-        };
-        t.addEventListener('click', (e) => { const r = t.getBoundingClientRect(); tocar(e.clientX - r.left, e.clientY - r.top); });
-        t.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tocar(t.offsetWidth / 2, t.offsetHeight / 2); } });
-    });
 })();

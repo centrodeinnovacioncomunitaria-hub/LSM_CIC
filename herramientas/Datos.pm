@@ -82,18 +82,12 @@ our @SER = (
 );
 
 # ---------------------------------------------------------------- Pilares
-# Estructura del modelo: el «software social» (habilidades del ser) envuelve tres pilares
-# que se apoyan sobre la apropiación del ecosistema emprendedor.
-our %MODELO = (
-    marco => 'Instalación del software social: habilidades del ser',
-    marco_texto => 'Confianza, liderazgo, derechos y cuidado de cada mujer: el ser envuelve todo el modelo.',
-    base => 'Apropiación del ecosistema emprendedor',
-    base_texto => 'Cada satélite conoce y activa los actores de su territorio.',
-);
 our @PILARES = (
-    { forma => 'circulo',   color => 'menta',       titulo => 'Acompañamiento',          puntos => ['Modelo de negocio.', 'Gestión financiera.'] },
-    { forma => 'cuadrado',  color => 'coral',       titulo => 'Acceso a mercados',       puntos => ['Clusters, núcleos, programas y demás relacionados con la vinculación al mercado.', 'Relaciones públicas y relaciones externas.'] },
-    { forma => 'circulo',   color => 'mantequilla', titulo => 'Acceso a financiamiento', puntos => ['Unidades de microfinanciamiento comunitario.', 'Educación financiera.', 'Nuevas fuentes de financiación.'] },
+    ['bg-menta',       'Acompañamiento integral',   'Cada emprendedora recibe acompañamiento en su negocio: autoestima, modelo de negocio y finanzas.'],
+    ['bg-coral',       'Acceso a mercados',         'Conectar los negocios con clientes nuevos, ferias, gremios y aliados comerciales.'],
+    ['bg-mantequilla', 'Acceso a financiamiento',   'Educación financiera y ahorro y crédito en grupo, para no depender del «gota a gota».'],
+    ['bg-agua',        'Apropiación del ecosistema','Cada satélite conoce y activa los actores de su territorio.'],
+    ['bg-lavanda',     'Desarrollo del ser',        'La base de todo: confianza, liderazgo, derechos y cuidado de cada mujer.'],
 );
 
 # ---------------------------------------------------------------- Mapa de la región Caribe
@@ -190,34 +184,16 @@ sub bloque_mapa {
 HTML
 }
 
-# Bloque del modelo (inicio y El CIC) en tarjetas: arriba el ser (lo que lo envuelve todo), en el medio
-# los tres pilares y abajo la base del ecosistema emprendedor.
-my %FIGURA = (
-    triangulo => q{<svg viewBox="0 0 100 92"><path d="M50,5 Q53,5 55,9 L96,82 Q98,88 92,88 L8,88 Q2,88 4,82 L45,9 Q47,5 50,5 Z" /></svg>},
-    cuadrado  => q{<svg viewBox="0 0 100 100"><rect x="4" y="4" width="92" height="92" rx="16" /></svg>},
-    circulo   => q{<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" /></svg>},
-);
+# Tarjetas de los cinco pilares (inicio y El CIC).
 sub pilares_lista {
     my $n = 0;
-    my $tarjetas = join "\n", map {
-        my $p = $_;
+    return join "
+", map {
+        my ($color, $titulo, $texto) = @$_;
         $n++;
-        my $puntos = join '', map { "<li>$_</li>" } @{ $p->{puntos} };
-        qq{                        <li class="pc-pilar pc-$p->{color} pc-$p->{forma} aparece" tabindex="0"><div class="pc-forma" aria-hidden="true">$FIGURA{$p->{forma}}</div><div class="pc-texto"><p class="pc-etiqueta">Pilar $n</p><h3>$p->{titulo}</h3><ul>$puntos</ul></div></li>}
+        my $base = $titulo eq q{Desarrollo del ser} ? q{ pilar-base} : q{};
+        qq{                    <li class="tarjeta pilar aparece$base"><span class="numero $color">$n</span><h3>$titulo</h3><p>$texto</p></li>}
     } @PILARES;
-    return qq{                <div class="pilares-cards">
-                    <div class="pc-ancha pc-ser aparece">
-                        <span class="pc-icono" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 5.3 3.2 1.7-2 3.2-3.2 5.3-3.2 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z"/></svg></span>
-                        <div><p class="pc-etiqueta">Lo que lo envuelve todo</p><h3>Habilidades del ser</h3><p>$MODELO{marco_texto}</p></div>
-                    </div>
-                    <ol class="pc-pilares lista-limpia escalonado">
-$tarjetas
-                    </ol>
-                    <div class="pc-ancha pc-base aparece">
-                        <span class="pc-icono" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22V11M12 11c0-4 3-7 8-7 0 5-3 8-8 7zM12 14c0-3-2.5-5.5-7-5.5 0 4 2.5 6.5 7 5.5zM4 22h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                        <div><p class="pc-etiqueta">La base</p><h3>$MODELO{base}</h3><p>$MODELO{base_texto}</p></div>
-                    </div>
-                </div>};
 }
 
 # Lista accesible de satélites que acompaña al mapa.
