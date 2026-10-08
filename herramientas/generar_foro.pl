@@ -44,6 +44,6 @@ my $html = cabeza(P => $P, noindex => 1, titulo => 'Foro de la comunidad · CIC'
     </main>
 HTML
 $html .= final_pagina($P);
-$html =~ s{(\s*</body>)}{\n    <script src="${P}config.js?v=20261018"></script>\n    <script src="${P}assets/foro.js?v=20261018"></script>$1};
+$html =~ s{(\s*</body>)}{\n    <script src="${P}config.js?v=20261019"></script>\n    <script src="${P}assets/foro.js?v=20261019"></script>$1};
 escribir('foro/index.html', $html);
 print "foro/index.html\n";

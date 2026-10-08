@@ -1397,3 +1397,6 @@ button.descarga:disabled, button.archivo:disabled { opacity: .6; cursor: progres
     .pc-forma svg, .pc-forma svg > *, .pc-ser .pc-icono svg, .pc-base .pc-icono svg, .js .pc-pilar.visible .pc-forma, .js .pc-pilar.visible .pc-texto { animation: none !important; }
     .pc-forma, .pc-texto { transform: none !important; }
 }
+/* Tarjetas de pilares sin fondo: solo la figura sobre el fondo de la sección */
+.pc-pilar, .pc-pilar:hover, .js .pc-pilar.visible:hover { background: transparent; border-color: transparent; box-shadow: none; }
+.pc-pilar:focus-visible { box-shadow: 0 0 0 3px var(--fuerte); }
