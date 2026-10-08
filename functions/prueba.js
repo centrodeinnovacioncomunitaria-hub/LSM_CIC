@@ -349,6 +349,57 @@ function cuentasFalsas() {
   await falla('bienvenida', { paso: 'iniciar' }, tRosa, 403);
   paso('Video de bienvenida obligatorio (con tiempo mínimo) antes del curso Gestión del CIC');
 
+  // ---------- Emprendimientos: asignación y seguimiento ----------
+  await falla('emprendimientos', {}, tDina, 403);
+  let em = await ok('emprendimientos', {}, tSara);
+  assert.ok(em.dinamizadoras.some((d) => d.cedula === '22222222' && d.satelite === 'magdalena'), 'lista las dinamizadoras del directorio, aunque no hayan ingresado');
+  assert.equal(em.emprendimientos.find((x) => x.cedula === '44444444').dinamizadora, null);
+  await falla('asignar', { cedulas: ['44444444'], dinamizadora: '22222222' }, tDina, 403);
+  await falla('asignar', { cedulas: ['55555555'], dinamizadora: '22222222' }, tSara, 400); // Luz es de Atlántico
+  const asg = await ok('asignar', { cedulas: ['44444444'], dinamizadora: '22222222' }, tSara);
+  assert.equal(asg.asignados, 1);
+  em = await ok('emprendimientos', {}, tSara);
+  assert.equal(em.emprendimientos.find((x) => x.cedula === '44444444').dinamizadora_nombre, 'Dina Dinamizadora Dos');
+  let mis = await ok('mis-emprendimientos', {}, tDina);
+  assert.deepEqual(mis.emprendimientos.map((x) => x.cedula), ['44444444']);
+  await falla('mis-emprendimientos', {}, tSara, 403);
+  await falla('seguimiento', { cedula: '55555555' }, tDina, 403); // no asignada a ella
+  await falla('seguimiento', { cedula: '44444444' }, tRosa, 403);
+  let sg = await ok('seguimiento', { cedula: '44444444' }, tDina);
+  assert.equal(sg.actividades.length, 10);
+  assert.deepEqual(sg.actividades[0].herramientas, ['A1', 'A2', 'A3']);
+  assert.equal(sg.actividades[0].requeridos[1].nombre, 'Herramientas A1, A2, A3 diligenciadas');
+  const act = { cedula: '44444444', ruta: 'hacer', n: 1 };
+  await falla('subir-documento', { ...act, tipo: 'acta', mime: 'image/jpeg', base64: 'AAAA' }, tDina, 400); // aún sin chulear
+  await falla('marcar-actividad', { ...act, ejecutada: 'si' }, tDina, 400);
+  sg = await ok('marcar-actividad', { ...act, ejecutada: true, fecha: '2026-10-08' }, tDina);
+  assert.equal(sg.actividades[0].ejecutada, true);
+  await falla('subir-documento', { ...act, tipo: 'acta', mime: 'text/plain', base64: 'AAAA' }, tDina, 400);
+  await falla('subir-documento', { ...act, tipo: 'otro', mime: 'image/jpeg', base64: 'AAAA' }, tDina, 400);
+  const grande = Buffer.alloc(2 * 1024 * 1024, 7).toString('base64'); // 2 MB → varias partes
+  sg = await ok('subir-documento', { ...act, tipo: 'acta', mime: 'application/pdf', nombre: 'acta semana 1.pdf', base64: grande }, tDina);
+  assert.equal(sg.actividades[0].documentos.acta.bytes, 2 * 1024 * 1024);
+  assert.equal(sg.avance.con_documentos, 0, 'falta la herramienta');
+  const doc = await ok('ver-documento', { ...act, tipo: 'acta' }, tSara);
+  assert.equal(doc.base64, grande, 'la Secretaría descarga el archivo completo, armado desde sus partes');
+  await ok('subir-documento', { ...act, tipo: 'acta', mime: 'image/png', nombre: 'acta.png', base64: 'iVBORw0KGgo=' }, tDina);
+  assert.ok(!db.datos.has('documentos/' + tRosa + '_hacer_1_acta_1'), 'al reemplazar, se borran las partes sobrantes');
+  sg = await ok('subir-documento', { ...act, tipo: 'herramienta', mime: 'image/jpeg', nombre: 'a1.jpg', base64: '/9j/4AAQ' }, tDina);
+  assert.equal(sg.avance.con_documentos, 1);
+  const muy = Buffer.alloc(5 * 1024 * 1024 + 10, 1).toString('base64');
+  await falla('subir-documento', { ...act, tipo: 'acta', mime: 'application/pdf', base64: muy }, tDina, 400);
+  sg = await ok('marcar-actividad', { cedula: '44444444', ruta: 'ser', n: 2, ejecutada: false, motivo: 'La emprendedora estaba enferma' }, tDina);
+  assert.equal(sg.actividades[7].motivo, 'La emprendedora estaba enferma');
+  assert.equal(sg.avance.no_ejecutadas, 1);
+  sg = await ok('quitar-documento', { ...act, tipo: 'herramienta' }, tDina);
+  assert.equal(sg.actividades[0].documentos.herramienta, null);
+  em = await ok('emprendimientos', {}, tSara);
+  assert.deepEqual(em.emprendimientos.find((x) => x.cedula === '44444444').avance, { total: 10, ejecutadas: 1, no_ejecutadas: 1, con_documentos: 0 });
+  await ok('asignar', { cedulas: ['44444444'], dinamizadora: null }, tSara);
+  await falla('seguimiento', { cedula: '44444444' }, tDina, 403); // ya no la tiene asignada
+  assert.equal((await ok('mis-emprendimientos', {}, tDina)).emprendimientos.length, 0);
+  paso('Emprendimientos: la Secretaría asigna por satélite; la dinamizadora chulea actividades y sube acta y herramienta');
+
   // ---------- Mi cuenta ----------
   await falla('cambiar-clave', { clave_actual: 'mala', clave_nueva: 'OtraClave2026' }, tDina, 401);
   await falla('cambiar-clave', { clave_actual: 'DinaClave2026', clave_nueva: '22222222' }, tDina, 400);

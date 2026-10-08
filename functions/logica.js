@@ -484,6 +484,188 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     return { ok: true };
   }
 
+  // ================================================================ Emprendimientos: asignación y seguimiento
+  // La Secretaría asigna cada emprendimiento a una dinamizadora de su mismo satélite. La dinamizadora chulea si cada
+  // actividad (6 sesiones de la ruta HACER y 4 talleres de la ruta SER) se ejecutó; si se ejecutó, sube el acta de
+  // la sesión y la herramienta diligenciada. Los archivos se guardan en Firestore por partes (colección «documentos»).
+  const ACTIVIDADES = [
+    ...[['A1', 'A2', 'A3'], ['A4', 'A5'], ['A6'], ['A7', 'A8', 'A9'], ['A10', 'A11'], ['A12', 'A13']].map((h, i) => ({ ruta: 'hacer', n: i + 1, nombre: `Ruta HACER · Semana ${i + 1}`, herramientas: h })),
+    ...[['A14'], ['A15'], ['A16'], ['A17']].map((h, i) => ({ ruta: 'ser', n: i + 1, nombre: `Ruta SER · Taller ${i + 1}`, herramientas: h })),
+  ];
+  const TIPOS_DOCUMENTO = ['acta', 'herramienta'];
+  const TIPOS_ARCHIVO = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+  const MAX_BYTES_DOCUMENTO = 5 * 1024 * 1024;
+  const CARACTERES_POR_PARTE = 900000; // cada documento de Firestore admite hasta 1 MiB
+  const actividadDe = (ruta, n) => ACTIVIDADES.find((a) => a.ruta === ruta && a.n === Number(n)) || null;
+  const idSeguimiento = (emp, a) => `${emp}_${a.ruta}_${a.n}`;
+  const requeridos = (a) => [
+    { tipo: 'acta', nombre: 'Acta de la sesión', detalle: 'Firmada por la emprendedora y la dinamizadora (foto o PDF).' },
+    { tipo: 'herramienta', nombre: `Herramienta${a.herramientas.length > 1 ? 's' : ''} ${a.herramientas.join(', ')} diligenciada${a.herramientas.length > 1 ? 's' : ''}`, detalle: 'Foto o PDF de la herramienta trabajada en la sesión.' },
+  ];
+  const metaDocumento = (m) => (m ? { nombre: m.nombre, mime: m.mime, bytes: m.bytes, subido_en: m.subido_en } : null);
+  function avanceDe(filas) {
+    const ejecutadas = filas.filter((x) => x.ejecutada === true);
+    return {
+      total: ACTIVIDADES.length,
+      ejecutadas: ejecutadas.length,
+      no_ejecutadas: filas.filter((x) => x.ejecutada === false).length,
+      con_documentos: ejecutadas.filter((x) => TIPOS_DOCUMENTO.every((t) => x.documentos && x.documentos[t])).length,
+    };
+  }
+  async function avancePorEmprendedora() {
+    const porPersona = {};
+    for (const x of await lista(col('seguimiento'))) (porPersona[x.emprendedora] = porPersona[x.emprendedora] || []).push(x);
+    return (id) => avanceDe(porPersona[id] || []);
+  }
+  async function dinamizadorasDirectorio() {
+    return (await lista(col('directorio'))).filter((x) => x.rol === 'dinamizadora')
+      .map((x) => ({ cedula: x._id, nombre: x.nombre, cargo: x.cargo || null, satelite: x.satelite || null }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  }
+  const filaEmprendimiento = (x, avance, nombres) => ({
+    cedula: x.cedula, nombre: x.nombre, negocio: x.negocio || null, municipio: x.municipio || null, satelite: x.satelite || null,
+    celular: x.celular || null, semana_actual: x.semana_actual || 1,
+    dinamizadora: x.dinamizadora_cedula || null, dinamizadora_nombre: x.dinamizadora_cedula ? (nombres[x.dinamizadora_cedula] || null) : null,
+    avance: avance(x._id),
+  });
+
+  // Secretaría: emprendimientos (con su dinamizadora y avance) y las dinamizadoras de cada satélite
+  async function verEmprendimientos(token) {
+    const p = await usuarioDelToken(token);
+    if (p.rol !== 'secretaria') throw new Falla(403, 'permiso', 'Solo la Secretaría Técnica asigna emprendimientos.');
+    const [emp, dinamizadoras, avance] = await Promise.all([lista(col('perfiles').where('rol', '==', 'emprendedora')), dinamizadorasDirectorio(), avancePorEmprendedora()]);
+    const nombres = Object.fromEntries(dinamizadoras.map((d) => [d.cedula, d.nombre]));
+    return {
+      dinamizadoras,
+      emprendimientos: emp.map((x) => filaEmprendimiento(x, avance, nombres)).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+    };
+  }
+  async function asignar(token, b) {
+    const p = await usuarioDelToken(token);
+    if (p.rol !== 'secretaria') throw new Falla(403, 'permiso', 'Solo la Secretaría Técnica asigna emprendimientos.');
+    const cedulas = [...new Set((Array.isArray(b.cedulas) ? b.cedulas : []).map((c) => soloDigitos(c)))].filter(Boolean).slice(0, 200);
+    if (!cedulas.length) throw new Falla(400, 'cedulas', 'Elige al menos un emprendimiento.');
+    let din = null;
+    if (b.dinamizadora) {
+      const ced = soloDigitos(b.dinamizadora);
+      const d = await datos(col('directorio').doc(ced));
+      if (!d || d.rol !== 'dinamizadora') throw new Falla(404, 'dinamizadora', 'No encontramos a esa dinamizadora.');
+      din = { cedula: ced, ...d };
+    }
+    const perfiles = [];
+    for (const c of cedulas) {
+      const e = await perfilPorCedula(c);
+      if (!e || e.rol !== 'emprendedora') throw new Falla(404, 'no_existe', `No encontramos el emprendimiento con cédula ${c}.`);
+      if (din && e.satelite !== din.satelite) throw new Falla(400, 'satelite', `${e.nombre} es de otro satélite: solo se puede asignar a una dinamizadora de su mismo satélite.`);
+      perfiles.push(e);
+    }
+    for (const e of perfiles) {
+      await col('perfiles').doc(e.id).update({ dinamizadora_cedula: din ? din.cedula : null, asignada_por: p.id, asignada_en: hoy() });
+    }
+    return { ok: true, asignados: perfiles.length, dinamizadora: din ? din.nombre : null };
+  }
+
+  // Dinamizadora: sus emprendimientos asignados
+  async function misEmprendimientos(token) {
+    const p = await usuarioDelToken(token);
+    if (p.rol !== 'dinamizadora') throw new Falla(403, 'permiso', 'Esta lista es para las dinamizadoras.');
+    const [emp, avance] = await Promise.all([lista(col('perfiles').where('dinamizadora_cedula', '==', p.cedula)), avancePorEmprendedora()]);
+    return { emprendimientos: emp.filter((x) => x.rol === 'emprendedora').map((x) => filaEmprendimiento(x, avance, { [p.cedula]: p.nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')) };
+  }
+
+  // Un emprendimiento lo ven la Secretaría y la dinamizadora a quien se le asignó
+  async function emprendimientoPermitido(token, cedula) {
+    const p = await usuarioDelToken(token);
+    if (p.rol !== 'secretaria' && p.rol !== 'dinamizadora') throw new Falla(403, 'permiso', 'El seguimiento es para el equipo del CIC.');
+    const e = await perfilPorCedula(validarCedula(cedula));
+    if (!e || e.rol !== 'emprendedora') throw new Falla(404, 'no_existe', 'No encontramos ese emprendimiento.');
+    if (p.rol === 'dinamizadora' && e.dinamizadora_cedula !== p.cedula) throw new Falla(403, 'permiso', 'Este emprendimiento no está asignado a ti. Pídele a la Secretaría Técnica que te lo asigne.');
+    return { p, e };
+  }
+  async function verSeguimiento(token, b) {
+    const { e } = await emprendimientoPermitido(token, b.cedula);
+    const filas = Object.fromEntries((await lista(col('seguimiento').where('emprendedora', '==', e.id))).map((x) => [`${x.ruta}_${x.n}`, x]));
+    const din = e.dinamizadora_cedula ? await datos(col('directorio').doc(e.dinamizadora_cedula)) : null;
+    return {
+      emprendimiento: { cedula: e.cedula, nombre: e.nombre, negocio: e.negocio || null, municipio: e.municipio || null, satelite: e.satelite || null, celular: e.celular || null, dinamizadora_nombre: din ? din.nombre : null },
+      actividades: ACTIVIDADES.map((a) => {
+        const x = filas[`${a.ruta}_${a.n}`];
+        return {
+          ruta: a.ruta, n: a.n, nombre: a.nombre, herramientas: a.herramientas, requeridos: requeridos(a),
+          ejecutada: x ? x.ejecutada : null, fecha: x ? x.fecha || null : null, motivo: x ? x.motivo || null : null,
+          documentos: Object.fromEntries(TIPOS_DOCUMENTO.map((t) => [t, metaDocumento(x && x.documentos && x.documentos[t])])),
+        };
+      }),
+      avance: avanceDe(Object.values(filas)),
+    };
+  }
+  async function marcarActividad(token, b) {
+    const { p, e } = await emprendimientoPermitido(token, b.cedula);
+    const a = actividadDe(b.ruta, b.n);
+    if (!a) throw new Falla(400, 'actividad', 'Esa actividad no existe.');
+    if (typeof b.ejecutada !== 'boolean') throw new Falla(400, 'ejecutada', 'Indica si la actividad se ejecutó o no.');
+    const fecha = /^\d{4}-\d{2}-\d{2}$/.test(b.fecha || '') ? b.fecha : null;
+    const id = idSeguimiento(e.id, a);
+    const previa = await datos(col('seguimiento').doc(id));
+    await col('seguimiento').doc(id).set({
+      emprendedora: e.id, ruta: a.ruta, n: a.n, ejecutada: b.ejecutada,
+      fecha: b.ejecutada ? fecha : null, motivo: b.ejecutada ? null : (texto(b.motivo, 300) || null),
+      documentos: (previa && previa.documentos) || {}, marcado_por: p.id, marcado_en: hoy(),
+    });
+    return verSeguimiento(token, b);
+  }
+  async function borrarPartes(base, desde, hasta) {
+    for (let i = desde; i < hasta; i++) await col('documentos').doc(`${base}_${i}`).delete();
+  }
+  async function subirDocumento(token, b) {
+    const { p, e } = await emprendimientoPermitido(token, b.cedula);
+    const a = actividadDe(b.ruta, b.n);
+    if (!a) throw new Falla(400, 'actividad', 'Esa actividad no existe.');
+    if (!TIPOS_DOCUMENTO.includes(b.tipo)) throw new Falla(400, 'tipo', 'Ese tipo de documento no existe.');
+    const id = idSeguimiento(e.id, a);
+    const fila = await datos(col('seguimiento').doc(id));
+    if (!fila || fila.ejecutada !== true) throw new Falla(400, 'ejecutada', 'Primero marca que la actividad sí se ejecutó.');
+    const mime = String(b.mime || '');
+    if (!TIPOS_ARCHIVO[mime]) throw new Falla(400, 'archivo', 'Sube una foto (JPG o PNG) o un PDF.');
+    const base64 = String(b.base64 || '');
+    if (!base64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) throw new Falla(400, 'archivo', 'No pudimos leer el archivo. Intenta de nuevo.');
+    const bytes = Buffer.from(base64, 'base64').length;
+    if (bytes > MAX_BYTES_DOCUMENTO) throw new Falla(400, 'archivo', 'El archivo pesa más de 5 MB. Toma la foto con menos resolución o comprime el PDF.');
+    const base = `${id}_${b.tipo}`;
+    const partes = Math.ceil(base64.length / CARACTERES_POR_PARTE);
+    for (let i = 0; i < partes; i++) await col('documentos').doc(`${base}_${i}`).set({ parte: base64.slice(i * CARACTERES_POR_PARTE, (i + 1) * CARACTERES_POR_PARTE) });
+    const anterior = fila.documentos && fila.documentos[b.tipo];
+    if (anterior && anterior.partes > partes) await borrarPartes(base, partes, anterior.partes);
+    const nombre = (texto(b.nombre, 120) || b.tipo).replace(/[\\/:*?"<>|]+/g, '_');
+    await col('seguimiento').doc(id).set({ ...fila, documentos: { ...(fila.documentos || {}), [b.tipo]: { nombre, mime, bytes, partes, subido_por: p.id, subido_en: hoy() } } });
+    return verSeguimiento(token, b);
+  }
+  async function verDocumento(token, b) {
+    const { e } = await emprendimientoPermitido(token, b.cedula);
+    const a = actividadDe(b.ruta, b.n);
+    const fila = a && TIPOS_DOCUMENTO.includes(b.tipo) ? await datos(col('seguimiento').doc(idSeguimiento(e.id, a))) : null;
+    const m = fila && fila.documentos && fila.documentos[b.tipo];
+    if (!m) throw new Falla(404, 'no_existe', 'Ese documento todavía no se ha subido.');
+    let base64 = '';
+    for (let i = 0; i < m.partes; i++) { const parte = await datos(col('documentos').doc(`${idSeguimiento(e.id, a)}_${b.tipo}_${i}`)); base64 += parte ? parte.parte : ''; }
+    return { nombre: m.nombre, mime: m.mime, base64 };
+  }
+  async function quitarDocumento(token, b) {
+    const { e } = await emprendimientoPermitido(token, b.cedula);
+    const a = actividadDe(b.ruta, b.n);
+    if (!a || !TIPOS_DOCUMENTO.includes(b.tipo)) throw new Falla(400, 'tipo', 'Ese documento no existe.');
+    const id = idSeguimiento(e.id, a);
+    const fila = await datos(col('seguimiento').doc(id));
+    const m = fila && fila.documentos && fila.documentos[b.tipo];
+    if (m) {
+      await borrarPartes(`${id}_${b.tipo}`, 0, m.partes);
+      const documentos = { ...fila.documentos };
+      delete documentos[b.tipo];
+      await col('seguimiento').doc(id).set({ ...fila, documentos });
+    }
+    return verSeguimiento(token, b);
+  }
+
   // ================================================================ Cursos del equipo
   async function contexto(persona) {
     const [progreso, evidencias, hitos, constancias, videos] = await Promise.all([
@@ -867,6 +1049,15 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
         case 'mi-dinamizadora': r = await miDinamizadora(token); break;
         case 'perfiles': r = await verPerfiles(token); break;
         case 'fijar-semana': r = await fijarSemana(token, b); break;
+        // Emprendimientos: asignación y seguimiento de actividades
+        case 'emprendimientos': r = await verEmprendimientos(token); break;
+        case 'asignar': r = await asignar(token, b); break;
+        case 'mis-emprendimientos': r = await misEmprendimientos(token); break;
+        case 'seguimiento': r = await verSeguimiento(token, b); break;
+        case 'marcar-actividad': r = await marcarActividad(token, b); break;
+        case 'subir-documento': r = await subirDocumento(token, b); break;
+        case 'ver-documento': r = await verDocumento(token, b); break;
+        case 'quitar-documento': r = await quitarDocumento(token, b); break;
         // Cursos del equipo
         case 'mi-progreso': r = await miProgreso(token); break;
         case 'marcar': r = await marcar(token, b); break;

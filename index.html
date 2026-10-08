@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261021">
+    <link rel="stylesheet" href="assets/cic.css?v=20261022">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -707,10 +707,11 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261021"></script>
-    <script src="assets/datos-cic.js?v=20261021"></script>
-    <script src="assets/sitio.js?v=20261021"></script>
-    <script src="assets/cursos-equipo.js?v=20261021"></script>
+    <script src="./config.js?v=20261022"></script>
+    <script src="assets/datos-cic.js?v=20261022"></script>
+    <script src="assets/sitio.js?v=20261022"></script>
+    <script src="assets/cursos-equipo.js?v=20261022"></script>
+    <script src="assets/emprendimientos.js?v=20261022"></script>
     <script>
     (() => {
         'use strict';
@@ -1266,6 +1267,8 @@
         // Contexto que comparten la página y los cursos del equipo (assets/cursos-equipo.js)
         const contextoCursos = () => ({ perfil, DEMO, esc, llamar, reproductor, traerVideos, aviso, CURSOS, codigoModulo, satelite });
         function pintarCursos() { return window.CICCursos.pintar($('#vista-cursos'), contextoCursos()); }
+        // Contexto de la asignación y el seguimiento de emprendimientos (assets/emprendimientos.js)
+        const contextoEmprendimientos = () => ({ perfil, DEMO, esc, llamar, aviso, satelite, SATELITES });
 
         // ---------- Seguimiento (equipo) ----------
         const EJEMPLO = [
@@ -1325,11 +1328,13 @@
         }
         function pintarDinamizadora(v, lista) {
             v.innerHTML = `
+                <div id="mis-emprendimientos" class="emp-panel"></div>
                 <h2>Emprendedoras de ${esc(perfil.departamento || 'tu departamento')}</h2>
                 <p class="vista-intro">Cuando termines una sesión, cambia su semana: así cada emprendedora ve lo que le toca y sus descargas. Si alguien olvida su contraseña, genérale un código de acceso y envíaselo por WhatsApp.</p>
                 <div class="rejilla r4 movil-2"><div class="tarjeta kpi"><b>${lista.length}</b><span>inscritas</span></div></div>
                 <div class="controles"><div><label class="etiqueta" for="buscar-d">Buscar por nombre, municipio o negocio</label><input id="buscar-d" class="campo" type="search"></div></div>
                 <div id="tabla-d">${tabla(lista, true)}</div>`;
+            window.CICEmprendimientos.dinamizadora($('#mis-emprendimientos'), contextoEmprendimientos());
             $('#buscar-d').addEventListener('input', (e) => {
                 const t = e.target.value.toLowerCase();
                 $('#tabla-d').innerHTML = tabla(lista.filter((p) => [p.nombre, p.municipio, p.negocio].join(' ').toLowerCase().includes(t)), true);
@@ -1356,6 +1361,8 @@
                     <h3 style="font-size:1.15rem;margin-bottom:1rem">Emprendedoras por satélite</h3>
                     <ul class="barras">${porSat.map(([d, n]) => `<li><span>${esc(d)}</span><span class="barra-fondo"><span style="width:${(n / max) * 100}%"></span></span><b>${n}</b></li>`).join('')}</ul>
                 </div>
+                <div id="emprendimientos" class="tarjeta emp-panel"></div>
+                <h3 class="emp-subtitulo">Todas las cuentas</h3>
                 <div class="controles">
                     <div><label class="etiqueta" for="buscar-s">Buscar</label><input id="buscar-s" class="campo" type="search" placeholder="Nombre, cédula, municipio…"></div>
                     <div style="flex:0 1 14rem"><label class="etiqueta" for="filtro-rol">Perfil</label><select id="filtro-rol" class="campo"><option value="">Todos</option><option value="emprendedora">Emprendedoras</option><option value="dinamizadora">Dinamizadoras</option><option value="secretaria">Secretaría Técnica</option></select></div>
@@ -1363,6 +1370,7 @@
                 <div id="tabla-s">${tabla(lista, true)}</div>
                 <div id="avance-equipo" class="avance-equipo"></div>`;
             window.CICCursos.pintarEquipo($('#avance-equipo'), contextoCursos());
+            window.CICEmprendimientos.secretaria($('#emprendimientos'), contextoEmprendimientos());
             const filtrar = () => {
                 const t = $('#buscar-s').value.toLowerCase();
                 const r = $('#filtro-rol').value;
