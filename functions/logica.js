@@ -174,12 +174,13 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     if (!d) return generico;
     let p = d.perfil;
     if (!p) {
-      if (!correoValido(d.correo)) return generico;
+      if (!correoValido(d.correo)) { console.warn(`Enlace no enviado: la cédula …${cedula.slice(-3)} no tiene un correo válido en el directorio.`); return generico; }
       p = await cuentaDesdeDirectorio(cedula, d.directorio, claveAlAzar());
     }
-    if (esInterno(p.cuenta_email)) return generico;
+    if (esInterno(p.cuenta_email)) { console.warn(`Enlace no enviado: la cuenta de la cédula …${cedula.slice(-3)} no tiene correo real.`); return generico; }
     await col('enlaces').doc(cedula).set({ enviado_en: hoy() });
-    await cuentas.enviarEnlace(p.cuenta_email).catch(() => false);
+    const enviado = await cuentas.enviarEnlace(p.cuenta_email).catch((e) => { console.error('Error al pedir el enlace a Authentication:', e.message); return false; });
+    if (!enviado) console.error(`El correo de la cédula …${cedula.slice(-3)} no salió: revisar CIC_API_KEY en functions/.env y el registro anterior.`);
     return generico;
   }
 
