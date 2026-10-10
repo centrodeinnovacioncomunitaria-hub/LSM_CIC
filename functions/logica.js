@@ -78,7 +78,7 @@ const barajar = (a) => { const r = [...a]; for (let i = r.length - 1; i > 0; i--
 
 // Campos del perfil que puede ver la propia persona (nunca el correo interno de la cuenta)
 const publico = (id, p) => ({
-  id, cedula: p.cedula, nombre: p.nombre, rol: p.rol, cargo: p.cargo || null, correo: p.correo || null,
+  id, cedula: p.cedula, nombre: p.nombre, rol: p.rol, cargo: p.cargo || null, subtitulo: p.subtitulo || null, correo: p.correo || null,
   celular: p.celular || null, departamento: p.departamento || null, municipio: p.municipio || null,
   negocio: p.negocio || null, satelite: p.satelite || null, semana_actual: p.semana_actual || 1,
   creado_en: p.creado_en || null, debe_cambiar_clave: false,
@@ -155,32 +155,62 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   const claveAlAzar = () => crypto.randomBytes(24).toString('base64url');
   async function cuentaDesdeDirectorio(cedula, d, clave) {
     return crearCuenta(cedula, clave, {
-      nombre: d.nombre, rol: d.rol, cargo: d.cargo || null, correo: d.correo || null, celular: d.celular || null,
+      nombre: d.nombre, rol: d.rol, cargo: d.cargo || null, subtitulo: d.subtitulo || null, correo: d.correo || null, celular: d.celular || null,
       departamento: d.departamento || null, satelite: d.satelite || null,
     });
   }
 
-  // La persona escribe su cédula y le llega al correo un enlace para crear o cambiar su contraseña.
-  // La respuesta es siempre la misma, para no revelar qué cédulas existen.
+  // La persona escribe su cédula y le llega al correo un enlace (no un código) para crear o cambiar su contraseña.
+  // Cada intento queda en la colección «envios_correo» (enviado, fallido u omitido, con el motivo) y las fallas
+  // también en el registro de la Cloud Function. A quien sí tiene correo se le muestra a cuál se envió, oculto en parte.
+  const mascaraCorreo = (c) => { const [u, dom] = String(c || '').split('@'); return dom ? `${u.slice(0, 3)}${'*'.repeat(Math.max(3, u.length - 3))}@${dom}` : null; };
+  async function registrarEnvio(cedula, estado, extra = {}) {
+    if (estado === 'fallido') console.error(`Correo de contraseña NO enviado (cédula ${cedula}, ${extra.correo || ''}): ${extra.error || ''}`);
+    try { await col('envios_correo').add({ cedula, tipo: 'enlace_contrasena', estado, rol: null, correo: null, motivo: null, error: null, ...extra, creado_en: hoy() }); }
+    catch (e) { console.error('No se pudo guardar el registro de envío:', e.message); }
+  }
   async function solicitarEnlace(b) {
     const cedula = validarCedula(b.cedula);
-    const generico = {
-      ok: true,
-      mensaje: 'Si esta cédula está registrada con un correo, te llegó un enlace para crear tu contraseña. Vence en 1 hora y solo sirve el del último correo que pidas. Si no lo ves, revisa «Spam» o «Correo no deseado». Si no tienes correo registrado, pídele un código a la Secretaría Técnica o a tu dinamizadora.',
+    const sinCorreo = {
+      ok: true, enviado: false,
+      mensaje: 'Si esta cédula está registrada con un correo, te llegó un enlace para crear tu contraseña. Si no tienes correo registrado o no te llega, pídele un código a la Secretaría Técnica o a tu dinamizadora, o toca «¿No puedes entrar? Pide soporte».',
     };
     const previo = await datos(col('enlaces').doc(cedula));
-    if (previo && ahora() - new Date(previo.enviado_en) < 2 * 60000) return generico; // máximo uno cada 2 minutos
+    if (previo && ahora() - new Date(previo.enviado_en) < 2 * 60000) { // máximo uno cada 2 minutos
+      await registrarEnvio(cedula, 'omitido', { motivo: 'Pidió otro antes de 2 minutos', correo: previo.correo || null });
+      return { ok: true, enviado: false, reciente: true, correo: previo.correo || null, mensaje: `Ya te enviamos un enlace hace menos de 2 minutos${previo.correo ? ` a ${previo.correo}` : ''}. Revisa tu correo (también «Spam», «Correo no deseado» o «Promociones») antes de pedir otro: solo sirve el último.` };
+    }
     const d = await destinatario(cedula);
-    if (!d) return generico;
+    if (!d) { await registrarEnvio(cedula, 'omitido', { motivo: 'Cédula no registrada' }); return sinCorreo; }
     let p = d.perfil;
     if (!p) {
-      if (!correoValido(d.correo)) return generico;
+      if (!correoValido(d.correo)) { await registrarEnvio(cedula, 'omitido', { motivo: 'Sin correo en el directorio', rol: d.rol || null }); return sinCorreo; }
       p = await cuentaDesdeDirectorio(cedula, d.directorio, claveAlAzar());
     }
-    if (esInterno(p.cuenta_email)) return generico;
-    await col('enlaces').doc(cedula).set({ enviado_en: hoy() });
-    await cuentas.enviarEnlace(p.cuenta_email).catch(() => false);
-    return generico;
+    if (esInterno(p.cuenta_email)) { await registrarEnvio(cedula, 'omitido', { motivo: 'La cuenta no tiene correo real', rol: p.rol }); return sinCorreo; }
+    const correo = mascaraCorreo(p.cuenta_email);
+    try {
+      await cuentas.enviarEnlace(p.cuenta_email);
+    } catch (e) {
+      await registrarEnvio(cedula, 'fallido', { correo, rol: p.rol, error: String((e && e.message) || e).slice(0, 300) });
+      return { ok: true, enviado: false, correo, mensaje: `No pudimos enviar el correo a ${correo} en este momento. Intenta de nuevo en unos minutos o pídele un código a la Secretaría Técnica.` };
+    }
+    await col('enlaces').doc(cedula).set({ enviado_en: hoy(), correo });
+    await registrarEnvio(cedula, 'enviado', { correo, rol: p.rol });
+    return {
+      ok: true, enviado: true, correo,
+      mensaje: `Te enviamos un enlace a ${correo}. Abre el correo «Restablece tu contraseña» y toca el enlace: no llega un código de números. Vence en 1 hora y solo sirve el último que pidas. Si no lo ves en unos minutos, revisa «Spam», «Correo no deseado» o «Promociones». ¿Ese no es tu correo? Pide soporte o un código a la Secretaría Técnica.`,
+    };
+  }
+  // Administración: últimos envíos de correo
+  async function verEnviosCorreo(token) {
+    const p = await usuarioDelToken(token);
+    if (p.rol !== 'administradora' && p.rol !== 'secretaria') throw new Falla(403, 'permiso', 'Este registro es para la administración.');
+    const filas = (await lista(col('envios_correo'))).sort((a, b) => String(b.creado_en).localeCompare(String(a.creado_en))).slice(0, 300);
+    const nombres = {};
+    for (const x of await lista(col('perfiles'))) nombres[x.cedula] = x.nombre;
+    for (const x of await lista(col('directorio'))) nombres[x._id] = nombres[x._id] || x.nombre;
+    return { envios: filas.map((x) => ({ cedula: x.cedula, nombre: nombres[x.cedula] || null, estado: x.estado, motivo: x.motivo || null, error: x.error || null, correo: x.correo || null, rol: x.rol || null, creado_en: x.creado_en })) };
   }
 
   // La Secretaría (a cualquiera) o la dinamizadora (a las emprendedoras de su departamento) generan un código
@@ -482,6 +512,127 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     if (!e || e.rol !== 'emprendedora' || (p.rol !== 'secretaria' && e.departamento !== p.departamento)) throw new Falla(404, 'no_existe', 'No encontramos a esa emprendedora en tu departamento.');
     await col('perfiles').doc(e.id).update({ semana_actual: semana });
     return { ok: true };
+  }
+
+  // ================================================================ Soporte técnico: tickets
+  // Cualquier persona con cuenta (emprendedora, dinamizadora o secretaría) abre una solicitud; quien no puede entrar
+  // la abre desde el ingreso con su cédula y un contacto. La atienden la Secretaría Técnica y la administración.
+  // Vive aparte (colecciones «tickets» y «documentos»): no toca el avance de nadie.
+  const CATEGORIAS_SOPORTE = {
+    acceso: 'No puedo entrar / contraseña', videos: 'Videos', cursos: 'Cursos y evaluaciones',
+    talleres: 'Talleres y guías', seguimiento: 'Seguimiento y documentos', otro: 'Otro',
+  };
+  const ESTADOS_TICKET = ['abierto', 'en_proceso', 'resuelto', 'cerrado'];
+  const esSoporte = (p) => p.rol === 'secretaria' || esAdmin(p);
+  const numeroTicket = () => `T-${hoy().slice(2, 10).replace(/-/g, '')}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+  const vistaTicket = (x, conMensajes) => ({
+    id: x._id, numero: x.numero, categoria: x.categoria, categoria_nombre: CATEGORIAS_SOPORTE[x.categoria] || 'Otro', asunto: x.asunto,
+    estado: x.estado, nombre: x.nombre, cedula: x.cedula, rol: x.rol || null, satelite: x.satelite || null, contacto: x.contacto || null,
+    publico: !!x.publico, adjunto: x.adjunto ? { nombre: x.adjunto.nombre, mime: x.adjunto.mime, bytes: x.adjunto.bytes } : null,
+    creado_en: x.creado_en, actualizado_en: x.actualizado_en, mensajes_total: (x.mensajes || []).length,
+    ultimo_de: (x.mensajes || []).length ? x.mensajes[x.mensajes.length - 1].de : null,
+    ...(conMensajes ? { mensajes: x.mensajes || [] } : {}),
+  });
+  async function guardarAdjuntoTicket(id, a) {
+    if (!a || !a.base64) return null;
+    const mime = String(a.mime || '');
+    if (!TIPOS_ARCHIVO[mime]) throw new Falla(400, 'archivo', 'El adjunto debe ser una foto (JPG o PNG) o un PDF.');
+    const base64 = String(a.base64);
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) throw new Falla(400, 'archivo', 'No pudimos leer el adjunto.');
+    const bytes = Buffer.from(base64, 'base64').length;
+    if (bytes > 3 * 1024 * 1024) throw new Falla(400, 'archivo', 'El adjunto pesa más de 3 MB.');
+    const partes = Math.ceil(base64.length / CARACTERES_POR_PARTE);
+    for (let i = 0; i < partes; i++) await col('documentos').doc(`ticket_${id}_${i}`).set({ parte: base64.slice(i * CARACTERES_POR_PARTE, (i + 1) * CARACTERES_POR_PARTE) });
+    return { nombre: (texto(a.nombre, 100) || 'adjunto').replace(/[\\/:*?"<>|]+/g, '_'), mime, bytes, partes };
+  }
+  async function crearTicket(token, b) {
+    const p = await usuarioDelToken(token);
+    const categoria = CATEGORIAS_SOPORTE[b.categoria] ? b.categoria : 'otro';
+    const asunto = texto(b.asunto, 120);
+    const descripcion = String(b.descripcion ?? '').trim().slice(0, 3000);
+    if (asunto.length < 5) throw new Falla(400, 'asunto', 'Escribe un asunto corto (al menos 5 letras).');
+    if (descripcion.length < 15) throw new Falla(400, 'descripcion', 'Cuéntanos qué pasa (al menos unas palabras).');
+    const mios = await lista(col('tickets').where('persona', '==', p.id));
+    if (mios.filter((x) => x.estado === 'abierto' || x.estado === 'en_proceso').length >= 5) throw new Falla(429, 'limite', 'Ya tienes 5 solicitudes abiertas. Espera la respuesta antes de abrir otra.');
+    const ref = col('tickets').doc();
+    const adjunto = await guardarAdjuntoTicket(ref.id, b.adjunto);
+    const fila = {
+      numero: numeroTicket(), persona: p.id, cedula: p.cedula, nombre: p.nombre, rol: p.rol, satelite: p.satelite || null,
+      contacto: [p.celular, p.correo].filter(Boolean).join(' · ') || null, publico: false, categoria, asunto, adjunto,
+      estado: 'abierto', mensajes: [{ de: 'usuario', nombre: p.nombre, texto: descripcion, en: hoy() }], creado_en: hoy(), actualizado_en: hoy(),
+    };
+    await ref.set(fila);
+    return { ticket: vistaTicket({ _id: ref.id, ...fila }, true) };
+  }
+  // Quien no puede entrar: cédula, nombre, un contacto y la descripción. Máximo 3 por cédula al día.
+  async function crearTicketPublico(b) {
+    const cedula = validarCedula(b.cedula);
+    const nombre = texto(b.nombre, 90);
+    const contacto = texto(b.contacto, 120);
+    const descripcion = String(b.descripcion ?? '').trim().slice(0, 2000);
+    if (b.sitio) return { ok: true }; // campo trampa para robots
+    if (nombre.length < 5 || !nombre.includes(' ')) throw new Falla(400, 'nombre', 'Escribe tu nombre y apellido.');
+    if (soloDigitos(contacto).length < 7 && !correoValido(contacto)) throw new Falla(400, 'contacto', 'Escribe tu celular o WhatsApp, o un correo, para poder responderte.');
+    if (descripcion.length < 15) throw new Falla(400, 'descripcion', 'Cuéntanos qué pasa (al menos unas palabras).');
+    const recientes = (await lista(col('tickets').where('cedula', '==', cedula))).filter((x) => x.publico && ahora() - new Date(x.creado_en) < 24 * 3600000);
+    if (recientes.length >= 3) throw new Falla(429, 'limite', 'Ya recibimos tus solicitudes de hoy. La Secretaría Técnica te contactará pronto.');
+    const p = await perfilPorCedula(cedula);
+    const ref = col('tickets').doc();
+    const fila = {
+      numero: numeroTicket(), persona: null, cedula, nombre, rol: p ? p.rol : null, satelite: p ? p.satelite || null : null,
+      contacto, publico: true, categoria: 'acceso', asunto: 'No puedo entrar a la plataforma', adjunto: null,
+      estado: 'abierto', mensajes: [{ de: 'usuario', nombre, texto: descripcion, en: hoy() }], creado_en: hoy(), actualizado_en: hoy(),
+    };
+    await ref.set(fila);
+    return { ok: true, numero: fila.numero };
+  }
+  async function misTickets(token) {
+    const p = await usuarioDelToken(token);
+    const filas = await lista(col('tickets').where('persona', '==', p.id));
+    return { tickets: filas.sort((a, b) => String(b.actualizado_en).localeCompare(String(a.actualizado_en))).map((x) => vistaTicket(x, false)) };
+  }
+  async function bandejaTickets(token) {
+    const p = await usuarioDelToken(token);
+    if (!esSoporte(p)) throw new Falla(403, 'permiso', 'La bandeja de soporte es para la Secretaría Técnica.');
+    const filas = await lista(col('tickets'));
+    return { tickets: filas.sort((a, b) => String(b.actualizado_en).localeCompare(String(a.actualizado_en))).map((x) => vistaTicket(x, false)) };
+  }
+  async function ticketPermitido(token, id) {
+    const p = await usuarioDelToken(token);
+    const x = id ? await datos(col('tickets').doc(String(id))) : null;
+    if (!x || (!esSoporte(p) && x.persona !== p.id)) throw new Falla(404, 'no_existe', 'No encontramos esa solicitud.');
+    return { p, x: { _id: String(id), ...x } };
+  }
+  async function verTicket(token, b) {
+    const { x } = await ticketPermitido(token, b.id);
+    return { ticket: vistaTicket(x, true) };
+  }
+  async function responderTicket(token, b) {
+    const { p, x } = await ticketPermitido(token, b.id);
+    const txt = String(b.texto ?? '').trim().slice(0, 3000);
+    if (txt.length < 2) throw new Falla(400, 'texto', 'Escribe tu respuesta.');
+    if (x.estado === 'cerrado') throw new Falla(400, 'cerrado', 'Esta solicitud está cerrada. Abre una nueva si lo necesitas.');
+    const deSoporte = esSoporte(p) && x.persona !== p.id;
+    const mensajes = [...(x.mensajes || []), { de: deSoporte ? 'soporte' : 'usuario', nombre: p.nombre, texto: txt, en: hoy() }];
+    const estado = deSoporte ? (x.estado === 'abierto' ? 'en_proceso' : x.estado) : (x.estado === 'resuelto' ? 'abierto' : x.estado);
+    const { _id, ...resto } = x;
+    await col('tickets').doc(_id).set({ ...resto, mensajes, estado, actualizado_en: hoy(), ...(deSoporte ? { atendido_por: p.id } : {}) });
+    return { ticket: vistaTicket({ ...x, mensajes, estado, actualizado_en: hoy() }, true) };
+  }
+  async function estadoTicket(token, b) {
+    const { p, x } = await ticketPermitido(token, b.id);
+    if (!ESTADOS_TICKET.includes(b.estado)) throw new Falla(400, 'estado', 'Ese estado no existe.');
+    if (!esSoporte(p) && !(x.persona === p.id && (b.estado === 'cerrado' || b.estado === 'resuelto'))) throw new Falla(403, 'permiso', 'Solo la Secretaría Técnica cambia el estado de la solicitud.');
+    const { _id, ...resto } = x;
+    await col('tickets').doc(_id).set({ ...resto, estado: b.estado, actualizado_en: hoy() });
+    return { ticket: vistaTicket({ ...x, estado: b.estado, actualizado_en: hoy() }, true) };
+  }
+  async function adjuntoTicket(token, b) {
+    const { x } = await ticketPermitido(token, b.id);
+    if (!x.adjunto) throw new Falla(404, 'no_existe', 'Esta solicitud no tiene adjunto.');
+    let base64 = '';
+    for (let i = 0; i < x.adjunto.partes; i++) { const parte = await datos(col('documentos').doc(`ticket_${x._id}_${i}`)); base64 += parte ? parte.parte : ''; }
+    return { nombre: x.adjunto.nombre, mime: x.adjunto.mime, base64 };
   }
 
   // ================================================================ Emprendimientos: asignación y seguimiento
@@ -1106,6 +1257,16 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
         case 'ver-documento': r = await verDocumento(token, b); break;
         case 'quitar-documento': r = await quitarDocumento(token, b); break;
         case 'sincronizar-drive': r = await sincronizarDrive(token); break;
+        // Soporte técnico (tickets) y registro de correos
+        case 'ticket-crear': r = await crearTicket(token, b); break;
+        case 'ticket-publico': r = await crearTicketPublico(b); break;
+        case 'mis-tickets': r = await misTickets(token); break;
+        case 'tickets': r = await bandejaTickets(token); break;
+        case 'ticket': r = await verTicket(token, b); break;
+        case 'ticket-responder': r = await responderTicket(token, b); break;
+        case 'ticket-estado': r = await estadoTicket(token, b); break;
+        case 'ticket-adjunto': r = await adjuntoTicket(token, b); break;
+        case 'envios-correo': r = await verEnviosCorreo(token); break;
         // Cursos del equipo
         case 'mi-progreso': r = await miProgreso(token); break;
         case 'marcar': r = await marcar(token, b); break;

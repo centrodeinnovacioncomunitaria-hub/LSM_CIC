@@ -27,7 +27,7 @@ function firestoreFalso() {
   });
   return {
     datos,
-    collection: (c) => ({ doc: (id) => doc(c, id), ...consulta(c, []), add: async (d) => { const id = `auto${++n}`; await doc(c, id).set(d); return { id }; } }),
+    collection: (c) => ({ doc: (id) => doc(c, id || `auto${++n}`), ...consulta(c, []), add: async (d) => { const id = `auto${++n}`; await doc(c, id).set(d); return { id }; } }),
   };
 }
 
@@ -89,14 +89,30 @@ function cuentasFalsas() {
   // ---------- Activación con enlace al correo ----------
   const r1 = await ok('solicitar-enlace', { cedula: '22222222' });
   assert.match(r1.mensaje, /enlace/);
+  assert.equal(r1.enviado, true);
+  assert.equal(r1.correo, 'din***@correo.co', 'se muestra a qué correo se envió, oculto en parte');
   assert.deepEqual(cuentas.enlaces, ['dina@correo.co']);
-  await ok('solicitar-enlace', { cedula: '22222222' });
+  const r1b = await ok('solicitar-enlace', { cedula: '22222222' });
   assert.equal(cuentas.enlaces.length, 1, 'máximo un enlace cada 2 minutos');
+  assert.equal(r1b.reciente, true, 'si pide otro antes de 2 minutos se le avisa');
   const r2 = await ok('solicitar-enlace', { cedula: '99999999' });
-  assert.equal(r2.mensaje, r1.mensaje, 'misma respuesta para cédulas que no existen');
-  await ok('solicitar-enlace', { cedula: '33333333' });
+  const r3 = await ok('solicitar-enlace', { cedula: '33333333' });
+  assert.equal(r2.mensaje, r3.mensaje, 'misma respuesta para cédulas que no existen y para quien no tiene correo');
   assert.equal(cuentas.enlaces.length, 1, 'sin correo no se envía nada');
-  paso('Activación: el enlace llega solo a quien tiene correo, sin revelar qué cédulas existen');
+  const envios = [...db.datos.entries()].filter(([k]) => k.startsWith('envios_correo/')).map(([, v]) => v);
+  assert.deepEqual(envios.map((x) => x.estado), ['enviado', 'omitido', 'omitido', 'omitido'], 'cada intento queda registrado');
+  const enviarAntes = cuentas.enviarEnlace;
+  cuentas.enviarEnlace = async () => { throw new Error('QUOTA_EXCEEDED'); };
+  avanzar(3);
+  const r4 = await ok('solicitar-enlace', { cedula: '22222222' });
+  assert.equal(r4.enviado, false);
+  const fallo = [...db.datos.entries()].filter(([k]) => k.startsWith('envios_correo/')).map(([, v]) => v).pop();
+  assert.equal(fallo.estado, 'fallido'); assert.equal(fallo.error, 'QUOTA_EXCEEDED', 'se guarda el motivo que da Google');
+  cuentas.enviarEnlace = enviarAntes;
+  avanzar(3);
+  await ok('solicitar-enlace', { cedula: '22222222' });
+  assert.equal(cuentas.enlaces.length, 2);
+  paso('Activación: el enlace llega solo a quien tiene correo; se muestra a cuál se envió y cada intento queda registrado');
 
   await falla('ingresar', { cedula: '22222222', clave: 'cualquiera1', rol: 'dinamizadora' }, null, 401);
   cuentas.abrirEnlace('dina@correo.co', 'DinaClave2026');
@@ -423,6 +439,43 @@ function cuentasFalsas() {
   assert.ok(sg.actividades[0].documentos.herramienta.drive_url.startsWith('https://drive.google.com/'));
   await ok('asignar', { cedulas: ['44444444'], dinamizadora: null }, tSara);
   paso('Documentos de seguimiento: copia en Google Drive por satélite, emprendimiento y semana; pendientes se reenvían');
+
+  // ---------- Soporte técnico: tickets ----------
+  const progresoAntes = JSON.stringify([...db.datos.entries()].filter(([k]) => /^(progreso|cuestionarios|evidencias|hitos|constancias|perfiles)/.test(k)));
+  await falla('ticket-crear', { categoria: 'videos', asunto: 'Hola', descripcion: 'corto' }, tRosa, 400);
+  const tk = await ok('ticket-crear', { categoria: 'videos', asunto: 'No me carga el video', descripcion: 'El video de la semana 2 se queda en negro en mi celular.', adjunto: { nombre: 'pantalla.png', mime: 'image/png', base64: 'iVBORw0KGgo=' } }, tRosa);
+  assert.match(tk.ticket.numero, /^T-\d{6}-[0-9A-F]{4}$/);
+  assert.equal(tk.ticket.estado, 'abierto');
+  await falla('tickets', {}, tRosa, 403);
+  await falla('tickets', {}, tDina, 403);
+  const bandeja = await ok('tickets', {}, tSara);
+  assert.equal(bandeja.tickets.length, 1);
+  await falla('ticket', { id: tk.ticket.id }, tDina, 404); // la dinamizadora no ve solicitudes ajenas
+  const r5 = await ok('ticket-responder', { id: tk.ticket.id, texto: 'Hola Rosa, prueba borrando la memoria del navegador.' }, tSara);
+  assert.equal(r5.ticket.estado, 'en_proceso');
+  assert.equal(r5.ticket.mensajes[1].de, 'soporte');
+  assert.equal((await ok('ticket-adjunto', { id: tk.ticket.id }, tSara)).base64, 'iVBORw0KGgo=');
+  await falla('ticket-estado', { id: tk.ticket.id, estado: 'en_proceso' }, tRosa, 403);
+  await ok('ticket-estado', { id: tk.ticket.id, estado: 'resuelto' }, tSara);
+  const r6 = await ok('ticket-responder', { id: tk.ticket.id, texto: 'Sigue igual, no funciona.' }, tRosa);
+  assert.equal(r6.ticket.estado, 'abierto', 'si la persona responde, la solicitud se reabre');
+  assert.equal((await ok('mis-tickets', {}, tRosa)).tickets.length, 1);
+  assert.equal((await ok('mis-tickets', {}, tDina)).tickets.length, 0);
+  await ok('ticket-estado', { id: tk.ticket.id, estado: 'cerrado' }, tRosa);
+  await falla('ticket-responder', { id: tk.ticket.id, texto: 'otra cosa' }, tRosa, 400);
+  await ok('ticket-crear', { categoria: 'seguimiento', asunto: 'Subir acta', descripcion: 'No me deja subir el acta de la semana 1.' }, tDina);
+  const pub = await ok('ticket-publico', { cedula: '44444444', nombre: 'Rosa Emprendedora', contacto: '3001234567', descripcion: 'Olvidé mi contraseña y no me llega el correo.' });
+  assert.match(pub.numero, /^T-/);
+  await falla('ticket-publico', { cedula: '44444444', nombre: 'Rosa', contacto: '300', descripcion: 'x' }, null, 400);
+  await ok('ticket-publico', { cedula: '44444444', nombre: 'Rosa Emprendedora', contacto: 'rosa@correo.co', descripcion: 'Sigo sin poder entrar a la plataforma.' });
+  await ok('ticket-publico', { cedula: '44444444', nombre: 'Rosa Emprendedora', contacto: 'rosa@correo.co', descripcion: 'Sigo sin poder entrar a la plataforma.' });
+  await falla('ticket-publico', { cedula: '44444444', nombre: 'Rosa Emprendedora', contacto: 'rosa@correo.co', descripcion: 'Cuarta vez el mismo día, debe frenar.' }, null, 429);
+  assert.equal((await ok('tickets', {}, tAdmin)).tickets.length, 5, 'la administración también ve la bandeja');
+  assert.equal(JSON.stringify([...db.datos.entries()].filter(([k]) => /^(progreso|cuestionarios|evidencias|hitos|constancias|perfiles)/.test(k))), progresoAntes, 'los tickets no tocan el avance ni los perfiles');
+  const env = await ok('envios-correo', {}, tAdmin);
+  assert.ok(env.envios.length >= 5 && env.envios.some((x) => x.estado === 'fallido'));
+  await falla('envios-correo', {}, tRosa, 403);
+  paso('Soporte: tickets con respuestas, estados y adjunto; solicitud sin cuenta con límite; sin tocar el avance');
 
   // ---------- Mi cuenta ----------
   await falla('cambiar-clave', { clave_actual: 'mala', clave_nueva: 'OtraClave2026' }, tDina, 401);

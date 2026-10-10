@@ -22,7 +22,18 @@ function crearCuentas(auth, claveWeb, sitio) {
     cambiarCorreo: (uid, email) => auth.updateUser(uid, { email }),
     verificarToken: async (token) => (await auth.verifyIdToken(token)).uid,
     verificarClave: (email, clave) => identidad('signInWithPassword', { email, password: clave, returnSecureToken: false }),
-    enviarEnlace: (email) => identidad('sendOobCode', { requestType: 'PASSWORD_RESET', email, continueUrl: `${sitio()}#ingresar` }),
+    // Lanza un error con el motivo que da Google si no se pudo enviar (queda en el registro de envíos)
+    enviarEnlace: async (email) => {
+      const base = process.env.FIREBASE_AUTH_EMULATOR_HOST ? `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com` : 'https://identitytoolkit.googleapis.com';
+      const r = await fetch(`${base}/v1/accounts:sendOobCode?key=${claveWeb()}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Firebase-Locale': 'es' },
+        body: JSON.stringify({ requestType: 'PASSWORD_RESET', email, continueUrl: `${sitio()}#ingresar` }),
+      });
+      if (r.ok) return true;
+      const j = await r.json().catch(() => ({}));
+      throw new Error((j.error && j.error.message) || `HTTP ${r.status}`);
+    },
   };
 }
 

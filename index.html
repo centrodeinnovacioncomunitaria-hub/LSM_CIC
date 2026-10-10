@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261025">
+    <link rel="stylesheet" href="assets/cic.css?v=20261026">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -101,6 +101,7 @@
                     </ul>
                 </div>
                 <a href="recursos/">Recursos</a>
+                <a href="microfinanciamiento/">Microfinanciamiento</a>
                 <a href="foro/">Foro</a>
                 <div class="submenu">
                     <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-cursos">Equipo <svg aria-hidden="true"><use href="#flecha"/></svg></button>
@@ -272,6 +273,15 @@
                     </div>
                 </div>
 <!-- PILARES:fin -->
+                <div id="microfinanciamiento" class="umc-aviso aparece">
+                    <span class="umc-aviso-icono" aria-hidden="true"><svg viewBox="0 0 24 24"><ellipse cx="9" cy="7" rx="6" ry="2.6"/><path d="M3 7v4c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6V7"/><path d="M9 13.6c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6v4c0 1.4-2.7 2.6-6 2.6s-6-1.2-6-2.6z"/></svg></span>
+                    <div>
+                        <p class="pc-etiqueta">Pilar 3 · Acceso a financiamiento</p>
+                        <h3>Unidades de Microfinanciamiento Comunitario</h3>
+                        <p>Grupos de 10 a 19 emprendedoras que ahorran juntas y se prestan entre ellas con reglas que ellas mismas votan, sin capital externo y siempre por debajo de la tasa de usura.</p>
+                    </div>
+                    <a class="btn btn-primario" href="microfinanciamiento/">Conocer las UMC <span aria-hidden="true">›</span></a>
+                </div>
             </div>
         </section>
 
@@ -568,10 +578,12 @@
             <div class="pestanas" role="tablist" id="pestanas-plataforma" aria-label="Secciones de la plataforma">
                 <button type="button" class="pestana" role="tab" id="tab-cursos" aria-controls="vista-cursos" data-vista="cursos">Mis talleres</button>
                 <button type="button" class="pestana" role="tab" id="tab-seguimiento" aria-controls="vista-seguimiento" data-vista="seguimiento">Seguimiento</button>
+                <button type="button" class="pestana" role="tab" id="tab-soporte" aria-controls="vista-soporte" data-vista="soporte">Soporte</button>
                 <button type="button" class="pestana" role="tab" id="tab-cuenta" aria-controls="vista-cuenta" data-vista="cuenta">Mi cuenta</button>
             </div>
             <section id="vista-cursos" class="vista" role="tabpanel" aria-labelledby="tab-cursos"></section>
             <section id="vista-seguimiento" class="vista" role="tabpanel" aria-labelledby="tab-seguimiento" hidden></section>
+            <section id="vista-soporte" class="vista" role="tabpanel" aria-labelledby="tab-soporte" hidden></section>
             <section id="vista-cuenta" class="vista" role="tabpanel" aria-labelledby="tab-cuenta" hidden></section>
         </div>
     </main>
@@ -652,6 +664,7 @@
                 <div class="acceso-enlaces">
                     <button type="button" id="olvide" class="texto-boton">¿Olvidaste tu contraseña?</button>
                     <button type="button" id="activar-cuenta" class="texto-boton" hidden>Activar mi cuenta</button>
+                    <button type="button" class="texto-boton" data-pedir-soporte>¿No puedes entrar? Pide soporte</button>
                 </div>
             </form>
 
@@ -661,7 +674,7 @@
                 <label class="etiqueta" for="co-cedula">Número de cédula</label>
                 <input class="campo" id="co-cedula" name="cedula" inputmode="numeric" autocomplete="username" maxlength="15" placeholder="Solo números, sin puntos" required>
                 <button type="button" id="pedir-codigo" class="btn btn-primario ancho">Enviarme el enlace a mi correo</button>
-                <small class="ayuda-campo">Abre el correo, toca el enlace, crea tu contraseña y vuelve aquí a ingresar. Si no llega, revisa «Spam».</small>
+                <small class="ayuda-campo">Te llega un <b>enlace</b> (no un código de números): abre el correo «Restablece tu contraseña», toca el enlace, crea tu contraseña y vuelve aquí a ingresar. Si no llega en unos minutos, revisa «Spam», «Correo no deseado» o «Promociones».</small>
                 <p class="separador-o"><span>¿No tienes correo? Usa el código que te dio la Secretaría Técnica o tu dinamizadora</span></p>
                 <label class="etiqueta" for="co-codigo">Código de 6 números</label>
                 <input class="campo campo-codigo" id="co-codigo" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required>
@@ -673,6 +686,23 @@
                 <small id="co-clave-ayuda" class="ayuda-campo">Mínimo 8 letras o números, distinta de tu cédula.</small>
                 <button type="submit" class="btn btn-borde ancho">Guardar contraseña con el código y entrar</button>
                 <button type="button" id="volver-ingresar" class="texto-boton">Volver a ingresar con mi contraseña</button>
+                <button type="button" class="texto-boton" data-pedir-soporte>¿No puedes entrar? Pide soporte</button>
+            </form>
+
+            <form id="form-soporte" method="post" action="#" novalidate hidden aria-labelledby="soporte-titulo">
+                <h3 id="soporte-titulo" class="subtitulo-dialogo">Pide soporte</h3>
+                <p class="texto-suave">Cuéntanos qué pasa y la Secretaría Técnica te contactará por WhatsApp o correo.</p>
+                <label class="etiqueta" for="so-cedula">Número de cédula</label>
+                <input class="campo" id="so-cedula" name="cedula" inputmode="numeric" maxlength="15" placeholder="Solo números, sin puntos" required>
+                <label class="etiqueta" for="so-nombre">Nombre y apellido</label>
+                <input class="campo" id="so-nombre" name="nombre" autocomplete="name" maxlength="90" required>
+                <label class="etiqueta" for="so-contacto">Celular / WhatsApp o correo para responderte</label>
+                <input class="campo" id="so-contacto" name="contacto" maxlength="120" required>
+                <label class="etiqueta" for="so-desc">¿Qué pasa?</label>
+                <textarea class="campo" id="so-desc" name="descripcion" rows="3" maxlength="2000" placeholder="Por ejemplo: pedí el enlace para cambiar mi contraseña y no me llega" required></textarea>
+                <input type="text" name="sitio" tabindex="-1" autocomplete="off" class="sr-only" aria-hidden="true">
+                <button type="submit" class="btn btn-primario ancho">Enviar solicitud</button>
+                <button type="button" class="texto-boton" data-volver-ingreso>Volver a ingresar</button>
             </form>
 
             <form id="form-registro" method="post" action="#" role="tabpanel" aria-labelledby="pestana-registro" novalidate hidden>
@@ -707,11 +737,12 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261025"></script>
-    <script src="assets/datos-cic.js?v=20261025"></script>
-    <script src="assets/sitio.js?v=20261025"></script>
-    <script src="assets/cursos-equipo.js?v=20261025"></script>
-    <script src="assets/emprendimientos.js?v=20261025"></script>
+    <script src="./config.js?v=20261026"></script>
+    <script src="assets/datos-cic.js?v=20261026"></script>
+    <script src="assets/sitio.js?v=20261026"></script>
+    <script src="assets/cursos-equipo.js?v=20261026"></script>
+    <script src="assets/soporte.js?v=20261026"></script>
+    <script src="assets/emprendimientos.js?v=20261026"></script>
     <script>
     (() => {
         'use strict';
@@ -894,12 +925,14 @@
         function modo(m) {
             const esRegistro = m === 'registro' && rolElegido() === 'emprendedora';
             const esCodigo = m === 'codigo';
+            const esSoporte = m === 'soporte';
+            $('#form-soporte').hidden = !esSoporte;
             $('#pestana-ingresar').setAttribute('aria-selected', String(!esRegistro));
             $('#pestana-registro').setAttribute('aria-selected', String(esRegistro));
-            $('#form-ingresar').hidden = esRegistro || esCodigo;
+            $('#form-ingresar').hidden = esRegistro || esCodigo || esSoporte;
             $('#form-registro').hidden = !esRegistro;
             $('#form-codigo').hidden = !esCodigo;
-            $('#acceso-titulo').textContent = esRegistro ? 'Inscríbete' : esCodigo ? 'Activa o recupera tu cuenta' : 'Ingresa al CIC';
+            $('#acceso-titulo').textContent = esRegistro ? 'Inscríbete' : esCodigo ? 'Activa o recupera tu cuenta' : esSoporte ? '¿No puedes entrar?' : 'Ingresa al CIC';
             mensaje('');
         }
         // Mientras no elija quién es, solo ve la pregunta. La inscripción es solo para emprendedoras.
@@ -947,6 +980,27 @@
             setTimeout(() => $(ced ? '#pedir-codigo' : '#co-cedula').focus(), 30);
         }
         $('#olvide').addEventListener('click', () => abrirCodigo(false));
+        $$('[data-pedir-soporte]').forEach((b) => b.addEventListener('click', () => {
+            const ced = soloDigitos($('#in-cedula').value || $('#co-cedula').value);
+            modo('soporte');
+            if (ced) $('#so-cedula').value = ced;
+            setTimeout(() => $(ced ? '#so-nombre' : '#so-cedula').focus(), 30);
+        }));
+        $('[data-volver-ingreso]').addEventListener('click', () => { modo('ingresar'); $('#in-cedula').focus(); });
+        $('#so-cedula').addEventListener('input', (e) => { e.target.value = soloDigitos(e.target.value); });
+        $('#form-soporte').addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            const f = ev.currentTarget;
+            const b = f.querySelector('button[type="submit"]');
+            if (soloDigitos(f.cedula.value).length < 5) return mensaje('Escribe tu número de cédula, solo números.');
+            if (DEMO) { mensaje('Demostración: en la plataforma real tu solicitud llegaría a la Secretaría Técnica.', 'ok'); return; }
+            b.disabled = true;
+            try {
+                const r = await llamar('ticket-publico', { cedula: soloDigitos(f.cedula.value), nombre: f.nombre.value, contacto: f.contacto.value, descripcion: f.descripcion.value, sitio: f.sitio.value });
+                f.reset();
+                mensaje(`Listo: recibimos tu solicitud${r.numero ? ` (${r.numero})` : ''}. La Secretaría Técnica te contactará pronto.`, 'ok');
+            } catch (e) { mensaje(e.message); } finally { b.disabled = false; }
+        });
         $('#activar-cuenta').addEventListener('click', () => abrirCodigo(true));
         $('#volver-ingresar').addEventListener('click', () => { modo('ingresar'); $('#in-cedula').focus(); });
         $$('#co-cedula, #co-codigo').forEach((c) => c.addEventListener('input', () => { c.value = soloDigitos(c.value); }));
@@ -1066,11 +1120,11 @@
             $('#usuaria').classList.add('activa');
             $('#logo').setAttribute('href', '#plataforma');
             $('#usuaria-nombre').textContent = perfil.nombre;
-            $('#usuaria-rol').textContent = ROL[perfil.rol].nombre;
+            $('#usuaria-rol').textContent = perfil.subtitulo || ROL[perfil.rol].nombre;
             $('#usuaria-inicial').textContent = primerNombre(perfil.nombre).charAt(0).toUpperCase();
             $('#aviso-demo').hidden = !DEMO;
             const sat = satelite(perfil.satelite);
-            $('#bienvenida-rol').textContent = [ROL[perfil.rol].nombre, sat ? `Satélite ${sat.nombre}` : perfil.departamento].filter(Boolean).join(' · ');
+            $('#bienvenida-rol').textContent = [perfil.subtitulo || ROL[perfil.rol].nombre, sat ? `Satélite ${sat.nombre}` : perfil.departamento].filter(Boolean).join(' · ');
             $('#bienvenida-titulo').textContent = `Hola, ${primerNombre(perfil.nombre)}`;
             $('#bienvenida-texto').textContent = esEquipo()
                 ? (perfil.rol === 'secretaria' ? 'Tus cursos, el seguimiento de los 8 satélites y la revisión de evidencias del equipo.' : 'Tus cursos para acompañar las rutas HACER y SER, y las emprendedoras de tu satélite.')
@@ -1104,9 +1158,10 @@
             aviso('Cerraste tu sesión.');
         });
 
-        const VISTAS = ['cursos', 'seguimiento', 'cuenta'];
+        const VISTAS = ['cursos', 'seguimiento', 'soporte', 'cuenta'];
         const visibles = () => VISTAS.filter((v) => !$(`#tab-${v}`).hidden);
         function ir(vista, enfocar = true) {
+            if (vista === 'soporte') pintarSoporte();
             VISTAS.forEach((v) => {
                 const activa = v === vista;
                 $(`#vista-${v}`).hidden = !activa;
@@ -1256,6 +1311,11 @@
         // Contexto que comparten la página y los cursos del equipo (assets/cursos-equipo.js)
         const contextoCursos = () => ({ perfil, DEMO, esc, llamar, reproductor, traerVideos, aviso, CURSOS, codigoModulo, satelite });
         function pintarCursos() { return window.CICCursos.pintar($('#vista-cursos'), contextoCursos()); }
+        // Soporte técnico (assets/soporte.js)
+        function pintarSoporte() {
+            if (DEMO) { $('#vista-soporte').innerHTML = '<p class="tarjeta vacio">En la demostración no se envían solicitudes: en la plataforma real aquí abres y sigues tus solicitudes de soporte.</p>'; return; }
+            window.CICSoporte.pintar($('#vista-soporte'), { perfil, esc, aviso, satelite, pedir: (accion, datos) => llamar(accion, datos, true) });
+        }
         // Contexto de la asignación y el seguimiento de emprendimientos (assets/emprendimientos.js)
         const contextoEmprendimientos = () => ({ perfil, DEMO, esc, llamar, aviso, satelite, SATELITES });
 

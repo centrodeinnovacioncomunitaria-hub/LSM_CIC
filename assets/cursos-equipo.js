@@ -292,6 +292,13 @@
             <div class="video-estado" id="bienvenida-estado" aria-live="polite">${bv.iniciada ? estadoReloj(bv.faltan, bv.segundos, 'tu compromiso') : '<p class="texto-suave">Dale play al video para empezar.</p>'}</div>
         </section>`;
     }
+    // Volver a ver la bienvenida cuando ya se vio (el reproductor se carga solo al abrirlo)
+    function repasoBienvenida() {
+        const bv = estado.bienvenida;
+        if (!bv || !bv.hecha || !porCodigo.BIENVENIDA) return '';
+        return `<details class="tarjeta repaso-video"><summary><span class="repaso-icono" aria-hidden="true">▶</span> Volver a ver el video de bienvenida al CIC <span class="paso-ok">✓ Visto</span></summary>
+            <div class="video-grande" data-fuente="${esc(fuenteVideo(porCodigo.BIENVENIDA))}"></div></details>`;
+    }
     const estadoReloj = (faltan, total, que) => `<p class="reloj-video"><span class="reloj-barra"><span style="width:${100 - Math.round(faltan / total * 100)}%"></span></span> Mira el video completo: ${esc(que)} se habilita en <b data-faltan="${faltan}">${minSeg(faltan)}</b>.</p>`;
     function enlazarBienvenida() {
         if (!bienvenidaPendiente()) return;
@@ -366,6 +373,7 @@
             <p class="vista-intro">${C.perfil.rol === 'secretaria' ? 'Avanza en orden: Gestión del CIC, luego tu Formación de la Secretaría Técnica y, al terminarla, se abren las rutas HACER y SER para que las supervises.' : 'Avanza en orden: cada módulo se abre cuando apruebas el anterior.'} Toca un módulo para abrir su lección.${C.DEMO ? ' <b>Demostración:</b> tu avance se guarda solo en este dispositivo y las preguntas son de ejemplo, no las oficiales.' : ''}</p>
             ${recorrido()}
             ${bienvenidaPendiente() ? tarjetaBienvenida() : (h.has('compromiso') ? '' : tarjetaCompromiso())}
+            ${repasoBienvenida()}
             ${Object.keys(estado.cursos).map(tarjetaCurso).join('')}
             ${C.DEMO ? '<p class="privado"><button type="button" class="boton-texto" id="demo-reiniciar">Reiniciar la demostración de los cursos</button></p>' : ''}`;
         const chk = v.querySelector('#acepto-compromiso');
@@ -377,6 +385,11 @@
             });
         }
         enlazarBienvenida();
+        const repaso = C.vista.querySelector('.repaso-video');
+        if (repaso) repaso.addEventListener('toggle', () => {
+            const caja = repaso.querySelector('.video-grande');
+            if (repaso.open && !caja.querySelector('iframe')) caja.innerHTML = marcoVideo(porCodigo.BIENVENIDA, 'Bienvenida al CIC');
+        });
         const reiniciar = v.querySelector('#demo-reiniciar');
         if (reiniciar) reiniciar.addEventListener('click', () => { Demo.reiniciar(C.perfil); refrescar().catch(() => {}); C.aviso('La demostración de los cursos volvió al inicio.'); });
         v.querySelectorAll('[data-constancia]').forEach((b) => b.addEventListener('click', () => imprimirConstancia(b.dataset.constancia)));

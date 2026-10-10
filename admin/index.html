@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/cic.css?v=20261025">
+    <link rel="stylesheet" href="../assets/cic.css?v=20261026">
     <style>
         .admin-cab { background: var(--bosque); color: #fff; padding: 1.2rem 0; }
         .admin-cab .contenedor { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -64,16 +64,21 @@
             <div class="admin-tabs" role="tablist">
                 <button type="button" role="tab" aria-selected="true" data-tab="cursos">Videos y material de los cursos</button>
                 <button type="button" role="tab" aria-selected="false" data-tab="grabaciones">Grabaciones de talleres SER</button>
+                <button type="button" role="tab" aria-selected="false" data-tab="soporte">Soporte técnico</button>
+                <button type="button" role="tab" aria-selected="false" data-tab="correos">Correos enviados</button>
             </div>
             <div id="tab-cursos"></div>
             <div id="tab-grabaciones" hidden></div>
+            <div id="tab-soporte" hidden></div>
+            <div id="tab-correos" hidden></div>
         </section>
     </main>
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="../config.js?v=20261025"></script>
-    <script src="../assets/datos-cic.js?v=20261025"></script>
+    <script src="../config.js?v=20261026"></script>
+    <script src="../assets/soporte.js?v=20261026"></script>
+    <script src="../assets/datos-cic.js?v=20261026"></script>
     <script>
     (() => {
         'use strict';
@@ -86,6 +91,7 @@
         const FUNCION = CFG.funcionUrl || (FB.projectId ? `https://us-central1-${FB.projectId}.cloudfunctions.net/cicAcceso` : '');
         let auth = null;
         let contenido = null;
+        let yo = null;
 
         // Títulos de las unidades (los mismos de la plataforma)
         const TITULOS = {
@@ -150,6 +156,7 @@
         async function entrar() {
             const { perfil } = await llamar('mi-perfil');
             if (!perfil || perfil.rol !== 'administradora') { await auth.signOut(); throw new Error('Esta cuenta no tiene permisos de administración.'); }
+            yo = perfil;
             $('#vista-login').hidden = true;
             $('#vista-panel').hidden = false;
             $('#salir').hidden = false;
@@ -167,9 +174,33 @@
         // ---------- Pestañas ----------
         $$('[data-tab]').forEach((b) => b.addEventListener('click', () => {
             $$('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
-            $('#tab-cursos').hidden = b.dataset.tab !== 'cursos';
-            $('#tab-grabaciones').hidden = b.dataset.tab !== 'grabaciones';
+            ['cursos', 'grabaciones', 'soporte', 'correos'].forEach((t) => { $(`#tab-${t}`).hidden = b.dataset.tab !== t; });
+            if (b.dataset.tab === 'soporte') window.CICSoporte.pintar($('#tab-soporte'), { perfil: yo, esc, aviso, pedir: llamar, satelite: (id) => DATOS.satelites.find((x) => x.id === id) || null });
+            if (b.dataset.tab === 'correos') pintarCorreos();
         }));
+
+        // ---------- Registro de correos de contraseña (colección «envios_correo» de Firestore) ----------
+        const ESTADO_ENVIO = { enviado: ['Enviado', 'sop-resuelto'], fallido: ['Falló', 'sop-abierto'], omitido: ['No se envió', 'sop-cerrado'] };
+        let soloProblemas = false;
+        async function pintarCorreos() {
+            const caja = $('#tab-correos');
+            caja.innerHTML = '<p class="vista-intro">Cargando…</p>';
+            let r;
+            try { r = await llamar('envios-correo'); } catch (e) { caja.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; return; }
+            const filas = r.envios.filter((x) => !soloProblemas || x.estado !== 'enviado');
+            const cuenta = (e) => r.envios.filter((x) => x.estado === e).length;
+            caja.innerHTML = `
+                <p class="vista-intro">Cada vez que alguien pide el enlace para crear o cambiar su contraseña queda aquí: si se envió, si falló (con el motivo que dio Google) o por qué no se envió. Se muestran los últimos 300.</p>
+                <p><span class="chip sop-resuelto">${cuenta('enviado')} enviados</span> <span class="chip sop-abierto">${cuenta('fallido')} fallidos</span> <span class="chip sop-cerrado">${cuenta('omitido')} no enviados</span>
+                <label style="margin-left:1rem"><input type="checkbox" id="solo-problemas" ${soloProblemas ? 'checked' : ''}> Ver solo los que no se enviaron</label></p>
+                <div class="tabla-caja"><table><thead><tr><th scope="col">Fecha</th><th scope="col">Persona</th><th scope="col">Correo</th><th scope="col">Estado</th><th scope="col">Detalle</th></tr></thead>
+                <tbody>${filas.map((x) => `<tr><td style="white-space:nowrap">${esc(new Date(x.creado_en).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))}</td>
+                    <td><b>${esc(x.nombre || 'Sin registro')}</b><small>CC ${esc(x.cedula)}${x.rol ? ' · ' + esc(x.rol) : ''}</small></td>
+                    <td>${esc(x.correo || '—')}</td>
+                    <td><span class="chip ${(ESTADO_ENVIO[x.estado] || [])[1] || ''}">${esc((ESTADO_ENVIO[x.estado] || [x.estado])[0])}</span></td>
+                    <td><small>${esc(x.error || x.motivo || '')}</small></td></tr>`).join('') || '<tr><td colspan="5">Todavía no hay registros.</td></tr>'}</tbody></table></div>`;
+            $('#solo-problemas').addEventListener('change', (e) => { soloProblemas = e.target.checked; pintarCorreos(); });
+        }
 
         async function recargar() {
             contenido = await llamar('admin-contenido');
