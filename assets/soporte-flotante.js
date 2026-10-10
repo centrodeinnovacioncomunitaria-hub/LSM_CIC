@@ -73,7 +73,7 @@ textarea.sopf-campo { resize: vertical; min-height: 4rem; }
         const s = sesion();
         const rolSesion = s ? (s.perfil.rol === 'administradora' ? 'secretaria' : s.perfil.rol) : null;
         panel.innerHTML = `
-            <div class="sopf-cabeza"><div><b>¿Necesitas ayuda?</b><small>Responde estas preguntas y la Secretaría Técnica te contacta.</small></div><button type="button" class="sopf-cerrar" data-cerrar aria-label="Cerrar">×</button></div>
+            <div class="sopf-cabeza"><div><b>¿Necesitas ayuda?</b><small>Responde estas preguntas y el equipo de soporte del CIC te contacta.</small></div><button type="button" class="sopf-cerrar" data-cerrar aria-label="Cerrar">×</button></div>
             <form class="sopf-cuerpo" novalidate>
                 ${s ? '' : `<fieldset><legend>1. ¿Quién eres?</legend>${chips('rol', QUIEN, null)}</fieldset>`}
                 <label class="sopf-etq" for="sopf-tema">${s ? '1' : '2'}. ¿Con qué necesitas ayuda?</label>
@@ -133,7 +133,7 @@ textarea.sopf-campo { resize: vertical; min-height: 4rem; }
             <div class="sopf-cabeza"><div><b>Soporte técnico</b></div><button type="button" class="sopf-cerrar" data-cerrar aria-label="Cerrar">×</button></div>
             <div class="sopf-ok"><span style="font-size:2rem" aria-hidden="true">✅</span><b>¡Recibimos tu solicitud!</b>
             ${numero ? `<span class="sopf-numero">${esc(numero)}</span>` : ''}
-            <p>${conCuenta ? 'La Secretaría Técnica te responderá en la pestaña «Soporte» de tu cuenta.' : 'La Secretaría Técnica te contactará por el celular, WhatsApp o correo que escribiste.'}</p>
+            <p>${conCuenta ? 'El equipo de soporte te responderá en la pestaña «Soporte» de tu cuenta.' : 'El equipo de soporte te contactará por el celular, WhatsApp o correo que escribiste.'}</p>
             ${conCuenta && window.CICSesion.irSoporte ? '<button type="button" class="sopf-enlace" data-ver>Ver mis solicitudes</button>' : ''}</div>`;
         panel.querySelector('[data-cerrar]').addEventListener('click', cerrar);
         const ver = panel.querySelector('[data-ver]');

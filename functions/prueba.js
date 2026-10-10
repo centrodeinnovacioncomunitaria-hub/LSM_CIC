@@ -448,17 +448,25 @@ function cuentasFalsas() {
   assert.equal(tk.ticket.estado, 'abierto');
   await falla('tickets', {}, tRosa, 403);
   await falla('tickets', {}, tDina, 403);
-  const bandeja = await ok('tickets', {}, tSara);
+  await falla('tickets', {}, tSara, 403); // la Secretaría ya no atiende el soporte
+  const bandeja = await ok('tickets', {}, tAdmin);
   assert.equal(bandeja.tickets.length, 1);
+  const avisos = () => enDrive.filter((c) => c.accion === 'correo');
+  assert.equal(avisos().length, 1, 'la solicitud nueva llega por correo a soporte');
+  assert.match(avisos()[0].asunto, /Nueva solicitud T-/);
+  assert.match(avisos()[0].texto, /El video de la semana 2/);
   await falla('ticket', { id: tk.ticket.id }, tDina, 404); // la dinamizadora no ve solicitudes ajenas
-  const r5 = await ok('ticket-responder', { id: tk.ticket.id, texto: 'Hola Rosa, prueba borrando la memoria del navegador.' }, tSara);
+  await falla('ticket-responder', { id: tk.ticket.id, texto: 'Respuesta de la Secretaría' }, tSara, 404);
+  const r5 = await ok('ticket-responder', { id: tk.ticket.id, texto: 'Hola Rosa, prueba borrando la memoria del navegador.' }, tAdmin);
+  assert.equal(avisos().length, 1, 'las respuestas de soporte no generan aviso');
   assert.equal(r5.ticket.estado, 'en_proceso');
   assert.equal(r5.ticket.mensajes[1].de, 'soporte');
-  assert.equal((await ok('ticket-adjunto', { id: tk.ticket.id }, tSara)).base64, 'iVBORw0KGgo=');
+  assert.equal((await ok('ticket-adjunto', { id: tk.ticket.id }, tAdmin)).base64, 'iVBORw0KGgo=');
   await falla('ticket-estado', { id: tk.ticket.id, estado: 'en_proceso' }, tRosa, 403);
-  await ok('ticket-estado', { id: tk.ticket.id, estado: 'resuelto' }, tSara);
+  await ok('ticket-estado', { id: tk.ticket.id, estado: 'resuelto' }, tAdmin);
   const r6 = await ok('ticket-responder', { id: tk.ticket.id, texto: 'Sigue igual, no funciona.' }, tRosa);
   assert.equal(r6.ticket.estado, 'abierto', 'si la persona responde, la solicitud se reabre');
+  assert.equal(avisos().length, 2, 'el mensaje nuevo de la persona llega por correo');
   assert.equal((await ok('mis-tickets', {}, tRosa)).tickets.length, 1);
   assert.equal((await ok('mis-tickets', {}, tDina)).tickets.length, 0);
   await ok('ticket-estado', { id: tk.ticket.id, estado: 'cerrado' }, tRosa);
@@ -467,7 +475,7 @@ function cuentasFalsas() {
   const pub = await ok('ticket-publico', { cedula: '44444444', nombre: 'Rosa Emprendedora', contacto: '3001234567', descripcion: 'Olvidé mi contraseña y no me llega el correo.' });
   assert.match(pub.numero, /^T-/);
   const pubVideo = await ok('ticket-publico', { cedula: '77777777', nombre: 'Ana Visitante', contacto: '3110000000', categoria: 'videos', rol: 'emprendedora', dispositivo: 'Celular', asunto: 'Videos', descripcion: 'El video no carga en mi celular desde ayer.' });
-  const vistoPub = (await ok('tickets', {}, tSara)).tickets.find((x) => x.numero === pubVideo.numero);
+  const vistoPub = (await ok('tickets', {}, tAdmin)).tickets.find((x) => x.numero === pubVideo.numero);
   assert.equal(vistoPub.categoria, 'videos'); assert.equal(vistoPub.dispositivo, 'Celular'); assert.equal(vistoPub.rol, 'emprendedora');
   await falla('ticket-publico', { cedula: '44444444', nombre: 'Rosa', contacto: '300', descripcion: 'x' }, null, 400);
   await ok('ticket-publico', { cedula: '44444444', nombre: 'Rosa Emprendedora', contacto: 'rosa@correo.co', descripcion: 'Sigo sin poder entrar a la plataforma.' });
@@ -475,6 +483,8 @@ function cuentasFalsas() {
   await falla('ticket-publico', { cedula: '44444444', nombre: 'Rosa Emprendedora', contacto: 'rosa@correo.co', descripcion: 'Cuarta vez el mismo día, debe frenar.' }, null, 429);
   assert.equal((await ok('tickets', {}, tAdmin)).tickets.length, 6, 'la administración también ve la bandeja');
   assert.equal(JSON.stringify([...db.datos.entries()].filter(([k]) => /^(progreso|cuestionarios|evidencias|hitos|constancias|perfiles)/.test(k))), progresoAntes, 'los tickets no tocan el avance ni los perfiles');
+  assert.ok(avisos().length >= 6, 'las solicitudes sin cuenta también llegan por correo');
+  await falla('envios-correo', {}, tSara, 403);
   const env = await ok('envios-correo', {}, tAdmin);
   assert.ok(env.envios.length >= 5 && env.envios.some((x) => x.estado === 'fallido'));
   await falla('envios-correo', {}, tRosa, 403);

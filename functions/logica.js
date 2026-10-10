@@ -205,7 +205,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   // Administración: últimos envíos de correo
   async function verEnviosCorreo(token) {
     const p = await usuarioDelToken(token);
-    if (p.rol !== 'administradora' && p.rol !== 'secretaria') throw new Falla(403, 'permiso', 'Este registro es para la administración.');
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Este registro es para la administración.');
     const filas = (await lista(col('envios_correo'))).sort((a, b) => String(b.creado_en).localeCompare(String(a.creado_en))).slice(0, 300);
     const nombres = {};
     for (const x of await lista(col('perfiles'))) nombres[x.cedula] = x.nombre;
@@ -516,14 +516,31 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
 
   // ================================================================ Soporte técnico: tickets
   // Cualquier persona con cuenta (emprendedora, dinamizadora o secretaría) abre una solicitud; quien no puede entrar
-  // la abre desde el ingreso con su cédula y un contacto. La atienden la Secretaría Técnica y la administración.
+  // la abre desde el ingreso con su cédula y un contacto. La atiende ÚNICAMENTE la administración
+  // (2horas.online01@gmail.com): cada solicitud nueva y cada mensaje de la persona le llegan por correo
+  // (el puente Apps Script de la cuenta del CIC solo puede escribir a esa dirección).
   // Vive aparte (colecciones «tickets» y «documentos»): no toca el avance de nadie.
   const CATEGORIAS_SOPORTE = {
     acceso: 'No puedo entrar / contraseña', videos: 'Videos', cursos: 'Cursos y evaluaciones',
     talleres: 'Talleres y guías', seguimiento: 'Seguimiento y documentos', otro: 'Otro',
   };
   const ESTADOS_TICKET = ['abierto', 'en_proceso', 'resuelto', 'cerrado'];
-  const esSoporte = (p) => p.rol === 'secretaria' || esAdmin(p);
+  const esSoporte = (p) => esAdmin(p);
+  const PANEL_SOPORTE = 'https://cicredmujeresdelcaribe.org/admin/';
+  async function avisarSoporte(t, tipo, texto) {
+    if (!driveActivo()) return;
+    const quien = `${t.nombre}${t.rol ? ` (${t.rol})` : ''} · CC ${t.cedula}`;
+    const asunto = tipo === 'nuevo' ? `[Soporte CIC] Nueva solicitud ${t.numero}: ${t.asunto}` : `[Soporte CIC] ${t.numero}: nuevo mensaje de ${t.nombre}`;
+    const cuerpo = [
+      tipo === 'nuevo' ? 'Llegó una nueva solicitud de soporte.' : 'La persona escribió de nuevo en su solicitud.',
+      '', `Solicitud: ${t.numero}`, `Tema: ${CATEGORIAS_SOPORTE[t.categoria] || t.categoria}`, `Asunto: ${t.asunto}`, `De: ${quien}`,
+      t.contacto ? `Contacto: ${t.contacto}` : '', t.satelite ? `Satélite: ${nombreSatelite(t.satelite)}` : '', t.dispositivo ? `Desde: ${t.dispositivo}` : '',
+      t.publico ? 'Enviada sin cuenta: respóndele por su contacto y luego márcala como resuelta.' : 'Tiene cuenta: respóndele en el panel y verá tu respuesta en su pestaña «Soporte».',
+      '', 'Mensaje:', texto, '', `Atiéndela en ${PANEL_SOPORTE} (pestaña «Soporte técnico»).`,
+    ].filter((x) => x !== '').join('\n');
+    try { await drive({ accion: 'correo', asunto, texto: cuerpo }); }
+    catch (err) { console.error(`No se pudo avisar por correo la solicitud ${t.numero}:`, err.message); }
+  }
   const numeroTicket = () => `T-${hoy().slice(2, 10).replace(/-/g, '')}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
   const vistaTicket = (x, conMensajes) => ({
     id: x._id, numero: x.numero, categoria: x.categoria, categoria_nombre: CATEGORIAS_SOPORTE[x.categoria] || 'Otro', asunto: x.asunto,
@@ -562,6 +579,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
       estado: 'abierto', mensajes: [{ de: 'usuario', nombre: p.nombre, texto: descripcion, en: hoy() }], creado_en: hoy(), actualizado_en: hoy(),
     };
     await ref.set(fila);
+    await avisarSoporte(fila, 'nuevo', descripcion);
     return { ticket: vistaTicket({ _id: ref.id, ...fila }, true) };
   }
   // Sin sesión (botón flotante o «¿No puedes entrar?»): cédula, nombre, un contacto, el tema y la descripción.
@@ -588,6 +606,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
       estado: 'abierto', mensajes: [{ de: 'usuario', nombre, texto: descripcion, en: hoy() }], creado_en: hoy(), actualizado_en: hoy(),
     };
     await ref.set(fila);
+    await avisarSoporte(fila, 'nuevo', descripcion);
     return { ok: true, numero: fila.numero };
   }
   async function misTickets(token) {
@@ -597,7 +616,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   }
   async function bandejaTickets(token) {
     const p = await usuarioDelToken(token);
-    if (!esSoporte(p)) throw new Falla(403, 'permiso', 'La bandeja de soporte es para la Secretaría Técnica.');
+    if (!esSoporte(p)) throw new Falla(403, 'permiso', 'La bandeja de soporte es solo para la administración.');
     const filas = await lista(col('tickets'));
     return { tickets: filas.sort((a, b) => String(b.actualizado_en).localeCompare(String(a.actualizado_en))).map((x) => vistaTicket(x, false)) };
   }
@@ -621,12 +640,13 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const estado = deSoporte ? (x.estado === 'abierto' ? 'en_proceso' : x.estado) : (x.estado === 'resuelto' ? 'abierto' : x.estado);
     const { _id, ...resto } = x;
     await col('tickets').doc(_id).set({ ...resto, mensajes, estado, actualizado_en: hoy(), ...(deSoporte ? { atendido_por: p.id } : {}) });
+    if (!deSoporte) await avisarSoporte(x, 'mensaje', txt);
     return { ticket: vistaTicket({ ...x, mensajes, estado, actualizado_en: hoy() }, true) };
   }
   async function estadoTicket(token, b) {
     const { p, x } = await ticketPermitido(token, b.id);
     if (!ESTADOS_TICKET.includes(b.estado)) throw new Falla(400, 'estado', 'Ese estado no existe.');
-    if (!esSoporte(p) && !(x.persona === p.id && (b.estado === 'cerrado' || b.estado === 'resuelto'))) throw new Falla(403, 'permiso', 'Solo la Secretaría Técnica cambia el estado de la solicitud.');
+    if (!esSoporte(p) && !(x.persona === p.id && (b.estado === 'cerrado' || b.estado === 'resuelto'))) throw new Falla(403, 'permiso', 'Solo el equipo de soporte cambia el estado de la solicitud.');
     const { _id, ...resto } = x;
     await col('tickets').doc(_id).set({ ...resto, estado: b.estado, actualizado_en: hoy() });
     return { ticket: vistaTicket({ ...x, estado: b.estado, actualizado_en: hoy() }, true) };

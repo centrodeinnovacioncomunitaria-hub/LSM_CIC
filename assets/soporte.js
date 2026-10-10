@@ -9,7 +9,7 @@
     const CATEGORIAS = [['acceso', 'No puedo entrar / contraseña'], ['videos', 'Videos'], ['cursos', 'Cursos y evaluaciones'], ['talleres', 'Talleres y guías'], ['seguimiento', 'Seguimiento y documentos'], ['otro', 'Otro']];
     const ESTADOS = { abierto: ['Abierta', 'sop-abierto'], en_proceso: ['En proceso', 'sop-proceso'], resuelto: ['Resuelta', 'sop-resuelto'], cerrado: ['Cerrada', 'sop-cerrado'] };
     const ROLES = { emprendedora: 'Emprendedora', dinamizadora: 'Dinamizadora', secretaria: 'Secretaría', administradora: 'Administración' };
-    const esSoporte = () => C.perfil.rol === 'secretaria' || C.perfil.rol === 'administradora';
+    const esSoporte = () => C.perfil.rol === 'administradora';
     const fecha = (f) => { const d = new Date(f); return isNaN(d) ? '' : d.toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); };
     const chip = (e) => `<span class="chip ${ESTADOS[e] ? ESTADOS[e][1] : ''}">${esc(ESTADOS[e] ? ESTADOS[e][0] : e)}</span>`;
     let filtro = 'pendientes';
@@ -26,7 +26,7 @@
         cont.innerHTML = `
             <div class="sop-cabeza">
                 <div><h2>${esSoporte() ? 'Bandeja de soporte' : 'Soporte técnico'}</h2>
-                <p class="vista-intro">${esSoporte() ? 'Solicitudes de emprendedoras, dinamizadoras y secretarías. Responde aquí: la persona ve tu respuesta en su pestaña «Soporte».' : '¿Algo no funciona en la plataforma? Cuéntanos y la Secretaría Técnica te responde aquí mismo.'}</p></div>
+                <p class="vista-intro">${esSoporte() ? 'Solicitudes de emprendedoras, dinamizadoras y secretarías. Responde aquí: la persona ve tu respuesta en su pestaña «Soporte».' : '¿Algo no funciona en la plataforma? Cuéntanos y el equipo de soporte del CIC te responde aquí mismo.'}</p></div>
                 <button type="button" class="btn btn-primario" data-nueva>Nueva solicitud</button>
             </div>
             ${esSoporte() ? `<div class="sop-filtros" role="group" aria-label="Filtrar solicitudes">${[['pendientes', 'Por atender'], ['resuelto', 'Resueltas'], ['cerrado', 'Cerradas'], ['todas', 'Todas']].map(([k, t]) => `<button type="button" data-filtro="${k}" aria-pressed="${filtro === k}">${t}${k !== 'todas' ? ` <b>${cuenta(k)}</b>` : ''}</button>`).join('')}</div>` : ''}

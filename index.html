@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261027">
+    <link rel="stylesheet" href="assets/cic.css?v=20261028">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -691,7 +691,7 @@
 
             <form id="form-soporte" method="post" action="#" novalidate hidden aria-labelledby="soporte-titulo">
                 <h3 id="soporte-titulo" class="subtitulo-dialogo">Pide soporte</h3>
-                <p class="texto-suave">Cuéntanos qué pasa y la Secretaría Técnica te contactará por WhatsApp o correo.</p>
+                <p class="texto-suave">Cuéntanos qué pasa y el equipo de soporte del CIC te contactará por WhatsApp o correo.</p>
                 <label class="etiqueta" for="so-cedula">Número de cédula</label>
                 <input class="campo" id="so-cedula" name="cedula" inputmode="numeric" maxlength="15" placeholder="Solo números, sin puntos" required>
                 <label class="etiqueta" for="so-nombre">Nombre y apellido</label>
@@ -737,13 +737,13 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261027"></script>
-    <script src="assets/datos-cic.js?v=20261027"></script>
-    <script src="assets/sitio.js?v=20261027"></script>
-    <script src="assets/cursos-equipo.js?v=20261027"></script>
-    <script src="assets/soporte.js?v=20261027"></script>
-    <script src="assets/soporte-flotante.js?v=20261027"></script>
-    <script src="assets/emprendimientos.js?v=20261027"></script>
+    <script src="./config.js?v=20261028"></script>
+    <script src="assets/datos-cic.js?v=20261028"></script>
+    <script src="assets/sitio.js?v=20261028"></script>
+    <script src="assets/cursos-equipo.js?v=20261028"></script>
+    <script src="assets/soporte.js?v=20261028"></script>
+    <script src="assets/soporte-flotante.js?v=20261028"></script>
+    <script src="assets/emprendimientos.js?v=20261028"></script>
     <script>
     (() => {
         'use strict';
@@ -999,7 +999,7 @@
             try {
                 const r = await llamar('ticket-publico', { cedula: soloDigitos(f.cedula.value), nombre: f.nombre.value, contacto: f.contacto.value, descripcion: f.descripcion.value, sitio: f.sitio.value });
                 f.reset();
-                mensaje(`Listo: recibimos tu solicitud${r.numero ? ` (${r.numero})` : ''}. La Secretaría Técnica te contactará pronto.`, 'ok');
+                mensaje(`Listo: recibimos tu solicitud${r.numero ? ` (${r.numero})` : ''}. El equipo de soporte te contactará pronto.`, 'ok');
             } catch (e) { mensaje(e.message); } finally { b.disabled = false; }
         });
         $('#activar-cuenta').addEventListener('click', () => abrirCodigo(true));
