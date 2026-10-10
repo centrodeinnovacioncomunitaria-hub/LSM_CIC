@@ -13,6 +13,8 @@ function crearCuentas(auth, claveWeb, sitio) {
       headers: { 'Content-Type': 'application/json', 'X-Firebase-Locale': 'es' },
       body: JSON.stringify(cuerpo),
     });
+    // Si Firebase rechaza la solicitud, queda en los registros (Firebase → Functions → Registros)
+    if (!r.ok) console.error(`Authentication ${metodo} falló (${r.status}):`, (await r.text().catch(() => '')).slice(0, 300));
     return r.ok;
   }
   return {
