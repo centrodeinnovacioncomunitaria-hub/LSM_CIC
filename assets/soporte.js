@@ -86,7 +86,7 @@
             <button type="button" class="boton-texto" data-volver>← Volver a las solicitudes</button>
             <div class="sop-ficha tarjeta">
                 <div class="sop-ficha-cabeza"><div><p class="eyebrow">${esc(t.numero)} · ${esc(t.categoria_nombre)}</p><h3>${esc(t.asunto)}</h3></div>${chip(t.estado)}</div>
-                ${esSoporte() ? `<p class="texto-suave sop-quien"><b>${esc(t.nombre)}</b>${t.rol ? ` · ${esc(ROLES[t.rol] || t.rol)}` : ''} · CC ${esc(t.cedula)}${sat ? ` · ${esc(sat.nombre)}` : ''}${t.contacto ? ` · Contacto: ${esc(t.contacto)}` : ''}${t.publico ? ' · <span class="chip">Solicitud sin cuenta</span>' : ''}</p>` : ''}
+                ${esSoporte() ? `<p class="texto-suave sop-quien"><b>${esc(t.nombre)}</b>${t.rol ? ` · ${esc(ROLES[t.rol] || t.rol)}` : ''} · CC ${esc(t.cedula)}${sat ? ` · ${esc(sat.nombre)}` : ''}${t.contacto ? ` · Contacto: ${esc(t.contacto)}` : ''}${t.dispositivo ? ` · Desde: ${esc(t.dispositivo)}` : ''}${t.publico ? ' · <span class="chip">Solicitud sin cuenta</span>' : ''}</p>` : ''}
                 ${t.adjunto ? `<p><button type="button" class="boton-texto" data-adjunto>📎 Ver adjunto (${esc(t.adjunto.nombre)})</button></p>` : ''}
                 <ol class="sop-mensajes lista-limpia">${t.mensajes.map((m) => `<li class="sop-msj ${m.de === 'soporte' ? 'de-soporte' : 'de-usuario'}"><div class="sop-msj-cabeza"><b>${esc(m.de === 'soporte' ? `${m.nombre} · Soporte CIC` : m.nombre)}</b><small>${esc(fecha(m.en))}</small></div><p>${esc(m.texto).replace(/\n/g, '<br>')}</p></li>`).join('')}</ol>
                 ${abierta ? `<form class="sop-responder" novalidate>

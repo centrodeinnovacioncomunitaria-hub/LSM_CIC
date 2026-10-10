@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261026">
+    <link rel="stylesheet" href="assets/cic.css?v=20261027">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -737,12 +737,13 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261026"></script>
-    <script src="assets/datos-cic.js?v=20261026"></script>
-    <script src="assets/sitio.js?v=20261026"></script>
-    <script src="assets/cursos-equipo.js?v=20261026"></script>
-    <script src="assets/soporte.js?v=20261026"></script>
-    <script src="assets/emprendimientos.js?v=20261026"></script>
+    <script src="./config.js?v=20261027"></script>
+    <script src="assets/datos-cic.js?v=20261027"></script>
+    <script src="assets/sitio.js?v=20261027"></script>
+    <script src="assets/cursos-equipo.js?v=20261027"></script>
+    <script src="assets/soporte.js?v=20261027"></script>
+    <script src="assets/soporte-flotante.js?v=20261027"></script>
+    <script src="assets/emprendimientos.js?v=20261027"></script>
     <script>
     (() => {
         'use strict';
@@ -1136,12 +1137,15 @@
             if (esEquipo()) pintarCursos(); else pintarSemana();
             if (esEquipo()) pintarSeguimiento();
             pintarCuenta();
+            // El botón flotante de soporte usa la sesión abierta (la solicitud queda en la cuenta)
+            window.CICSesion = DEMO ? null : { perfil, pedir: (accion, datos) => llamar(accion, datos, true), irSoporte: () => ir('soporte') };
             ir('cursos', false);
             window.scrollTo(0, 0);
             $('#bienvenida-titulo').focus({ preventScroll: true });
         }
         function mostrarPublico() {
             perfil = null;
+            window.CICSesion = null;
             guardar(sessionStorage, 'cic-demo', null);
             $('#plataforma').hidden = true;
             $('#publico').hidden = false;

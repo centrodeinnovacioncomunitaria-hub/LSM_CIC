@@ -466,11 +466,14 @@ function cuentasFalsas() {
   await ok('ticket-crear', { categoria: 'seguimiento', asunto: 'Subir acta', descripcion: 'No me deja subir el acta de la semana 1.' }, tDina);
   const pub = await ok('ticket-publico', { cedula: '44444444', nombre: 'Rosa Emprendedora', contacto: '3001234567', descripcion: 'Olvidé mi contraseña y no me llega el correo.' });
   assert.match(pub.numero, /^T-/);
+  const pubVideo = await ok('ticket-publico', { cedula: '77777777', nombre: 'Ana Visitante', contacto: '3110000000', categoria: 'videos', rol: 'emprendedora', dispositivo: 'Celular', asunto: 'Videos', descripcion: 'El video no carga en mi celular desde ayer.' });
+  const vistoPub = (await ok('tickets', {}, tSara)).tickets.find((x) => x.numero === pubVideo.numero);
+  assert.equal(vistoPub.categoria, 'videos'); assert.equal(vistoPub.dispositivo, 'Celular'); assert.equal(vistoPub.rol, 'emprendedora');
   await falla('ticket-publico', { cedula: '44444444', nombre: 'Rosa', contacto: '300', descripcion: 'x' }, null, 400);
   await ok('ticket-publico', { cedula: '44444444', nombre: 'Rosa Emprendedora', contacto: 'rosa@correo.co', descripcion: 'Sigo sin poder entrar a la plataforma.' });
   await ok('ticket-publico', { cedula: '44444444', nombre: 'Rosa Emprendedora', contacto: 'rosa@correo.co', descripcion: 'Sigo sin poder entrar a la plataforma.' });
   await falla('ticket-publico', { cedula: '44444444', nombre: 'Rosa Emprendedora', contacto: 'rosa@correo.co', descripcion: 'Cuarta vez el mismo día, debe frenar.' }, null, 429);
-  assert.equal((await ok('tickets', {}, tAdmin)).tickets.length, 5, 'la administración también ve la bandeja');
+  assert.equal((await ok('tickets', {}, tAdmin)).tickets.length, 6, 'la administración también ve la bandeja');
   assert.equal(JSON.stringify([...db.datos.entries()].filter(([k]) => /^(progreso|cuestionarios|evidencias|hitos|constancias|perfiles)/.test(k))), progresoAntes, 'los tickets no tocan el avance ni los perfiles');
   const env = await ok('envios-correo', {}, tAdmin);
   assert.ok(env.envios.length >= 5 && env.envios.some((x) => x.estado === 'fallido'));

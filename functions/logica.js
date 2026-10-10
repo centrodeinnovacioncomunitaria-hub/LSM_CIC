@@ -528,7 +528,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   const vistaTicket = (x, conMensajes) => ({
     id: x._id, numero: x.numero, categoria: x.categoria, categoria_nombre: CATEGORIAS_SOPORTE[x.categoria] || 'Otro', asunto: x.asunto,
     estado: x.estado, nombre: x.nombre, cedula: x.cedula, rol: x.rol || null, satelite: x.satelite || null, contacto: x.contacto || null,
-    publico: !!x.publico, adjunto: x.adjunto ? { nombre: x.adjunto.nombre, mime: x.adjunto.mime, bytes: x.adjunto.bytes } : null,
+    publico: !!x.publico, dispositivo: x.dispositivo || null, adjunto: x.adjunto ? { nombre: x.adjunto.nombre, mime: x.adjunto.mime, bytes: x.adjunto.bytes } : null,
     creado_en: x.creado_en, actualizado_en: x.actualizado_en, mensajes_total: (x.mensajes || []).length,
     ultimo_de: (x.mensajes || []).length ? x.mensajes[x.mensajes.length - 1].de : null,
     ...(conMensajes ? { mensajes: x.mensajes || [] } : {}),
@@ -564,7 +564,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     await ref.set(fila);
     return { ticket: vistaTicket({ _id: ref.id, ...fila }, true) };
   }
-  // Quien no puede entrar: cédula, nombre, un contacto y la descripción. Máximo 3 por cédula al día.
+  // Sin sesión (botón flotante o «¿No puedes entrar?»): cédula, nombre, un contacto, el tema y la descripción.
+  // Máximo 3 por cédula al día.
   async function crearTicketPublico(b) {
     const cedula = validarCedula(b.cedula);
     const nombre = texto(b.nombre, 90);
@@ -577,10 +578,13 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const recientes = (await lista(col('tickets').where('cedula', '==', cedula))).filter((x) => x.publico && ahora() - new Date(x.creado_en) < 24 * 3600000);
     if (recientes.length >= 3) throw new Falla(429, 'limite', 'Ya recibimos tus solicitudes de hoy. La Secretaría Técnica te contactará pronto.');
     const p = await perfilPorCedula(cedula);
+    const categoria = CATEGORIAS_SOPORTE[b.categoria] ? b.categoria : 'acceso';
+    const ROL_DECLARADO = { emprendedora: 'emprendedora', dinamizadora: 'dinamizadora', secretaria: 'secretaria' };
     const ref = col('tickets').doc();
     const fila = {
-      numero: numeroTicket(), persona: null, cedula, nombre, rol: p ? p.rol : null, satelite: p ? p.satelite || null : null,
-      contacto, publico: true, categoria: 'acceso', asunto: 'No puedo entrar a la plataforma', adjunto: null,
+      numero: numeroTicket(), persona: null, cedula, nombre, rol: p ? p.rol : (ROL_DECLARADO[b.rol] || null), satelite: p ? p.satelite || null : null,
+      dispositivo: texto(b.dispositivo, 30) || null,
+      contacto, publico: true, categoria, asunto: texto(b.asunto, 120) || (categoria === 'acceso' ? 'No puedo entrar a la plataforma' : CATEGORIAS_SOPORTE[categoria]), adjunto: null,
       estado: 'abierto', mensajes: [{ de: 'usuario', nombre, texto: descripcion, en: hoy() }], creado_en: hoy(), actualizado_en: hoy(),
     };
     await ref.set(fila);
