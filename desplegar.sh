@@ -27,7 +27,7 @@ grep -q '^CIC_API_KEY=.\+' functions/.env || { echo "Falta CIC_API_KEY en la fun
 echo "2/4 · Recuperando los archivos privados de la versión publicada…"
 read -r BUCKET OBJETO < <(gcloud functions describe cicAcceso --gen2 --region "$REGION" --project "$PROYECTO" \
   --format='value(buildConfig.source.storageSource.bucket,buildConfig.source.storageSource.object)')
-gcloud storage cp "gs://$BUCKET/$OBJETO" "$TMP/fuente.zip" --quiet
+gsutil -q cp "gs://$BUCKET/$OBJETO" "$TMP/fuente.zip" || gcloud storage cp "gs://$BUCKET/$OBJETO" "$TMP/fuente.zip" --quiet
 mkdir -p "$TMP/fuente" && unzip -q "$TMP/fuente.zip" -d "$TMP/fuente"
 if [ -d "$TMP/fuente/archivos" ]; then rm -rf functions/archivos && cp -r "$TMP/fuente/archivos" functions/archivos; fi
 python3 - <<'PY'
