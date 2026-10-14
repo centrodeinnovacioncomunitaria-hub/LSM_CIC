@@ -10,6 +10,8 @@ set -euo pipefail
 PROYECTO=cic-caribe
 REGION=us-central1
 cd "$(dirname "$0")"
+# Si quedó una ejecución anterior a medias (por ejemplo, una descarga detenida), se detiene primero
+pkill -f "gcloud storage cp gs://gcf-v2-sources" 2>/dev/null || true
 TMP=$(mktemp -d)
 umask 077
 trap 'rm -f functions/.env; rm -rf "$TMP"' EXIT
