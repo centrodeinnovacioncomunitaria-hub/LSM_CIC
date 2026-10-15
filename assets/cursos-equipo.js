@@ -5,11 +5,12 @@
     'use strict';
 
     const REGLAS = { preguntas: 10, nota_minima: 7, intentos: 2 }; // banco oficial de octubre 2026: 7 de 10 (70 %)
-    const UNIDADES = { gestion: 4, 'formacion-secretaria': 6, 'acompanar-hacer': 6, 'facilitar-ser': 4 };
-    const EVIDENCIA = { gestion: 'actividad', 'formacion-secretaria': 'actividad', 'acompanar-hacer': 'verificacion', 'facilitar-ser': 'verificacion' };
-    const SIN_CUESTIONARIO = new Set(['formacion-secretaria']);
-    const ROLES = { gestion: ['secretaria', 'dinamizadora'], 'formacion-secretaria': ['secretaria'], 'acompanar-hacer': ['secretaria', 'dinamizadora'], 'facilitar-ser': ['secretaria', 'dinamizadora'] };
-    const PREFIJO = { gestion: 'GES-M', 'formacion-secretaria': 'STF-U', 'acompanar-hacer': 'HAC-S', 'facilitar-ser': 'SER-T' };
+    const UNIDADES = { gestion: 4, 'acompanar-hacer': 6, 'facilitar-ser': 4 };
+    // La actividad de cada módulo es participar en su conversación del foro. El módulo 4 de Gestión no tiene actividad.
+    const SIN_ACTIVIDAD = { gestion: [4] };
+    const sinActividad = (c, u) => (SIN_ACTIVIDAD[c] || []).includes(u);
+    const ROLES = { gestion: ['secretaria', 'dinamizadora'], 'acompanar-hacer': ['secretaria', 'dinamizadora'], 'facilitar-ser': ['secretaria', 'dinamizadora'] };
+    const PREFIJO = { gestion: 'GES-M', 'acompanar-hacer': 'HAC-S', 'facilitar-ser': 'SER-T' };
     const ESTADOS = {
         bloqueada: { txt: 'Bloqueado', icono: '🔒', clase: 'est-bloqueada' },
         disponible: { txt: 'Disponible', icono: '○', clase: 'est-disponible' },
@@ -17,7 +18,9 @@
         pausada: { txt: 'En pausa', icono: '⏸', clase: 'est-pausada' },
         aprobada: { txt: 'Aprobado', icono: '✓', clase: 'est-aprobada' },
     };
-    const EV_TXT = { enviada: 'Enviada · por revisar', aprobada: 'Aprobada', devuelta: 'Devuelta: ajústala y vuelve a enviarla' };
+    const EV_TXT = { enviada: 'Publicado en el foro · la Secretaría lo revisa', aprobada: 'Aprobado por la Secretaría', devuelta: 'Devuelto: escribe un nuevo aporte' };
+    // Aviso bajo cada video: si no carga (pasa a veces con Drive o con mala señal), recargar la página lo resuelve
+    const ayudaVideo = '<p class="video-ayuda" role="note"><span aria-hidden="true">⟳</span> ¿El video no carga o se queda en negro? <button type="button" class="boton-texto" data-recargar-pagina>Recarga la página</button></p>';
 
     // ================================================================ Motor de demostración
     // Imita la función del servidor con preguntas de ejemplo. Nada sale de este navegador.
@@ -31,17 +34,16 @@
         const ahora = () => new Date().toISOString();
 
         function requisito(perfil, d, c, u) {
-            if (!ROLES[c].includes(perfil.rol)) return 'Este curso es solo para la Secretaría Técnica.';
+            if (!ROLES[c].includes(perfil.rol)) return 'Este curso no está habilitado para tu perfil.';
             if (perfil.debe_cambiar_clave) return 'Primero cambia tu contraseña en «Mi cuenta»: todavía es tu número de cédula.';
             if (u > 1) {
-                if (!(d.progreso[k(c, u - 1)] || {}).aprobado_en) return `Se abre cuando apruebes el cuestionario de la unidad ${u - 1}.`;
-                if (!d.evidencias[k(c, u - 1)]) return `Se abre cuando envíes la ${EVIDENCIA[c] === 'actividad' ? 'actividad' : 'verificación de la sesión'} de la unidad ${u - 1}.`;
+                if (!(d.progreso[k(c, u - 1)] || {}).aprobado_en) return `Se abre cuando apruebes la evaluación del módulo ${u - 1}.`;
+                if (!sinActividad(c, u - 1) && !d.evidencias[k(c, u - 1)]) return `Se abre cuando participes en el foro del módulo ${u - 1}.`;
                 return null;
             }
             if (c === 'gestion') return d.hitos.includes('compromiso') ? null : 'Se abre cuando confirmes tu compromiso como parte del equipo.';
             if (!d.constancias.some((x) => x.curso === 'gestion')) return 'Se abre cuando apruebes el curso Gestión del CIC.';
-            if (c === 'formacion-secretaria') return null;
-            if (perfil.rol === 'secretaria') return d.constancias.some((x) => x.curso === 'formacion-secretaria') ? null : 'Se abre cuando termines la Formación de la Secretaría Técnica.';
+            if (perfil.rol === 'secretaria') return null;
             return d.hitos.includes(c === 'acompanar-hacer' ? 'transferencia-hacer' : 'transferencia-ser') ? null : 'Se abre cuando la Secretaría Técnica registre tu transferencia de la ruta.';
         }
         function estado(perfil, d, c, u, videos) {
@@ -54,11 +56,11 @@
             else if (f.video_en || f.material_en || f.intentos) e = 'en-curso';
             const inicio = f.video_inicio && (!f.bloqueado_en || f.video_inicio > f.bloqueado_en) ? f.video_inicio : null;
             return {
-                unidad: u, estado: e, motivo: falta, tiene_video: tieneVideo, sin_cuestionario: SIN_CUESTIONARIO.has(c),
+                unidad: u, estado: e, motivo: falta, tiene_video: tieneVideo, sin_cuestionario: false, sin_actividad: sinActividad(c, u), foro_tema: `modulo_${c}_${u}`,
                 video_visto: !!f.video_en && (!f.bloqueado_en || f.video_en > f.bloqueado_en), material_visto: !!f.material_en,
                 video_iniciado: !!inicio, video_segundos: SEG_DEMO, video_faltan: inicio ? Math.max(0, SEG_DEMO - Math.floor((Date.now() - new Date(inicio)) / 1000)) : SEG_DEMO,
                 intentos: f.intentos || 0, intentos_max: REGLAS.intentos, ronda: f.ronda || 1, mejor_nota: f.mejor_nota ?? null, aprobado_en: f.aprobado_en || null,
-                puede_cuestionario: !SIN_CUESTIONARIO.has(c) && !falta && !f.aprobado_en && !f.bloqueado_en && (f.intentos || 0) < REGLAS.intentos && !!f.material_en && (!tieneVideo || (!!f.video_en && (!f.bloqueado_en || f.video_en > f.bloqueado_en))),
+                puede_cuestionario: !falta && !f.aprobado_en && !f.bloqueado_en && (f.intentos || 0) < REGLAS.intentos && !!f.material_en && (!tieneVideo || (!!f.video_en && (!f.bloqueado_en || f.video_en > f.bloqueado_en))),
                 evidencia: ev,
             };
         }
@@ -69,7 +71,7 @@
         }
         function emitir(perfil, d, c) {
             if (d.constancias.some((x) => x.curso === c)) return null;
-            for (let u = 1; u <= UNIDADES[c]; u++) if (!(d.progreso[k(c, u)] || {}).aprobado_en || !d.evidencias[k(c, u)]) return null;
+            for (let u = 1; u <= UNIDADES[c]; u++) if (!(d.progreso[k(c, u)] || {}).aprobado_en || (!sinActividad(c, u) && !d.evidencias[k(c, u)])) return null;
             const codigo = `CIC-${PREFIJO[c].replace('-', '')}-DEMO${String(Math.floor(Math.random() * 90) + 10)}`;
             const x = { codigo, curso: c, emitida_en: ahora() };
             d.constancias.push(x);
@@ -134,15 +136,16 @@
                 }
                 case 'entregar': {
                     exigirAbierta();
-                    if ((datos.texto || '').trim().length < 20 && !datos.enlace) throw new Error('Escribe tu respuesta (al menos unas líneas) o pega el enlace a tu evidencia.');
-                    if (datos.enlace && !/^https:\/\/\S+$/.test(datos.enlace)) throw new Error('El enlace debe empezar por https:// (por ejemplo, un archivo de Google Drive).');
-                    if (SIN_CUESTIONARIO.has(c) && !(d.progreso[k(c, u)] || {}).material_en) throw new Error('Primero repasa el material de estudio de esta unidad.');
-                    d.evidencias[k(c, u)] = { estado: 'enviada', texto: datos.texto, enlace: datos.enlace, comentario: null };
-                    if (SIN_CUESTIONARIO.has(c)) fila().aprobado_en = fila().aprobado_en || ahora();
+                    if (sinActividad(c, u)) throw new Error('Este módulo no tiene actividad: se aprueba con la evaluación.');
+                    if (!(d.progreso[k(c, u)] || {}).aprobado_en) throw new Error('Primero aprueba la evaluación del módulo; luego participa en el foro.');
+                    if ((datos.texto || '').trim().length < 20) throw new Error('Escribe tu aporte para el foro (al menos unas líneas).');
+                    d.evidencias[k(c, u)] = { tipo: 'foro', estado: 'enviada', texto: datos.texto, comentario: null };
                     const constancia = emitir(perfil, d, c);
                     r = { ok: true, constancia, progreso: resumen(perfil, d, videos) };
                     break;
                 }
+                case 'foro-modulo': r = { tema: { id: `modulo_${c}_${u}` }, respuestas: d.evidencias[k(c, u)] ? [{ autor: 'Tú (demostración)', autor_rol: perfil.rol === 'secretaria' ? 'Secretaría Técnica' : 'Dinamizadora', texto: d.evidencias[k(c, u)].texto, creado_en: ahora(), mio: true }] : [] }; break;
+                case 'material-transferencia': r = { unidades: ['Método Insight', 'Oportunidad significativa emergente', 'Modelo de negocio Canvas', 'Producto mínimo viable y Lean Startup', 'Gestión financiera estratégica', 'Guía metodológica del facilitador'].map((titulo, i) => ({ n: i + 1, titulo, archivos: [], video: null })) }; break;
                 case 'equipo': r = equipoEjemplo(); break;
                 case 'revisar': case 'generar-codigo': r = { ok: true, codigo: '482913', vence_horas: 24, correoEnviado: false, nombre: 'persona de ejemplo', demo: true }; break;
                 default: throw new Error('Acción no disponible en la demostración.');
@@ -151,19 +154,19 @@
             return r;
         }
         function equipoEjemplo() {
-            const p = (nombre, rol, satelite, activa, g, h, s, hitos = [], extra = {}) => ({ cedula: String(Math.floor(Math.random() * 1e8)), nombre, rol, satelite, activa, avance: { gestion: g, 'formacion-secretaria': extra.formacion || 0, 'acompanar-hacer': h, 'facilitar-ser': s }, hitos, constancias: g === 5 ? [{ curso: 'gestion', codigo: 'CIC-GESM-DEMO01' }] : [], pausas: 0, ultima_actividad: activa ? new Date(Date.now() - 864e5 * (extra.dias || 1)).toISOString() : null, cargo: rol === 'dinamizadora' ? 'Acompañamiento' : 'Secretaría Técnica', ...extra });
+            const p = (nombre, rol, satelite, activa, g, h, s, hitos = [], extra = {}) => ({ cedula: String(Math.floor(Math.random() * 1e8)), nombre, rol, satelite, activa, avance: { gestion: g, 'acompanar-hacer': h, 'facilitar-ser': s }, hitos, constancias: g === 4 ? [{ curso: 'gestion', codigo: 'CIC-GESM-DEMO01' }] : [], pausas: 0, ultima_actividad: activa ? new Date(Date.now() - 864e5 * (extra.dias || 1)).toISOString() : null, cargo: rol === 'dinamizadora' ? 'Acompañamiento' : 'Secretaría Técnica', ...extra });
             return {
                 unidades: UNIDADES,
                 personas: [
-                    p('Dinamizadora de ejemplo 1', 'dinamizadora', 'magdalena', true, 5, 2, 1, ['compromiso', 'transferencia-hacer', 'transferencia-ser']),
+                    p('Dinamizadora de ejemplo 1', 'dinamizadora', 'magdalena', true, 4, 2, 1, ['compromiso', 'transferencia-hacer', 'transferencia-ser']),
                     p('Dinamizadora de ejemplo 2', 'dinamizadora', 'atlantico', true, 3, 0, 0, ['compromiso'], { pausas: 1, dias: 9 }),
-                    p('Dinamizadora de ejemplo 3', 'dinamizadora', 'sucre', true, 5, 0, 0, ['compromiso']),
+                    p('Dinamizadora de ejemplo 3', 'dinamizadora', 'sucre', true, 4, 0, 0, ['compromiso']),
                     p('Dinamizadora de ejemplo 4', 'dinamizadora', 'cordoba', false, 0, 0, 0),
-                    p('Secretaría de ejemplo', 'secretaria', null, true, 5, 0, 0, ['compromiso'], { formacion: 2 }),
+                    p('Secretaría de ejemplo', 'secretaria', null, true, 4, 1, 0, ['compromiso']),
                 ],
                 pendientes: [
-                    { id: 1, nombre: 'Dinamizadora de ejemplo 2', curso: 'gestion', unidad: 3, tipo: 'actividad', texto: 'Ejemplo: describí cómo opera mi satélite, quién hace cada tarea y cómo reporto cada semana a la Secretaría Técnica.', enlace: '', creado_en: new Date(Date.now() - 864e5).toISOString() },
-                    { id: 2, nombre: 'Dinamizadora de ejemplo 1', curso: 'acompanar-hacer', unidad: 2, tipo: 'verificacion', texto: 'Ejemplo: sesión de la semana 2 con 8 emprendedoras; Canvas de la Esquina diligenciado y fotos autorizadas.', enlace: 'https://drive.google.com/ejemplo', creado_en: new Date().toISOString() },
+                    { id: 'demo-1', nombre: 'Dinamizadora de ejemplo 2', curso: 'gestion', unidad: 3, tipo: 'foro', texto: 'Ejemplo: en mi satélite cada tarea tiene responsable y reporto cada semana a la Secretaría Técnica.', creado_en: new Date(Date.now() - 864e5).toISOString() },
+                    { id: 'demo-2', nombre: 'Dinamizadora de ejemplo 1', curso: 'acompanar-hacer', unidad: 2, tipo: 'foro', texto: 'Ejemplo: en la semana 2 trabajamos el Canvas de la Esquina con 8 emprendedoras.', creado_en: new Date().toISOString() },
                 ],
             };
         }
@@ -182,8 +185,7 @@
 
     const esc = (s) => C.esc(s);
     const api = (accion, datos = {}) => C.DEMO ? Demo.api(C.perfil, accion, datos, new Set(Object.keys(porCodigo))) : C.llamar(accion, datos, true);
-    const nombreEvidencia = (c) => EVIDENCIA[c] === 'actividad' ? 'Actividad del módulo' : 'Verificación de la sesión';
-    const nombreUnidad = (c) => ({ gestion: 'Módulo', 'formacion-secretaria': 'Unidad', 'acompanar-hacer': 'Semana', 'facilitar-ser': 'Taller' }[c] || 'Unidad');
+    const nombreUnidad = (c) => ({ gestion: 'Módulo', 'acompanar-hacer': 'Semana', 'facilitar-ser': 'Taller' }[c] || 'Unidad');
     // De dónde salen las preguntas: el archivo de evaluación oficial (Drive «Productos Contrato»)
     const fuenteEvaluacion = (c, u) => ({
         gestion: `Banco oficial de evaluaciones (octubre 2026) · Curso de gestión, módulo ${u}`,
@@ -203,8 +205,7 @@
             ...(bv.requerida ? [['Video de bienvenida', !!bv.hecha, bv.hecha ? 'Visto' : 'Obligatorio']] : []),
             ['Compromiso', h.has('compromiso'), h.has('compromiso') ? 'Confirmado' : 'Pendiente'],
             ['Gestión del CIC', cons.has('gestion'), `${hechos('gestion')} de ${UNIDADES.gestion} módulos`],
-            ...(C.perfil.rol === 'secretaria'
-                ? [['Formación de la Secretaría', cons.has('formacion-secretaria'), `${hechos('formacion-secretaria')} de 6 unidades`]]
+            ...(C.perfil.rol === 'secretaria' ? []
                 : [['Transferencia de la ruta', h.has('transferencia-hacer') || h.has('transferencia-ser'), h.has('transferencia-hacer') || h.has('transferencia-ser') ? 'Registrada' : 'La registra la Secretaría']]),
             rutas,
         ];
@@ -289,6 +290,7 @@
                 <p class="texto-suave">Mira el video de presentación completo${v.duracion_min ? ` (unos ${esc(v.duracion_min)} minutos)` : ''}. Al terminar se habilita tu compromiso y, con él, el módulo 1.</p>
             </div>
             <div class="video-grande" data-fuente="${esc(fuenteVideo(v))}">${marcoVideo(v, v.titulo || 'Bienvenida al CIC')}</div>
+            ${ayudaVideo}
             <div class="video-estado" id="bienvenida-estado" aria-live="polite">${bv.iniciada ? estadoReloj(bv.faltan, bv.segundos, 'tu compromiso') : '<p class="texto-suave">Dale play al video para empezar.</p>'}</div>
         </section>`;
     }
@@ -297,7 +299,7 @@
         const bv = estado.bienvenida;
         if (!bv || !bv.hecha || !porCodigo.BIENVENIDA) return '';
         return `<details class="tarjeta repaso-video"><summary><span class="repaso-icono" aria-hidden="true">▶</span> Volver a ver el video de bienvenida al CIC <span class="paso-ok">✓ Visto</span></summary>
-            <div class="video-grande" data-fuente="${esc(fuenteVideo(porCodigo.BIENVENIDA))}"></div></details>`;
+            <div class="video-grande" data-fuente="${esc(fuenteVideo(porCodigo.BIENVENIDA))}"></div>${ayudaVideo}</details>`;
     }
     const estadoReloj = (faltan, total, que) => `<p class="reloj-video"><span class="reloj-barra"><span style="width:${100 - Math.round(faltan / total * 100)}%"></span></span> Mira el video completo: ${esc(que)} se habilita en <b data-faltan="${faltan}">${minSeg(faltan)}</b>.</p>`;
     function enlazarBienvenida() {
@@ -370,7 +372,8 @@
         const h = new Set((estado.hitos || []).map((x) => x.hito));
         v.innerHTML = `
             <h2>Mis cursos</h2>
-            <p class="vista-intro">${C.perfil.rol === 'secretaria' ? 'Avanza en orden: Gestión del CIC, luego tu Formación de la Secretaría Técnica y, al terminarla, se abren las rutas HACER y SER para que las supervises.' : 'Avanza en orden: cada módulo se abre cuando apruebas el anterior.'} Toca un módulo para abrir su lección.${C.DEMO ? ' <b>Demostración:</b> tu avance se guarda solo en este dispositivo y las preguntas son de ejemplo, no las oficiales.' : ''}</p>
+            <p class="vista-intro">${C.perfil.rol === 'secretaria' ? 'Avanza en orden: al aprobar Gestión del CIC se abren las rutas HACER y SER para que las supervises.' : 'Avanza en orden: cada módulo se abre cuando apruebas el anterior.'} En cada módulo: video, material, evaluación y tu aporte en el foro del equipo.${C.DEMO ? ' <b>Demostración:</b> tu avance se guarda solo en este dispositivo y las preguntas son de ejemplo, no las oficiales.' : ''}</p>
+            ${C.perfil.rol === 'secretaria' ? `<div class="tarjeta transferencia-acceso"><div><h3>Material de transferencia</h3><p class="texto-suave">Guías, presentaciones y videos de las 6 metodologías para transferir a las dinamizadoras. No es un curso: consúltalo cuando lo necesites.</p></div><button type="button" class="btn btn-primario" data-transferencia>Abrir el material de transferencia</button></div>` : ''}
             ${recorrido()}
             ${bienvenidaPendiente() ? tarjetaBienvenida() : (h.has('compromiso') ? '' : tarjetaCompromiso())}
             ${repasoBienvenida()}
@@ -393,6 +396,51 @@
         const reiniciar = v.querySelector('#demo-reiniciar');
         if (reiniciar) reiniciar.addEventListener('click', () => { Demo.reiniciar(C.perfil); refrescar().catch(() => {}); C.aviso('La demostración de los cursos volvió al inicio.'); });
         v.querySelectorAll('[data-constancia]').forEach((b) => b.addEventListener('click', () => imprimirConstancia(b.dataset.constancia)));
+        const tr = v.querySelector('[data-transferencia]');
+        if (tr) tr.addEventListener('click', () => pintarTransferencia());
+    }
+
+    // ---------- Material de transferencia (Secretaría Técnica): antes era el curso «Formación de la Secretaría» ----------
+    async function pintarTransferencia() {
+        leccion = null;
+        detenerReloj();
+        const v = C.vista;
+        v.innerHTML = '<p class="vista-intro" role="status">Cargando el material de transferencia…</p>';
+        let r;
+        try { r = await api('material-transferencia'); } catch (e) { C.aviso(e.message); pintarResumen(); return; }
+        v.innerHTML = `<div class="leccion">
+            <nav class="leccion-migas" aria-label="Ruta"><button type="button" class="boton-texto" data-volver>← Mis cursos</button><span aria-hidden="true">›</span><span>Material de transferencia</span></nav>
+            <h2 id="leccion-titulo" tabindex="-1">Material de transferencia</h2>
+            <p class="vista-intro">Las 6 metodologías que la Secretaría Técnica transfiere a las dinamizadoras. Abre las guías y presentaciones cuando prepares cada sesión.</p>
+            <div class="transferencia-lista">${r.unidades.map((u) => `<details class="tarjeta transferencia-unidad" ${u.n === 1 ? 'open' : ''}>
+                <summary><span class="codigo">STF-U${u.n}</span> <b>${esc(u.titulo)}</b> <small>${u.archivos.length} archivo${u.archivos.length === 1 ? '' : 's'}${u.video ? ' · video' : ''}</small></summary>
+                ${u.video ? `<div class="video-grande" data-video-transferencia="${u.n}"></div>${ayudaVideo}` : ''}
+                ${u.archivos.length ? `<ul class="lista-archivos">${u.archivos.map((a) => a.id
+                    ? `<li><button type="button" class="archivo" data-transferencia-id="${esc(a.id)}" data-tipo="${esc(a.tipo)}"><span class="archivo-icono archivo-${a.tipo === 'PDF' ? 'pdf' : 'xls'}" aria-hidden="true">${a.tipo === 'PDF' ? 'PDF' : 'XLS'}</span><span>${esc(a.nombre)}<small>${a.tipo === 'PDF' ? 'Se abre en PDF' : 'Archivo para descargar'}</small></span></button></li>`
+                    : `<li><a class="archivo" href="${esc(a.url)}" target="_blank" rel="noopener"><span class="archivo-icono" aria-hidden="true">📄</span><span>${esc(a.nombre)}<small>Se abre en Google Drive</small></span></a></li>`).join('')}</ul>`
+                    : `<p class="texto-suave">${C.DEMO ? 'En la demostración no hay archivos.' : 'Todavía no hay archivos para esta metodología.'}</p>`}
+            </details>`).join('')}</div>
+        </div>`;
+        const t = v.querySelector('#leccion-titulo');
+        if (t) t.focus({ preventScroll: true });
+        v.querySelector('[data-volver]').addEventListener('click', () => pintarResumen());
+        // Los videos se cargan al abrir cada metodología
+        const cargarVideo = (d) => {
+            const caja = d.querySelector('[data-video-transferencia]');
+            if (!d.open || !caja || caja.querySelector('iframe')) return;
+            const u = r.unidades[Number(caja.dataset.videoTransferencia) - 1];
+            caja.innerHTML = marcoVideo(u.video, u.titulo);
+        };
+        v.querySelectorAll('details.transferencia-unidad').forEach((d) => { cargarVideo(d); d.addEventListener('toggle', () => cargarVideo(d)); });
+        v.querySelectorAll('[data-transferencia-id]').forEach((b) => b.addEventListener('click', async () => {
+            const ventana = b.dataset.tipo === 'PDF' ? window.open('', '_blank') : null;
+            if (ventana) ventana.document.write('<p style="font-family:sans-serif;padding:2rem">Abriendo el material…</p>');
+            b.disabled = true;
+            try { window.CICAbrirArchivo(await api('archivo-transferencia', { id: b.dataset.transferenciaId }), ventana); }
+            catch (x) { if (ventana) ventana.close(); C.aviso(x.message); }
+            finally { b.disabled = false; }
+        }));
+        window.scrollTo(0, Math.max(0, v.getBoundingClientRect().top + window.scrollY - 90));
     }
 
     // ---------- Lección de un módulo ----------
@@ -424,9 +472,8 @@
         const ev = e.evidencia;
         const conVideo = !!vid;
         // Pasos y si están completos
-        const pasos = e.sin_cuestionario
-            ? [['material', 'Material', e.material_visto], ['actividad', 'Actividad', !!ev && ev.estado !== 'devuelta']]
-            : [['video', 'Video', !conVideo || e.video_visto], ['material', 'Material', e.material_visto], ['evaluacion', 'Evaluación', !!e.aprobado_en], ['actividad', nombreEvidencia(curso).split(' ')[0], !!ev && ev.estado !== 'devuelta']];
+        const pasos = [['video', 'Video', !conVideo || e.video_visto], ['material', 'Material', e.material_visto], ['evaluacion', 'Evaluación', !!e.aprobado_en],
+            ...(e.sin_actividad ? [] : [['actividad', 'Foro', !!ev && ev.estado !== 'devuelta']])];
         const siguiente = lista[unidad];
         const anterior = lista[unidad - 2];
 
@@ -439,19 +486,18 @@
                     ${pausa ? '<p class="nota nota-pausa"><b>Módulo en pausa.</b> Usaste los dos intentos de la evaluación. Vuelve a ver el video y a repasar el material: la evaluación se reabre sola con dos intentos nuevos.</p>' : ''}
                     <ol class="leccion-pasos" aria-label="Pasos de la lección">${pasos.map(([k, t, ok], n) => `<li class="${ok ? 'hecho' : ''}"><a href="#paso-${k}" data-ir-paso="${k}"><span aria-hidden="true">${ok ? '✓' : n + 1}</span> ${esc(t)}</a></li>`).join('')}</ol>
 
-                    ${e.sin_cuestionario ? '' : `<section class="leccion-bloque" id="paso-video" aria-labelledby="t-video">
+                    <section class="leccion-bloque" id="paso-video" aria-labelledby="t-video">
                         <h3 id="t-video"><span class="paso-n">1</span> Video de la lección</h3>
                         ${vid ? reproductorGrande(vid, e) : '<p class="tarjeta vacio">El video de este módulo todavía no está publicado. Puedes avanzar con el material de estudio: la evaluación se habilita al repasarlo.</p>'}
-                    </section>`}
+                    </section>
 
                     <section class="leccion-bloque" id="paso-material" aria-labelledby="t-material">
-                        <h3 id="t-material"><span class="paso-n">${e.sin_cuestionario ? 1 : 2}</span> Material de estudio</h3>
-                        ${e.sin_cuestionario ? `<p class="texto-suave">${esc(c.modulos[i][1])}</p>` : ''}
+                        <h3 id="t-material"><span class="paso-n">2</span> Material de estudio</h3>
                         <div class="material-lista" aria-live="polite"><p class="texto-suave" role="status">Cargando el material…</p></div>
                         ${e.material_visto && !pausa ? '<p class="paso-ok">✓ Material repasado</p>' : `<button type="button" class="btn btn-borde" data-marcar="material">${pausa ? 'Volví a repasar el material' : 'Ya repasé el material'}</button>`}
                     </section>
 
-                    ${e.sin_cuestionario ? '' : `<section class="leccion-bloque" id="paso-evaluacion" aria-labelledby="t-evaluacion">
+                    <section class="leccion-bloque" id="paso-evaluacion" aria-labelledby="t-evaluacion">
                         <h3 id="t-evaluacion"><span class="paso-n">3</span> Evaluación</h3>
                         <p class="fuente-evaluacion">${esc(fuenteEvaluacion(curso, unidad))}</p>
                         <ul class="reglas-evaluacion">
@@ -460,12 +506,12 @@
                             <li>Si no apruebas en los dos, vuelves a ver el video y el material y se reabre.</li>
                         </ul>
                         <div id="caja-cuestionario">${cuestionario || bloqueEvaluacion(e, conVideo)}</div>
-                    </section>`}
-
-                    <section class="leccion-bloque" id="paso-actividad" aria-labelledby="t-actividad">
-                        <h3 id="t-actividad"><span class="paso-n">${e.sin_cuestionario ? 2 : 4}</span> ${esc(nombreEvidencia(curso))}</h3>
-                        ${bloqueActividad(curso, i, e)}
                     </section>
+
+                    ${e.sin_actividad ? '' : `<section class="leccion-bloque" id="paso-actividad" aria-labelledby="t-actividad">
+                        <h3 id="t-actividad"><span class="paso-n">4</span> Participa en el foro del equipo</h3>
+                        ${bloqueActividad(curso, i, e)}
+                    </section>`}
 
                     <div class="leccion-nav">
                         ${anterior ? `<button type="button" class="btn btn-borde" data-abrir-leccion="${esc(curso)}" data-unidad="${unidad - 1}">← ${esc(nombreUnidad(curso))} ${unidad - 1}</button>` : '<span></span>'}
@@ -488,12 +534,14 @@
         </div>`);
         enlazarLeccion(e, vid);
         cargarMaterial();
+        cargarForoModulo();
     }
 
     // Video grande: se carga al tocarlo y desde ese momento corre el tiempo mínimo que controla el servidor
     function reproductorGrande(v, e) {
         const visto = e.video_visto && e.estado !== 'pausada';
         return `<div class="video-grande" data-fuente="${esc(fuenteVideo(v))}">${marcoVideo(v)}</div>
+            ${ayudaVideo}
             <div class="video-estado" aria-live="polite">${visto ? '<p class="paso-ok">✓ Video visto</p>'
                 : e.video_iniciado ? `<p class="reloj-video"><span class="reloj-barra"><span style="width:${100 - Math.round(e.video_faltan / e.video_segundos * 100)}%"></span></span> Mira el video completo: la evaluación se habilita en <b data-faltan="${e.video_faltan}">${minSeg(e.video_faltan)}</b>.</p>`
                 : `<p class="texto-suave">Dale play al video. La evaluación se habilita cuando lo hayas visto completo${v.duracion_min ? ` (unos ${esc(v.duracion_min)} minutos)` : ''}.</p>`}</div>`;
@@ -509,24 +557,35 @@
         return `${intentos}<button type="button" class="btn btn-primario" data-cuestionario>Empezar la evaluación${e.intentos ? ` · intento ${e.intentos + 1} de ${e.intentos_max}` : ''}</button>`;
     }
 
+    // Actividad obligatoria: un aporte en la conversación del módulo en el foro del equipo (sin enlaces de Drive)
+    const enlaceForo = (e) => `foro/#tema-${encodeURIComponent(e.foro_tema)}`;
     function bloqueActividad(curso, i, e) {
         const ev = e.evidencia;
         const lista = estado.cursos[curso];
-        const desc = e.sin_cuestionario ? 'Escribe cómo aplicarías esta metodología en la transferencia a las dinamizadoras, o pega el enlace a tu documento. Al enviarla, la unidad queda aprobada y se abre la siguiente.'
-            : EVIDENCIA[curso] === 'actividad' ? 'Responde la actividad del módulo con tus palabras, o pega el enlace a tu documento o foto en Google Drive.'
-            : `Es la Parte B de la evaluación oficial: después de la sesión con la emprendedora, cuenta cómo te fue (preguntas de salida) y pega el enlace a tus evidencias en Google Drive (lista de asistencia, fotos autorizadas, bitácora). La Secretaría Técnica la revisa.`;
-        const habilitada = e.sin_cuestionario ? e.material_visto : !!e.aprobado_en;
-        const estadoEv = ev ? `<p class="chip ${ev.estado === 'aprobada' ? 'bg-menta' : ev.estado === 'devuelta' ? 'bg-coral' : 'bg-mantequilla'}">${esc(EV_TXT[ev.estado])}</p>${ev.comentario ? `<p class="nota"><b>Comentario de la Secretaría:</b> ${esc(ev.comentario)}</p>` : ''}` : '';
-        if (ev && ev.estado !== 'devuelta') return `<p class="texto-suave">${esc(desc)}</p>${estadoEv}${lista[i + 1] && lista[i + 1].estado !== 'bloqueada' ? '<p class="paso-ok">✓ Siguiente módulo abierto</p>' : ''}`;
-        if (!habilitada) return `<p class="texto-suave">${esc(desc)}</p><p class="ayuda-campo">Se habilita cuando ${e.sin_cuestionario ? 'repases el material' : 'apruebes la evaluación'}.</p>`;
-        return `<p class="texto-suave">${esc(desc)}</p>${estadoEv}
+        const desc = '<p class="texto-suave">Cuenta en el foro del equipo qué aprendiste en este módulo y cómo lo vas a aplicar en tu satélite. Tu aporte queda publicado con tu nombre y la Secretaría Técnica lo revisa. Es obligatorio para abrir el siguiente módulo.</p>';
+        const estadoEv = ev ? `<p class="chip ${ev.estado === 'aprobada' ? 'bg-menta' : ev.estado === 'devuelta' ? 'bg-coral' : 'bg-mantequilla'}">${esc(EV_TXT[ev.estado] || 'Enviado')}</p>${ev.comentario ? `<p class="nota"><b>Comentario de la Secretaría:</b> ${esc(ev.comentario)}</p>` : ''}` : '';
+        const conversacion = `<div class="foro-modulo" aria-live="polite"></div><p><a class="enlace" href="${esc(enlaceForo(e))}" target="_blank" rel="noopener">Ver la conversación completa en el foro</a></p>`;
+        if (ev && ev.estado !== 'devuelta') return `${desc}${estadoEv}${ev.texto ? `<blockquote class="aporte-propio">${esc(ev.texto)}</blockquote>` : ''}${lista[i + 1] && lista[i + 1].estado !== 'bloqueada' ? '<p class="paso-ok">✓ Siguiente módulo abierto</p>' : ''}${conversacion}`;
+        if (!e.aprobado_en) return `${desc}<p class="ayuda-campo">Se habilita cuando apruebes la evaluación.</p>`;
+        return `${desc}${estadoEv}
             <form class="form-evidencia" novalidate>
-                <label class="etiqueta" for="ev-t">Tu respuesta</label>
-                <textarea class="campo" id="ev-t" name="texto" rows="5" maxlength="4000">${esc(ev ? ev.texto || '' : '')}</textarea>
-                <label class="etiqueta" for="ev-e">Enlace a tu evidencia en Google Drive ${EVIDENCIA[curso] === 'verificacion' ? '' : '(opcional)'}</label>
-                <input class="campo" id="ev-e" name="enlace" type="url" inputmode="url" placeholder="https://drive.google.com/…" value="${esc(ev ? ev.enlace || '' : '')}">
-                <button type="submit" class="btn btn-primario">${e.sin_cuestionario ? 'Enviar y aprobar la unidad' : 'Enviar'}</button>
-            </form>`;
+                <label class="etiqueta" for="ev-t">Tu aporte para el foro</label>
+                <textarea class="campo" id="ev-t" name="texto" rows="5" maxlength="3000" placeholder="Por ejemplo: aprendí que… En mi satélite lo voy a aplicar así…"></textarea>
+                <button type="submit" class="btn btn-primario">Publicar en el foro</button>
+            </form>${conversacion}`;
+    }
+    // Aportes de las demás personas en la conversación del módulo (los últimos 5)
+    async function cargarForoModulo() {
+        const caja = C.vista.querySelector('.foro-modulo');
+        if (!caja || !leccion) return;
+        const datos = { ...leccion };
+        try {
+            const r = await api('foro-modulo', datos);
+            if (!leccion || leccion.curso !== datos.curso || leccion.unidad !== datos.unidad) return;
+            const ult = (r.respuestas || []).slice(-5);
+            caja.innerHTML = ult.length ? `<p class="eyebrow">Aportes del equipo · ${r.respuestas.length}</p><ul class="lista-limpia aportes">${ult.map((x) => `<li><b>${esc(x.autor)}</b> <small>${esc(x.autor_rol || '')}</small><p>${esc(x.texto)}</p></li>`).join('')}</ul>`
+                : '<p class="texto-suave">Todavía nadie ha escrito en este módulo. ¡Sé la primera persona en aportar!</p>';
+        } catch (x) { caja.innerHTML = ''; }
     }
 
     async function cargarMaterial() {
@@ -608,16 +667,16 @@
         const form = v.querySelector('.form-evidencia');
         if (form) form.addEventListener('submit', async (ev) => {
             ev.preventDefault();
-            const texto = form.texto.value.trim(), enlace = form.enlace.value.trim();
-            if (EVIDENCIA[datos.curso] === 'verificacion' && !enlace) { C.aviso('Pega el enlace de Google Drive con tus evidencias de la sesión.'); form.enlace.focus(); return; }
+            const texto = form.texto.value.trim();
+            if (texto.length < 20) { C.aviso('Escribe tu aporte para el foro (al menos unas líneas).'); form.texto.focus(); return; }
             const b = form.querySelector('button[type="submit"]');
-            b.disabled = true;
+            b.disabled = true; b.textContent = 'Publicando…';
             try {
-                const r = await api('entregar', { ...datos, texto, enlace });
+                const r = await api('entregar', { ...datos, texto });
                 estado = r.progreso;
                 pintarLeccion();
-                C.aviso(r.constancia ? '¡Completaste el curso! Ya puedes descargar tu certificado en «Mis cursos».' : 'Enviado. Ya puedes seguir con el siguiente módulo.');
-            } catch (x) { C.aviso(x.message); b.disabled = false; }
+                C.aviso(r.constancia ? '¡Completaste el curso! Ya puedes descargar tu certificado en «Mis cursos».' : 'Tu aporte quedó publicado en el foro. Ya puedes seguir con el siguiente módulo.');
+            } catch (x) { C.aviso(x.message); b.disabled = false; b.textContent = 'Publicar en el foro'; }
         });
         v.querySelectorAll('[data-abrir-leccion]').forEach((b) => b.addEventListener('click', () => {
             if (b.getAttribute('aria-disabled') === 'true') { const x = estado.cursos[b.dataset.abrirLeccion][Number(b.dataset.unidad) - 1]; C.aviso(x.motivo); return; }
@@ -653,7 +712,7 @@
                 const resultado = `<div class="resultado-inline ${r.aprobado ? 'aprobado' : 'no-aprobado'}">
                     <p class="resultado-nota">${r.nota}<small>/${r.de}</small></p>
                     <div><h4>${r.aprobado ? '¡Aprobaste la evaluación!' : r.pausado ? 'Esta vez no fue' : 'Casi: tienes otro intento'}</h4>
-                    <p>${r.aprobado ? 'Ahora envía la actividad de abajo para abrir el siguiente módulo.' : r.pausado ? 'Usaste los dos intentos. Vuelve a ver el video y a repasar el material: la evaluación se reabre sola.' : 'Repasa lo que fallaste y vuelve a intentarlo.'}</p></div>
+                    <p>${r.aprobado ? (estado.cursos[leccion.curso][leccion.unidad - 1].sin_actividad ? 'Aprobaste este módulo.' : 'Ahora escribe tu aporte en el foro (abajo) para abrir el siguiente módulo.') : r.pausado ? 'Usaste los dos intentos. Vuelve a ver el video y a repasar el material: la evaluación se reabre sola.' : 'Repasa lo que fallaste y vuelve a intentarlo.'}</p></div>
                     ${r.detalle.some((x) => !x.bien) ? `<div class="retro-caja"><b>Para repasar</b><ul class="retro">${r.detalle.map((x, i) => x.bien ? '' : `<li><b>Pregunta ${i + 1}:</b> ${esc(x.retro)}</li>`).join('')}</ul></div>` : ''}
                 </div>`;
                 pintarLeccion(resultado + bloqueEvaluacion(estado.cursos[leccion.curso][leccion.unidad - 1], !!porCodigo[C.codigoModulo(leccion.curso, leccion.unidad - 1)]).replace(/^<p class="paso-ok">[^<]*<\/p>/, ''));
@@ -742,8 +801,8 @@
             return `<tr class="${quieto || p.pausas ? 'fila-alerta' : ''}">
                 <td><b>${esc(p.nombre)}</b><small>${esc(p.cargo || '')}${sat(p.satelite) ? ' · ' + esc(sat(p.satelite)) : ''}</small></td>
                 <td>${p.activa ? '<span class="chip bg-menta">Activa</span>' : `<button type="button" class="boton-texto" data-codigo="${esc(p.cedula)}" data-nombre="${esc(p.nombre)}" data-celular="${esc(p.celular || '')}">Generar código</button>`}</td>
-                <td><span class="mini-barra" title="${g} de 5"><span style="width:${g / 5 * 100}%"></span></span> ${g}/5${gestionOk ? ' ✓' : ''}</td>
-                <td>${p.rol === 'dinamizadora' ? `${p.avance['acompanar-hacer']}/6 · ${p.avance['facilitar-ser']}/4` : `Formación ${p.avance['formacion-secretaria'] || 0}/6`}</td>
+                <td><span class="mini-barra" title="${g} de ${UNIDADES.gestion}"><span style="width:${g / UNIDADES.gestion * 100}%"></span></span> ${g}/${UNIDADES.gestion}${gestionOk ? ' ✓' : ''}</td>
+                <td>${p.avance['acompanar-hacer'] || 0}/6 · ${p.avance['facilitar-ser'] || 0}/4</td>
                 <td>${p.rol === 'dinamizadora' ? tr('transferencia-hacer', 'HACER') + tr('transferencia-ser', 'SER') : '—'}</td>
                 <td><small>${esc(hace(p.ultima_actividad))}${p.pausas ? ` · ${p.pausas} en pausa` : ''}${quieto ? ' · sin avanzar' : ''}</small></td>
             </tr>`;
@@ -753,21 +812,22 @@
             <div class="rejilla r4 movil-2">
                 <div class="tarjeta kpi"><b>${d.personas.filter((p) => p.activa).length}<small class="texto-suave" style="font-size:1rem">/${d.personas.length}</small></b><span>cuentas activadas</span></div>
                 <div class="tarjeta kpi"><b>${din.filter((p) => p.constancias.some((x) => x.curso === 'gestion')).length}<small class="texto-suave" style="font-size:1rem">/${din.length}</small></b><span>dinamizadoras con Gestión aprobada</span></div>
-                <div class="tarjeta kpi"><b>${d.pendientes.length}</b><span>evidencias por revisar</span></div>
+                <div class="tarjeta kpi"><b>${d.pendientes.length}</b><span>aportes del foro por revisar</span></div>
                 <div class="tarjeta kpi"><b>${d.personas.filter((p) => p.pausas).length}</b><span>${d.personas.filter((p) => p.pausas).length === 1 ? 'persona' : 'personas'} con un módulo en pausa</span></div>
             </div>
             <div class="tabla-caja"><table class="tabla-equipo">
-                <thead><tr><th scope="col">Persona</th><th scope="col">Cuenta</th><th scope="col">Gestión</th><th scope="col">Rutas o formación</th><th scope="col">Transferencia</th><th scope="col">Actividad</th></tr></thead>
+                <thead><tr><th scope="col">Persona</th><th scope="col">Cuenta</th><th scope="col">Gestión</th><th scope="col">HACER · SER</th><th scope="col">Transferencia</th><th scope="col">Actividad</th></tr></thead>
                 <tbody>${filas}</tbody></table></div>
             <p class="ayuda-campo">La transferencia se marca después de la sesión de transferencia con la Secretaría y abre el curso de esa ruta. En rojo: personas con un módulo en pausa o más de 7 días sin avanzar.</p>
-            <h3 class="subtitulo-seccion" id="bandeja">Evidencias por revisar</h3>
-            ${d.pendientes.length ? d.pendientes.map((e) => `<article class="tarjeta evidencia" data-id="${e.id}">
-                <p class="eyebrow">${esc(C.CURSOS[e.curso].titulo)} · ${esc(C.codigoModulo(e.curso, e.unidad - 1))} · ${e.tipo === 'actividad' ? 'Actividad' : 'Verificación de la sesión'}</p>
+            <h3 class="subtitulo-seccion" id="bandeja">Aportes del foro por revisar</h3>
+            ${d.pendientes.length ? d.pendientes.filter((e) => C.CURSOS[e.curso]).map((e, n) => `<article class="tarjeta evidencia" data-id="${esc(e.id)}">
+                <p class="eyebrow">${esc(C.CURSOS[e.curso].titulo)} · ${esc(C.codigoModulo(e.curso, e.unidad - 1))} · ${e.tipo === 'foro' ? 'Aporte en el foro' : e.tipo === 'actividad' ? 'Actividad' : 'Verificación de la sesión'}</p>
                 <h4>${esc(e.nombre)}</h4>
                 ${e.texto ? `<p class="evidencia-texto">${esc(e.texto)}</p>` : ''}
                 ${e.enlace ? `<p><a class="enlace" href="${esc(e.enlace)}" target="_blank" rel="noopener noreferrer">Abrir la evidencia</a></p>` : ''}
-                <label class="etiqueta" for="com-${e.id}">Comentario (obligatorio si la devuelves)</label>
-                <textarea class="campo" id="com-${e.id}" rows="2" maxlength="1000"></textarea>
+                ${e.foro_tema ? `<p><a class="enlace" href="foro/#tema-${esc(encodeURIComponent(e.foro_tema))}" target="_blank" rel="noopener">Ver la conversación en el foro</a></p>` : ''}
+                <label class="etiqueta" for="com-${n}">Comentario (obligatorio si lo devuelves)</label>
+                <textarea class="campo" id="com-${n}" rows="2" maxlength="1000"></textarea>
                 <div class="botones"><button type="button" class="btn btn-primario" data-revisar="aprobada">Aprobar</button><button type="button" class="btn btn-borde" data-revisar="devuelta">Devolver con comentario</button></div>
             </article>`).join('') : '<p class="tarjeta vacio">No hay evidencias pendientes. ¡Todo al día!</p>'}`;
 
@@ -784,7 +844,8 @@
                 const comentario = card.querySelector('textarea').value.trim();
                 if (b.dataset.revisar === 'devuelta' && comentario.length < 5) { C.aviso('Escribe qué debe ajustar antes de devolverla.'); card.querySelector('textarea').focus(); return; }
                 b.disabled = true;
-                try { await api('revisar', { id: Number(card.dataset.id), estado: b.dataset.revisar, comentario }); card.remove(); C.aviso(b.dataset.revisar === 'aprobada' ? 'Evidencia aprobada.' : 'Evidencia devuelta con tu comentario.'); }
+                // El id es el del documento de Firestore (texto): antes se convertía a número y la revisión siempre fallaba
+                try { await api('revisar', { id: card.dataset.id, estado: b.dataset.revisar, comentario }); card.remove(); C.aviso(b.dataset.revisar === 'aprobada' ? 'Aporte aprobado.' : 'Aporte devuelto con tu comentario.'); }
                 catch (e) { C.aviso(e.message); b.disabled = false; }
                 return;
             }

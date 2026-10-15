@@ -189,7 +189,9 @@
             await conectar();
             const u = await new Promise((ok) => { const fin = auth.onAuthStateChanged((x) => { fin(); ok(x); }); });
             if (!u) return pintarPuerta();
-            await pintarLista();
+            // foro/#tema-ID abre directamente una conversación (p. ej., la de un módulo, desde la lección)
+            const tema = location.hash.match(/^#tema-([\w-]+)$/);
+            if (tema) await pintarTema(tema[1]); else await pintarLista();
         } catch (e) { app.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; }
     })();
 })();

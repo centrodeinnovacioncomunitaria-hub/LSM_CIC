@@ -29,13 +29,19 @@ const SATELITES = {
 const sateliteDe = (municipio) => (Object.entries(SATELITES).find(([, s]) => s.municipios.includes(municipio)) || [null])[0];
 
 // Reglas de los cursos del equipo (documento técnico 6.4 y guiones del curso de Gestión)
-// cuestionario: false → la unidad se aprueba al repasar el material y enviar la actividad.
+// evidencia 'foro': la actividad de cada módulo es participar en la conversación de ese módulo en el foro del equipo.
+// sin_actividad: módulos que se aprueban solo con la evaluación (el 4 de Gestión, acordado con Emprende Ahora).
 const CURSOS = {
-  gestion: { unidades: 4, prefijo: 'GES-M', nombre: 'Gestión del CIC', evidencia: 'actividad', cuestionario: true, roles: ['secretaria', 'dinamizadora'] },
-  'formacion-secretaria': { unidades: 6, prefijo: 'STF-U', nombre: 'Formación de la Secretaría Técnica', evidencia: 'actividad', cuestionario: false, roles: ['secretaria'] },
-  'acompanar-hacer': { unidades: 6, prefijo: 'HAC-S', nombre: 'Acompañar la ruta HACER', evidencia: 'verificacion', cuestionario: true, roles: ['secretaria', 'dinamizadora'] },
-  'facilitar-ser': { unidades: 4, prefijo: 'SER-T', nombre: 'Facilitar la ruta SER', evidencia: 'verificacion', cuestionario: true, roles: ['secretaria', 'dinamizadora'] },
+  gestion: { unidades: 4, prefijo: 'GES-M', nombre: 'Gestión del CIC', unidad: 'Módulo', evidencia: 'foro', sin_actividad: [4], cuestionario: true, roles: ['secretaria', 'dinamizadora'] },
+  'acompanar-hacer': { unidades: 6, prefijo: 'HAC-S', nombre: 'Acompañar la ruta HACER', unidad: 'Semana', evidencia: 'foro', cuestionario: true, roles: ['secretaria', 'dinamizadora'] },
+  'facilitar-ser': { unidades: 4, prefijo: 'SER-T', nombre: 'Facilitar la ruta SER', unidad: 'Taller', evidencia: 'foro', cuestionario: true, roles: ['secretaria', 'dinamizadora'] },
 };
+// La Formación de la Secretaría Técnica dejó de ser un curso: su material está en «Material de transferencia»
+// (catálogo formacion-secretaria_N y videos STF-UN). Sus constancias ya emitidas se siguen verificando con este nombre.
+const NOMBRE_CURSO_RETIRADO = { 'formacion-secretaria': 'Formación de la Secretaría Técnica' };
+// En admin/ el material de transferencia se carga como un curso más (videos STF-UN y enlaces adicionales)
+const CURSOS_ADMIN = { ...CURSOS, 'formacion-secretaria': { unidades: 6, prefijo: 'STF-U', nombre: 'Material de transferencia · Secretaría Técnica', cuestionario: false } };
+const TRANSFERENCIA = ['Método Insight', 'Oportunidad significativa emergente', 'Modelo de negocio Canvas', 'Producto mínimo viable y Lean Startup', 'Gestión financiera estratégica', 'Guía metodológica del facilitador'];
 const PREGUNTAS_POR_INTENTO = 10; // el banco oficial (octubre 2026) tiene 10 preguntas por evaluación
 const NOTA_MINIMA = 7;            // 70 %: 7 de 10
 const INTENTOS_POR_RONDA = 2;    // si pierde los dos, repasa video y material para volver a intentar
@@ -153,6 +159,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
       fallos, ventana_desde: nueva ? hoy() : previo.ventana_desde,
       bloqueado_hasta: fallos >= FALLOS_MAX ? enMinutos(BLOQUEO_MIN) : null,
     });
+    return fallos;
   }
 
   // ---------- Enlace al correo y códigos de la Secretaría ----------
@@ -283,6 +290,31 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     return { envios: filas.map((x) => ({ cedula: x.cedula, nombre: nombres[x.cedula] || null, estado: x.estado, motivo: x.motivo || null, error: x.error || null, correo: x.correo || null, rol: x.rol || null, creado_en: x.creado_en })) };
   }
 
+  // ---------- Cuentas de administración (solo administración) ----------
+  // Agrega un correo como administración: crea la cuenta (sin contraseña conocida) y le envía el enlace para crearla.
+  // Nunca convierte la cuenta de una persona del equipo o de una emprendedora.
+  async function adminAdministradoras(token) {
+    const p = await usuarioDelToken(token);
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Esta sección es solo para la administración.');
+    const admins = await lista(col('perfiles').where('rol', '==', 'administradora'));
+    return { administradoras: admins.map((x) => ({ correo: x.cuenta_email || x.correo, creado_en: x.creado_en || null, yo: x._id === p.id })).sort((a, b) => String(a.correo).localeCompare(String(b.correo))) };
+  }
+  async function adminAgregarAdministradora(token, b) {
+    const p = await usuarioDelToken(token);
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Esta sección es solo para la administración.');
+    const correo = texto(b.correo, 120).toLowerCase();
+    if (!correoValido(correo) || esInterno(correo)) throw new Falla(400, 'correo', 'Escribe un correo válido.');
+    let uid = cuentas.uidPorCorreo ? await cuentas.uidPorCorreo(correo) : null;
+    if (uid) {
+      const ex = await perfilPorId(uid);
+      if (ex && ex.rol !== 'administradora') throw new Falla(409, 'en_uso', `Ese correo ya es la cuenta de ${ex.nombre} (${NOMBRE_ROL[ex.rol] || ex.rol}). Para la administración usa otro correo.`);
+    } else uid = await cuentas.crear({ email: correo, clave: claveAlAzar(), nombre: 'Administración CIC' });
+    await col('perfiles').doc(uid).set({ cedula: `admin-${uid.slice(0, 6)}`, nombre: 'Administración CIC', rol: 'administradora', correo, cuenta_email: correo, creado_en: hoy(), agregada_por: p.id }, { merge: true });
+    let enviado = true;
+    try { await cuentas.enviarEnlace(correo, 'admin/'); } catch (e) { enviado = false; console.error(`Enlace de administración NO enviado a ${enmascarar(correo)}:`, e.message); }
+    return { ok: true, enviado, correo: enmascarar(correo) };
+  }
+
   // La Secretaría (a cualquiera) o la dinamizadora (a las emprendedoras de su departamento) generan un código
   // de 6 números para entregarlo por WhatsApp o en persona, a quien no tiene correo o no lo recibe.
   const hashCodigo = (cedula, codigo) => crypto.createHash('sha256').update(`${cedula}:${codigo}:cic`).digest('hex');
@@ -333,10 +365,18 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const p = await perfilPorCedula(cedula);
     const ok = p ? await cuentas.verificarClave(p.cuenta_email, clave).catch(() => false) : false;
     if (!ok) {
-      await registrarFallo(cedula, bloqueo);
-      throw new Falla(401, 'credenciales', rol === 'emprendedora'
-        ? 'La cédula o la contraseña no coinciden. Si aún no tienes cuenta, toca «Inscribirme».'
-        : 'La cédula o la contraseña no coinciden. Si es tu primera vez, toca «Activar mi cuenta» y te llegará un enlace a tu correo.');
+      // Mensajes distintos para cada caso (antes todos decían «no coinciden» y la persona no sabía qué hacer)
+      const fallos = await registrarFallo(cedula, bloqueo);
+      const quedan = FALLOS_MAX - fallos;
+      const aviso = quedan > 0
+        ? ` Te ${quedan === 1 ? 'queda 1 intento' : `quedan ${quedan} intentos`} antes de una pausa de ${BLOQUEO_MIN} minutos.`
+        : ` Por seguridad, espera ${BLOQUEO_MIN} minutos antes de volver a intentarlo.`;
+      let motivo;
+      if (p) motivo = 'La contraseña no es correcta. Si la cambiaste hace poco, escribe la nueva. Si no la recuerdas, toca «¿Olvidaste tu contraseña?».';
+      else if (rol === 'emprendedora') motivo = 'No encontramos una cuenta con esta cédula. Revisa el número o, si aún no te has inscrito, toca «Inscribirme».';
+      else if (await datos(col('directorio').doc(cedula))) motivo = 'Esta cédula todavía no tiene la cuenta activada. Toca «Activar mi cuenta»: te llega un enlace al correo para crear tu contraseña.';
+      else motivo = 'Esta cédula no está registrada en el equipo del CIC. Revisa el número o toca «¿No puedes entrar? Pide soporte».';
+      throw new Falla(401, 'credenciales', motivo + aviso, { quedan: Math.max(0, quedan), sin_cuenta: !p });
     }
     await col('bloqueos').doc(cedula).delete();
     // La contraseña ya se verificó: aquí sí podemos decirle cuál es su perfil.
@@ -453,10 +493,10 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Esta sección es solo para la administración de la plataforma.');
     const [videos, material, preguntas] = await Promise.all([lista(col('videos')), lista(col('material')), lista(col('preguntas'))]);
     const porCodigo = Object.fromEntries(videos.map(({ _id, ...v }) => [v.codigo, v]));
-    const mat = Object.fromEntries(material.filter((m) => { const [c, u] = m._id.split('_'); return enlacesVigentes(m, CURSOS[c] && u !== 'general' ? idsMaterial(c, Number(u)).some((k) => CATALOGO.archivos[k]) : false); }).map((m) => [m._id, m.archivos || []]));
+    const mat = Object.fromEntries(material.filter((m) => { const [c, u] = m._id.split('_'); return enlacesVigentes(m, CURSOS_ADMIN[c] && u !== 'general' ? idsMaterial(c, Number(u)).some((k) => CATALOGO.archivos[k]) : false); }).map((m) => [m._id, m.archivos || []]));
     const bancos = {};
     for (const q of preguntas) { const k = `${q.curso}_${q.unidad}`; bancos[k] = (bancos[k] || 0) + 1; }
-    const cursos = Object.fromEntries(Object.entries(CURSOS).map(([id, c]) => [id, {
+    const cursos = Object.fromEntries(Object.entries(CURSOS_ADMIN).map(([id, c]) => [id, {
       nombre: c.nombre, prefijo: c.prefijo, cuestionario: c.cuestionario,
       general: mat[`${id}_general`] || [],
       unidades: Array.from({ length: c.unidades }, (_, i) => ({
@@ -472,9 +512,9 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const p = await usuarioDelToken(token);
     if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Solo la administración de la plataforma carga el material.');
     const curso = String(b.curso || '');
-    if (!CURSOS[curso]) throw new Falla(400, 'curso', 'Ese curso no existe.');
+    if (!CURSOS_ADMIN[curso]) throw new Falla(400, 'curso', 'Ese curso no existe.');
     const unidad = b.unidad === 'general' ? 'general' : Number(b.unidad);
-    if (unidad !== 'general' && (!Number.isInteger(unidad) || unidad < 1 || unidad > CURSOS[curso].unidades)) throw new Falla(400, 'curso', 'Esa unidad no existe.');
+    if (unidad !== 'general' && (!Number.isInteger(unidad) || unidad < 1 || unidad > CURSOS_ADMIN[curso].unidades)) throw new Falla(400, 'curso', 'Esa unidad no existe.');
     const archivos = (Array.isArray(b.archivos) ? b.archivos : []).slice(0, 15).map((a) => ({ nombre: texto(a && a.nombre, 120) || 'Material', url: String((a && a.url) || '').trim() }));
     const malo = archivos.find((a) => !/^https:\/\/\S+$/.test(a.url));
     if (malo) throw new Falla(400, 'url', `El enlace de «${malo.nombre}» debe empezar por https:// (por ejemplo, un archivo de Google Drive).`);
@@ -538,9 +578,55 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const cuerpo = String(b.texto ?? '').trim().slice(0, 3000);
     if (cuerpo.length < 2) throw new Falla(400, 'texto', 'Escribe tu respuesta.');
     await foroLimite(p);
-    await col('foro_respuestas').add({ tema: id, texto: cuerpo, autor_id: p.id, autor: autorDe(p), autor_rol: NOMBRE_ROL[p.rol] || 'Administración', creado_en: hoy(), borrado: false });
+    const r = await col('foro_respuestas').add({ tema: id, texto: cuerpo, autor_id: p.id, autor: autorDe(p), autor_rol: NOMBRE_ROL[p.rol] || 'Administración', creado_en: hoy(), borrado: false });
     await ref.update({ respuestas: (t.respuestas || 0) + 1, ultima_actividad: hoy() });
+    // Responder en la conversación de un módulo cuenta como la actividad de ese módulo
+    if (t.modulo && p.rol !== 'emprendedora') await aporteDesdeForo(p, t.modulo, cuerpo, id, r.id).catch((e) => console.error('Aporte del módulo:', e.message));
     return foroTema(token, { id });
+  }
+
+  // ---------- Conversación de cada módulo: la actividad obligatoria de los cursos del equipo ----------
+  const idTemaModulo = (curso, u) => `modulo_${curso}_${u}`;
+  async function temaModulo(curso, u) {
+    const id = idTemaModulo(curso, u);
+    const ref = col('foro_temas').doc(id);
+    let t = await datos(ref);
+    if (!t) {
+      const ts = hoy();
+      t = {
+        categoria: 'equipo', titulo: `${CURSOS[curso].nombre} · ${CURSOS[curso].unidad} ${u}: conversación del equipo`,
+        texto: `Actividad obligatoria del ${CURSOS[curso].unidad.toLowerCase()} ${u}: cuenta con tus palabras qué aprendiste y cómo lo vas a aplicar en tu satélite. Lee los aportes de tus compañeras y compañeros: aquí aprendemos juntos.`,
+        autor_id: null, autor: 'Secretaría Técnica', autor_rol: 'Secretaría Técnica', creado_en: ts, ultima_actividad: ts,
+        respuestas: 0, fijado: false, borrado: false, modulo: { curso, unidad: u },
+      };
+      await ref.set(t);
+    } else if (t.borrado) await ref.update({ borrado: false });
+    return { id, ref, t };
+  }
+  const idEvidenciaForo = (persona, curso, u) => `${persona}_${curso}_${u}_foro`;
+  async function guardarAporte(perfil, curso, u, txt, tema, respuesta) {
+    await col('evidencias').doc(idEvidenciaForo(perfil.id, curso, u)).set({
+      persona: perfil.id, curso, unidad: u, tipo: 'foro', texto: txt, enlace: null, foro_tema: tema, foro_respuesta: respuesta,
+      estado: 'enviada', comentario: null, revisado_por: null, revisado_en: null, creado_en: hoy(),
+    });
+  }
+  // ¿Puede esta persona registrar ya el aporte del módulo? (módulo abierto, con actividad y evaluación aprobada)
+  function aporteHabilitado(perfil, ctx, curso, u) {
+    const falta = requisito(perfil, ctx, curso, u);
+    if (falta) return falta;
+    if (!actividadRequerida(curso, u)) return 'Este módulo no tiene actividad: se aprueba con la evaluación.';
+    if (CURSOS[curso].cuestionario && !aprobada(ctx, curso, u)) return 'Primero aprueba la evaluación del módulo; luego participa en el foro.';
+    return null;
+  }
+  async function aporteDesdeForo(p, modulo, txt, tema, respuesta) {
+    const { curso, unidad } = modulo;
+    if (!CURSOS[curso] || txt.length < 20) return;
+    const ctx = await contexto(p.id);
+    if (aporteHabilitado(p, ctx, curso, unidad)) return;
+    const previa = evidenciaDe(ctx, curso, unidad);
+    if (previa && previa.estado !== 'devuelta') return;
+    await guardarAporte(p, curso, unidad, txt, tema, respuesta);
+    await emitirSiCompleto(p, curso);
   }
   async function foroBorrar(token, b) {
     const p = await usuarioDelToken(token);
@@ -818,6 +904,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
       return { drive_pendiente: true };
     }
   }
+  // Revisión de cada actividad: la dinamizadora la envía a la Secretaría Técnica, que la aprueba o la devuelve con comentario.
+  const estadoRevision = (x) => (x && x.revision && x.revision.estado) || null; // null | enviada | aprobada | devuelta
   function avanceDe(filas) {
     const ejecutadas = filas.filter((x) => x.ejecutada === true);
     return {
@@ -825,8 +913,20 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
       ejecutadas: ejecutadas.length,
       no_ejecutadas: filas.filter((x) => x.ejecutada === false).length,
       con_documentos: ejecutadas.filter((x) => TIPOS_DOCUMENTO.every((t) => x.documentos && x.documentos[t])).length,
+      por_revisar: filas.filter((x) => estadoRevision(x) === 'enviada').length,
+      aprobadas: filas.filter((x) => estadoRevision(x) === 'aprobada').length,
+      devueltas: filas.filter((x) => estadoRevision(x) === 'devuelta').length,
     };
   }
+  // Mientras la Secretaría la revisa (o ya la aprobó), la dinamizadora no puede cambiar la actividad.
+  function exigirEditable(p, fila) {
+    const r = estadoRevision(fila);
+    if (p.rol === 'dinamizadora' && (r === 'enviada' || r === 'aprobada')) {
+      throw new Falla(409, 'en_revision', r === 'aprobada' ? 'Esta actividad ya fue aprobada por la Secretaría Técnica: no se puede cambiar.' : 'Esta actividad está en revisión de la Secretaría Técnica. Si necesitas corregir algo, escríbele en los comentarios.');
+    }
+  }
+  const vistaRevision = (x) => (x && x.revision ? { estado: x.revision.estado, enviada_en: x.revision.enviada_en || null, revisada_en: x.revision.revisada_en || null, revisada_por: x.revision.revisada_por_nombre || null } : null);
+  const vistaComentarios = (x) => ((x && x.comentarios) || []).map((c) => ({ autor: c.autor, rol: c.rol, texto: c.texto, estado: c.estado || null, en: c.en }));
   async function avancePorEmprendedora() {
     const porPersona = {};
     for (const x of await lista(col('seguimiento'))) (porPersona[x.emprendedora] = porPersona[x.emprendedora] || []).push(x);
@@ -939,6 +1039,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
           ruta: a.ruta, n: a.n, nombre: a.nombre, herramientas: a.herramientas, requeridos: requeridos(a),
           ejecutada: x ? x.ejecutada : null, fecha: x ? x.fecha || null : null, motivo: x ? x.motivo || null : null,
           documentos: Object.fromEntries(TIPOS_DOCUMENTO.map((t) => [t, metaDocumento(x && x.documentos && x.documentos[t])])),
+          revision: vistaRevision(x), comentarios: vistaComentarios(x),
         };
       }),
       avance: avanceDe(Object.values(filas)),
@@ -952,12 +1053,74 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const fecha = /^\d{4}-\d{2}-\d{2}$/.test(b.fecha || '') ? b.fecha : null;
     const id = idSeguimiento(e.id, a);
     const previa = await datos(col('seguimiento').doc(id));
+    exigirEditable(p, previa);
     await col('seguimiento').doc(id).set({
       emprendedora: e.id, ruta: a.ruta, n: a.n, ejecutada: b.ejecutada,
       fecha: b.ejecutada ? fecha : null, motivo: b.ejecutada ? null : (texto(b.motivo, 300) || null),
       documentos: (previa && previa.documentos) || {}, marcado_por: p.id, marcado_en: hoy(),
+      revision: (previa && previa.revision) || null, comentarios: (previa && previa.comentarios) || [],
     });
     return verSeguimiento(token, b);
+  }
+  const comentario = (p, txt, estado = null) => ({ autor: p.nombre, autor_id: p.id, rol: NOMBRE_ROL[p.rol] || 'Equipo', texto: txt, estado, en: hoy() });
+  // Dinamizadora: «Enviar a la Secretaría Técnica» cuando la actividad está completa (o explicó por qué no se hizo).
+  async function enviarActividad(token, b) {
+    const { p, e } = await emprendimientoPermitido(token, b.cedula);
+    if (p.rol !== 'dinamizadora') throw new Falla(403, 'permiso', 'La dinamizadora asignada envía la actividad a la Secretaría Técnica.');
+    const a = actividadDe(b.ruta, b.n);
+    if (!a) throw new Falla(400, 'actividad', 'Esa actividad no existe.');
+    const id = idSeguimiento(e.id, a);
+    const fila = await datos(col('seguimiento').doc(id));
+    if (!fila || typeof fila.ejecutada !== 'boolean') throw new Falla(400, 'ejecutada', 'Primero marca si la actividad se ejecutó.');
+    exigirEditable(p, fila);
+    if (fila.ejecutada && !TIPOS_DOCUMENTO.every((t) => fila.documentos && fila.documentos[t])) throw new Falla(400, 'documentos', 'Antes de enviarla, sube el acta de la sesión y la herramienta diligenciada.');
+    if (!fila.ejecutada && !fila.motivo) throw new Falla(400, 'motivo', 'Antes de enviarla, escribe y guarda por qué no se ejecutó.');
+    const nota = texto(b.nota, 1000);
+    const comentarios = [...(fila.comentarios || []), ...(nota ? [comentario(p, nota, 'enviada')] : [])];
+    await col('seguimiento').doc(id).set({ ...fila, comentarios, revision: { estado: 'enviada', enviada_en: hoy(), enviada_por: p.id } });
+    return verSeguimiento(token, b);
+  }
+  // Secretaría: aprueba o devuelve (con comentario obligatorio) una actividad enviada.
+  async function revisarActividad(token, b) {
+    const { p, e } = await emprendimientoPermitido(token, b.cedula);
+    if (p.rol !== 'secretaria') throw new Falla(403, 'permiso', 'Solo la Secretaría Técnica aprueba o devuelve actividades.');
+    const a = actividadDe(b.ruta, b.n);
+    if (!a) throw new Falla(400, 'actividad', 'Esa actividad no existe.');
+    const estado = String(b.estado || '');
+    if (estado !== 'aprobada' && estado !== 'devuelta') throw new Falla(400, 'estado', 'Elige aprobar o devolver.');
+    const txt = texto(b.comentario, 1000);
+    if (estado === 'devuelta' && txt.length < 5) throw new Falla(400, 'comentario', 'Cuando devuelves una actividad, escribe qué debe corregir la dinamizadora.');
+    const id = idSeguimiento(e.id, a);
+    const fila = await datos(col('seguimiento').doc(id));
+    if (!fila || typeof fila.ejecutada !== 'boolean') throw new Falla(400, 'ejecutada', 'Esta actividad todavía no tiene registro de la dinamizadora.');
+    const comentarios = [...(fila.comentarios || []), comentario(p, txt || (estado === 'aprobada' ? 'Actividad aprobada.' : ''), estado)];
+    await col('seguimiento').doc(id).set({ ...fila, comentarios, revision: { ...(fila.revision || {}), estado, revisada_en: hoy(), revisada_por: p.id, revisada_por_nombre: p.nombre } });
+    return verSeguimiento(token, b);
+  }
+  // Comentarios de la actividad: la Secretaría deja anotaciones y la dinamizadora puede responder.
+  async function comentarActividad(token, b) {
+    const { p, e } = await emprendimientoPermitido(token, b.cedula);
+    const a = actividadDe(b.ruta, b.n);
+    if (!a) throw new Falla(400, 'actividad', 'Esa actividad no existe.');
+    const txt = texto(b.texto, 1000);
+    if (txt.length < 2) throw new Falla(400, 'texto', 'Escribe el comentario.');
+    const id = idSeguimiento(e.id, a);
+    const fila = (await datos(col('seguimiento').doc(id))) || { emprendedora: e.id, ruta: a.ruta, n: a.n, ejecutada: null, fecha: null, motivo: null, documentos: {}, revision: null };
+    await col('seguimiento').doc(id).set({ ...fila, comentarios: [...(fila.comentarios || []), comentario(p, txt)].slice(-50) });
+    return verSeguimiento(token, b);
+  }
+  // Emprendedora: el estado de sus actividades (si ya fueron aprobadas por la Secretaría Técnica).
+  async function miAvance(token) {
+    const p = await usuarioDelToken(token);
+    if (p.rol !== 'emprendedora') throw new Falla(403, 'permiso', 'Este avance es de cada emprendedora.');
+    const filas = Object.fromEntries((await lista(col('seguimiento').where('emprendedora', '==', p.id))).map((x) => [`${x.ruta}_${x.n}`, x]));
+    const actividades = ACTIVIDADES.map((a) => {
+      const x = filas[`${a.ruta}_${a.n}`];
+      const r = estadoRevision(x);
+      const estado = r === 'aprobada' ? 'aprobada' : r === 'enviada' || r === 'devuelta' ? 'en_revision' : x && x.ejecutada === true ? 'realizada' : x && x.ejecutada === false ? 'no_realizada' : 'pendiente';
+      return { ruta: a.ruta, n: a.n, nombre: a.nombre, estado, fecha: (x && x.fecha) || null, aprobada_en: r === 'aprobada' ? x.revision.revisada_en || null : null };
+    });
+    return { actividades, aprobadas: actividades.filter((x) => x.estado === 'aprobada').length, total: actividades.length };
   }
   async function borrarPartes(base, desde, hasta) {
     for (let i = desde; i < hasta; i++) await col('documentos').doc(`${base}_${i}`).delete();
@@ -970,6 +1133,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const id = idSeguimiento(e.id, a);
     const fila = await datos(col('seguimiento').doc(id));
     if (!fila || fila.ejecutada !== true) throw new Falla(400, 'ejecutada', 'Primero marca que la actividad sí se ejecutó.');
+    exigirEditable(p, fila);
     const mime = String(b.mime || '');
     if (!TIPOS_ARCHIVO[mime]) throw new Falla(400, 'archivo', 'Sube una foto (JPG o PNG) o un PDF.');
     const base64 = String(b.base64 || '');
@@ -997,11 +1161,12 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     return { nombre: m.nombre, mime: m.mime, base64 };
   }
   async function quitarDocumento(token, b) {
-    const { e } = await emprendimientoPermitido(token, b.cedula);
+    const { p, e } = await emprendimientoPermitido(token, b.cedula);
     const a = actividadDe(b.ruta, b.n);
     if (!a || !TIPOS_DOCUMENTO.includes(b.tipo)) throw new Falla(400, 'tipo', 'Ese documento no existe.');
     const id = idSeguimiento(e.id, a);
     const fila = await datos(col('seguimiento').doc(id));
+    exigirEditable(p, fila);
     const m = fila && fila.documentos && fila.documentos[b.tipo];
     if (m) {
       if (m.drive_id && driveActivo()) await drive({ accion: 'quitar', id: m.drive_id }).catch((err) => console.error('Drive:', err.message));
@@ -1031,7 +1196,12 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     };
   }
   const filaDe = (ctx, curso, u) => ctx.progreso.find((p) => p.curso === curso && p.unidad === u);
-  const evidenciaDe = (ctx, curso, u) => ctx.evidencias.find((e) => e.curso === curso && e.unidad === u && e.tipo === CURSOS[curso].evidencia);
+  // La evidencia más reciente del módulo: el aporte en el foro, o la actividad o verificación que se enviaba antes
+  // (las ya enviadas siguen contando, para que nadie pierda su avance).
+  const evidenciaDe = (ctx, curso, u) => ctx.evidencias.filter((e) => e.curso === curso && e.unidad === u)
+    .sort((a, b) => String(b.creado_en).localeCompare(String(a.creado_en)))[0];
+  const actividadRequerida = (curso, u) => !(CURSOS[curso].sin_actividad || []).includes(u);
+  const actividadHecha = (ctx, curso, u) => !actividadRequerida(curso, u) || !!evidenciaDe(ctx, curso, u);
   const tieneVideo = (ctx, curso, u) => ctx.videos.has(`${CURSOS[curso].prefijo}${u}`);
   const aprobada = (ctx, curso, u) => !!(filaDe(ctx, curso, u) || {}).aprobado_en;
   // El video cuenta como visto cuando pasó al menos el 90 % de su duración desde que se abrió en la lección.
@@ -1045,10 +1215,11 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
 
   // Qué falta para abrir una unidad (null = abierta)
   function requisito(perfil, ctx, curso, u) {
-    if (!CURSOS[curso].roles.includes(perfil.rol)) return 'Este curso es solo para la Secretaría Técnica.';
+    if (!CURSOS[curso].roles.includes(perfil.rol)) return 'Este curso no está habilitado para tu perfil.';
     if (u > 1) {
-      if (!aprobada(ctx, curso, u - 1)) return `Se abre cuando apruebes el cuestionario de la unidad ${u - 1}.`;
-      if (!evidenciaDe(ctx, curso, u - 1)) return `Se abre cuando envíes la ${CURSOS[curso].evidencia === 'actividad' ? 'actividad' : 'verificación de la sesión'} de la unidad ${u - 1}.`;
+      const nombre = `${CURSOS[curso].unidad.toLowerCase()} ${u - 1}`;
+      if (!aprobada(ctx, curso, u - 1)) return `Se abre cuando apruebes la evaluación del ${nombre}.`;
+      if (!actividadHecha(ctx, curso, u - 1)) return `Se abre cuando participes en el foro del ${nombre}.`;
       return null;
     }
     if (curso === 'gestion') {
@@ -1057,9 +1228,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
       return ctx.hitos.has('compromiso') ? null : 'Se abre cuando confirmes tu compromiso como parte del equipo.';
     }
     if (!ctx.constancias.some((c) => c.curso === 'gestion')) return 'Se abre cuando apruebes el curso Gestión del CIC.';
-    if (curso === 'formacion-secretaria') return null;
-    // La Secretaría abre las rutas al terminar su formación; las dinamizadoras, con la transferencia.
-    if (perfil.rol === 'secretaria') return ctx.constancias.some((c) => c.curso === 'formacion-secretaria') ? null : 'Se abre cuando termines la Formación de la Secretaría Técnica.';
+    // La Secretaría abre las rutas al aprobar Gestión; las dinamizadoras, con la transferencia que registra la Secretaría.
+    if (perfil.rol === 'secretaria') return null;
     const t = curso === 'acompanar-hacer' ? 'transferencia-hacer' : 'transferencia-ser';
     return ctx.hitos.has(t) ? null : 'Se abre cuando la Secretaría Técnica registre tu transferencia de la ruta.';
   }
@@ -1078,13 +1248,13 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const conCuestionario = CURSOS[curso].cuestionario;
     return {
       unidad: u, estado, motivo: falta,
-      tiene_video: video, sin_cuestionario: !conCuestionario,
+      tiene_video: video, sin_cuestionario: !conCuestionario, sin_actividad: !actividadRequerida(curso, u), foro_tema: idTemaModulo(curso, u),
       video_visto: !!f.video_en && (!f.bloqueado_en || f.video_en > f.bloqueado_en), material_visto: !!f.material_en,
       video_iniciado: !!inicioValido(f), video_segundos: segundosVideo(ctx, curso, u), video_faltan: video ? faltaVideo(ctx, curso, u, f) : 0,
       intentos: f.intentos || 0, intentos_max: INTENTOS_POR_RONDA, ronda: f.ronda || 1,
       mejor_nota: f.mejor_nota ?? null, aprobado_en: f.aprobado_en || null,
       puede_cuestionario: conCuestionario && !falta && !f.aprobado_en && !f.bloqueado_en && (f.intentos || 0) < INTENTOS_POR_RONDA && listo,
-      evidencia: ev ? { estado: ev.estado, comentario: ev.comentario || null, texto: ev.texto || null, enlace: ev.enlace || null } : null,
+      evidencia: ev ? { tipo: ev.tipo, estado: ev.estado, comentario: ev.comentario || null, texto: ev.texto || null, creado_en: ev.creado_en || null } : null,
     };
   }
 
@@ -1155,6 +1325,37 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   // Los enlaces de Drive que se cargaron al inicio (sin «actualizado_por») quedan reemplazados por los PDF del catálogo;
   // los que la administración guarde desde admin/ se muestran siempre como material adicional.
   const enlacesVigentes = (m, hayCatalogo) => !!m && (!hayCatalogo || !!m.actualizado_por);
+
+  // Material de transferencia (antes «Formación de la Secretaría Técnica»): guías, presentaciones y videos de las
+  // 6 metodologías, para la Secretaría Técnica, sin curso ni evaluaciones.
+  const idsTransferencia = (n) => ((CATALOGO.material || {})[`formacion-secretaria_${n}`] || []).filter((id) => CATALOGO.archivos[id]);
+  const puedeTransferencia = (p) => p.rol === 'secretaria' || esAdmin(p);
+  async function materialTransferencia(token) {
+    const p = await usuarioDelToken(token);
+    if (!puedeTransferencia(p)) throw new Falla(403, 'permiso', 'El material de transferencia es para la Secretaría Técnica.');
+    const videos = new Map((await lista(col('videos'))).map((v) => [v.codigo, v]));
+    const enlaces = Object.fromEntries((await lista(col('material'))).filter((m) => m._id.startsWith('formacion-secretaria_') && m.actualizado_por).map((m) => [m._id, m.archivos || []]));
+    return {
+      unidades: TRANSFERENCIA.map((titulo, i) => {
+        const v = videos.get(`STF-U${i + 1}`);
+        return {
+          n: i + 1, titulo,
+          archivos: [
+            ...idsTransferencia(i + 1).map((id) => ({ id, nombre: CATALOGO.archivos[id].nombre, tipo: CATALOGO.archivos[id].tipo })),
+            ...(enlaces[`formacion-secretaria_${i + 1}`] || []).filter((a) => /^https:\/\//.test(a.url || '')).map((a) => ({ nombre: a.nombre, url: a.url })),
+          ],
+          video: v ? { codigo: v.codigo, titulo: v.titulo, youtube_id: v.youtube_id || null, drive_id: v.drive_id || null, duracion_min: v.duracion_min || null } : null,
+        };
+      }),
+    };
+  }
+  async function archivoTransferencia(token, b) {
+    const p = await usuarioDelToken(token);
+    if (!puedeTransferencia(p)) throw new Falla(403, 'permiso', 'El material de transferencia es para la Secretaría Técnica.');
+    const id = String(b.id || '');
+    if (!TRANSFERENCIA.some((_, i) => idsTransferencia(i + 1).includes(id))) throw new Falla(404, 'no_existe', 'No encontramos ese archivo.');
+    return paquete(id);
+  }
   async function material(token, b) {
     const { perfil, curso, unidad } = await equipoAbierto(token, b);
     const archivos = idsMaterial(curso, unidad).filter((id) => CATALOGO.archivos[id]).map((id) => ({ id, nombre: CATALOGO.archivos[id].nombre, tipo: CATALOGO.archivos[id].tipo }));
@@ -1276,23 +1477,26 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     return { nota, de: c.preguntas.length, aprobado, pausado: !aprobado && intentos >= INTENTOS_POR_RONDA, intentos, detalle, constancia, progreso: resumen(perfil, await contexto(perfil.id)) };
   }
 
-  // Actividad (Gestión y Formación) o verificación de la sesión (HACER y SER): texto y/o enlace a la evidencia.
+  // Actividad del módulo: un aporte en la conversación del módulo en el foro del equipo (ya no se piden enlaces de Drive).
+  // Queda publicado en el foro, con su nombre, y llega a la Secretaría Técnica para revisarlo.
   async function entregar(token, b) {
     const { perfil, ctx, curso, unidad } = await equipoAbierto(token, b);
-    const previa = filaDe(ctx, curso, unidad);
-    if (!CURSOS[curso].cuestionario && !(previa && previa.material_en)) throw new Falla(400, 'material', 'Primero repasa el material de estudio de esta unidad.');
-    const txt = String(b.texto ?? '').trim().slice(0, 4000);
-    const enlace = String(b.enlace ?? '').trim().slice(0, 500);
-    if (txt.length < 20 && !enlace) throw new Falla(400, 'evidencia', 'Escribe tu respuesta (al menos unas líneas) o pega el enlace a tu evidencia.');
-    if (enlace && !/^https:\/\/\S+$/.test(enlace)) throw new Falla(400, 'enlace', 'El enlace debe empezar por https:// (por ejemplo, un archivo de Google Drive).');
-    const tipo = CURSOS[curso].evidencia;
-    await col('evidencias').doc(`${perfil.id}_${curso}_${unidad}_${tipo}`).set({
-      persona: perfil.id, curso, unidad, tipo, texto: txt || null, enlace: enlace || null,
-      estado: 'enviada', comentario: null, revisado_por: null, revisado_en: null, creado_en: hoy(),
-    });
-    if (!CURSOS[curso].cuestionario && !(previa && previa.aprobado_en)) await guardarProgreso(perfil.id, curso, unidad, { aprobado_en: hoy() });
+    const falta = aporteHabilitado(perfil, ctx, curso, unidad);
+    if (falta) throw new Falla(400, 'foro', falta);
+    const txt = String(b.texto ?? '').trim().slice(0, 3000);
+    if (txt.length < 20) throw new Falla(400, 'evidencia', 'Escribe tu aporte para el foro (al menos unas líneas).');
+    const { id, ref, t } = await temaModulo(curso, unidad);
+    const r = await col('foro_respuestas').add({ tema: id, texto: txt, autor_id: perfil.id, autor: autorDe(perfil), autor_rol: NOMBRE_ROL[perfil.rol] || 'Equipo', creado_en: hoy(), borrado: false });
+    await ref.update({ respuestas: (t.respuestas || 0) + 1, ultima_actividad: hoy() });
+    await guardarAporte(perfil, curso, unidad, txt, id, r.id);
     const constancia = await emitirSiCompleto(perfil, curso);
-    return { ok: true, constancia, progreso: resumen(perfil, await contexto(perfil.id)) };
+    return { ok: true, foro_tema: id, constancia, progreso: resumen(perfil, await contexto(perfil.id)) };
+  }
+  // Los aportes de las demás personas en la conversación del módulo (se muestran en la lección)
+  async function foroModulo(token, b) {
+    const { curso, unidad } = await equipoAbierto(token, b);
+    const { id } = await temaModulo(curso, unidad);
+    return foroTema(token, { id });
   }
 
   // El compromiso lo confirma cada persona; las transferencias, solo la Secretaría Técnica.
@@ -1349,7 +1553,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
       };
     });
     const nombrePorId = new Map(delEquipo.map((p) => [p._id, p.nombre]));
-    const pendientes = evid.filter((e) => e.estado === 'enviada')
+    const pendientes = evid.filter((e) => e.estado === 'enviada' && CURSOS[e.curso])
       .map(({ _id, persona, ...e }) => ({ id: _id, ...e, nombre: nombrePorId.get(persona) || '' }))
       .sort((a, b) => a.creado_en.localeCompare(b.creado_en));
     return { personas, pendientes, unidades: Object.fromEntries(Object.entries(CURSOS).map(([k, v]) => [k, v.unidades])) };
@@ -1359,7 +1563,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   async function emitirSiCompleto(perfil, curso) {
     const ctx = await contexto(perfil.id);
     if (ctx.constancias.some((c) => c.curso === curso)) return null;
-    for (let u = 1; u <= CURSOS[curso].unidades; u++) if (!aprobada(ctx, curso, u) || !evidenciaDe(ctx, curso, u)) return null;
+    for (let u = 1; u <= CURSOS[curso].unidades; u++) if (!aprobada(ctx, curso, u) || !actividadHecha(ctx, curso, u)) return null;
     const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     const codigo = `CIC-${CURSOS[curso].prefijo.replace('-', '')}-${Array.from({ length: 6 }, () => alfabeto[crypto.randomInt(alfabeto.length)]).join('')}`;
     await col('constancias').doc(codigo).set({ persona: perfil.id, curso, nombre: perfil.nombre, emitida_en: hoy() });
@@ -1372,7 +1576,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     if (!/^CIC-[A-Z]{3}[A-Z]-[A-Z0-9]{6}$/.test(codigo)) throw new Falla(400, 'codigo', 'Revisa el código: tiene la forma CIC-GESM-ABC123.');
     const c = await datos(col('constancias').doc(codigo));
     if (!c) return { valida: false };
-    return { valida: true, iniciales: iniciales(c.nombre), curso: (CURSOS[c.curso] || {}).nombre || c.curso, emitida_en: c.emitida_en };
+    return { valida: true, iniciales: iniciales(c.nombre), curso: (CURSOS[c.curso] || {}).nombre || NOMBRE_CURSO_RETIRADO[c.curso] || c.curso, emitida_en: c.emitida_en };
   }
 
   // ---------- Entrada única ----------
@@ -1406,6 +1610,15 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
         case 'ver-documento': r = await verDocumento(token, b); break;
         case 'quitar-documento': r = await quitarDocumento(token, b); break;
         case 'sincronizar-drive': r = await sincronizarDrive(token); break;
+        case 'enviar-actividad': r = await enviarActividad(token, b); break;
+        case 'revisar-actividad': r = await revisarActividad(token, b); break;
+        case 'comentar-actividad': r = await comentarActividad(token, b); break;
+        case 'mi-avance': r = await miAvance(token); break;
+        case 'material-transferencia': r = await materialTransferencia(token); break;
+        case 'archivo-transferencia': r = await archivoTransferencia(token, b); break;
+        case 'foro-modulo': r = await foroModulo(token, b); break;
+        case 'admin-administradoras': r = await adminAdministradoras(token); break;
+        case 'admin-agregar-administradora': r = await adminAgregarAdministradora(token, b); break;
         // Soporte técnico (tickets) y registro de correos
         case 'ticket-crear': r = await crearTicket(token, b); break;
         case 'ticket-publico': r = await crearTicketPublico(b); break;

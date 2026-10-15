@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/cic.css?v=20261028">
+    <link rel="stylesheet" href="../assets/cic.css?v=20261029">
     <style>
         .admin-cab { background: var(--bosque); color: #fff; padding: 1.2rem 0; }
         .admin-cab .contenedor { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -67,20 +67,22 @@
                 <button type="button" role="tab" aria-selected="false" data-tab="soporte">Soporte técnico</button>
                 <button type="button" role="tab" aria-selected="false" data-tab="correos">Correos enviados</button>
                 <button type="button" role="tab" aria-selected="false" data-tab="equipo">Registrar equipo</button>
+                <button type="button" role="tab" aria-selected="false" data-tab="admins">Administradoras</button>
             </div>
             <div id="tab-cursos"></div>
             <div id="tab-grabaciones" hidden></div>
             <div id="tab-soporte" hidden></div>
             <div id="tab-correos" hidden></div>
             <div id="tab-equipo" hidden></div>
+            <div id="tab-admins" hidden></div>
         </section>
     </main>
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="../config.js?v=20261028"></script>
-    <script src="../assets/soporte.js?v=20261028"></script>
-    <script src="../assets/datos-cic.js?v=20261028"></script>
+    <script src="../config.js?v=20261029"></script>
+    <script src="../assets/soporte.js?v=20261029"></script>
+    <script src="../assets/datos-cic.js?v=20261029"></script>
     <script>
     (() => {
         'use strict';
@@ -176,10 +178,11 @@
         // ---------- Pestañas ----------
         $$('[data-tab]').forEach((b) => b.addEventListener('click', () => {
             $$('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
-            ['cursos', 'grabaciones', 'soporte', 'correos', 'equipo'].forEach((t) => { $(`#tab-${t}`).hidden = b.dataset.tab !== t; });
+            ['cursos', 'grabaciones', 'soporte', 'correos', 'equipo', 'admins'].forEach((t) => { $(`#tab-${t}`).hidden = b.dataset.tab !== t; });
             if (b.dataset.tab === 'soporte') window.CICSoporte.pintar($('#tab-soporte'), { perfil: yo, esc, aviso, pedir: llamar, satelite: (id) => DATOS.satelites.find((x) => x.id === id) || null });
             if (b.dataset.tab === 'correos') pintarCorreos();
             if (b.dataset.tab === 'equipo') pintarEquipo();
+            if (b.dataset.tab === 'admins') pintarAdmins();
         }));
 
         // ---------- Registro de correos de contraseña (colección «envios_correo» de Firestore) ----------
@@ -269,6 +272,35 @@
             });
         }
 
+        // ---------- Cuentas de administración ----------
+        async function pintarAdmins() {
+            const caja = $('#tab-admins');
+            caja.innerHTML = '<p class="vista-intro">Cargando…</p>';
+            let r;
+            try { r = await llamar('admin-administradoras'); } catch (e) { caja.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; return; }
+            caja.innerHTML = `
+                <p class="vista-intro">Estas cuentas entran a este panel (cicredmujeresdelcaribe.org/admin/) con su correo y su contraseña. Al agregar un correo, le llega un enlace para crear su contraseña; luego entra aquí con «Ingresar». Usa un correo que no sea el de una secretaria, dinamizadora o emprendedora.</p>
+                <form id="form-admin" class="tarjeta" novalidate style="display:flex;flex-wrap:wrap;gap:.6rem;align-items:end">
+                    <label style="flex:1 1 260px"><span class="etiqueta">Correo de la nueva administradora</span><input class="campo" name="correo" type="email" required placeholder="correo@gmail.com"></label>
+                    <button class="btn btn-primario" type="submit">Dar acceso de administración</button>
+                    <p class="mensaje" id="admin-msj" role="alert" style="flex-basis:100%;margin:0"></p>
+                </form>
+                <div class="tabla-caja"><table><thead><tr><th scope="col">Correo</th><th scope="col">Desde</th></tr></thead>
+                <tbody>${r.administradoras.map((x) => `<tr><td><b>${esc(x.correo)}</b>${x.yo ? ' <small>(tú)</small>' : ''}</td><td>${x.creado_en ? esc(new Date(x.creado_en).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })) : '—'}</td></tr>`).join('')}</tbody></table></div>`;
+            $('#form-admin').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const correo = e.target.correo.value.trim();
+                const b = e.target.querySelector('[type=submit]');
+                const m = $('#admin-msj');
+                b.disabled = true;
+                try {
+                    const x = await llamar('admin-agregar-administradora', { correo });
+                    aviso(x.enviado ? `Listo: ${correo} ya es administradora. Le llegó el enlace para crear su contraseña.` : `Listo: ${correo} ya es administradora, pero el correo no salió. Que entre aquí y toque «¿Olvidaste tu contraseña?».`);
+                    pintarAdmins();
+                } catch (err) { m.textContent = err.message; m.className = 'mensaje error'; b.disabled = false; }
+            });
+        }
+
         async function recargar() {
             contenido = await llamar('admin-contenido');
             pintarCursos();
@@ -306,7 +338,7 @@
                         <summary><span>${esc(c.nombre)}</span><small>${conVideo} de ${c.unidades.length} videos · ${c.unidades.filter((u) => u.material.length).length} con material</small></summary>
                         ${c.unidades.map((u) => `<div class="unidad-admin" data-curso="${esc(id)}" data-unidad="${u.unidad}">
                             <h4><span class="codigo">${esc(u.codigo)}</span> ${esc(NOMBRE_U[id])} ${u.unidad} · ${esc((TITULOS[id] || [])[u.unidad - 1] || '')}
-                                ${c.cuestionario ? `<small class="${u.preguntas ? 'estado-ok' : 'estado-falta'}">${u.preguntas ? `${u.preguntas} preguntas en el banco` : 'sin preguntas cargadas'}</small>` : '<small class="texto-suave">sin cuestionario (se aprueba con la actividad)</small>'}</h4>
+                                ${c.cuestionario ? `<small class="${u.preguntas ? 'estado-ok' : 'estado-falta'}">${u.preguntas ? `${u.preguntas} preguntas en el banco` : 'sin preguntas cargadas'}</small>` : '<small class="texto-suave">material de consulta de la Secretaría (sin evaluación)</small>'}</h4>
                             <form class="form-video" novalidate>
                                 <b>Video ${u.video ? '<span class="estado-ok">· publicado</span>' : '<span class="estado-falta">· falta</span>'}</b>
                                 <label class="etiqueta" for="v-${esc(u.codigo)}">Enlace de Google Drive (o YouTube)</label>

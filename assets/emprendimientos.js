@@ -16,8 +16,15 @@
         return `<div class="emp-avance" title="${a.ejecutadas} de ${a.total} actividades ejecutadas">
             <span class="emp-barra"><span style="width:${pct}%"></span></span>
             <small>${a.ejecutadas}/${a.total} ejecutadas · ${a.con_documentos} con documentos${a.no_ejecutadas ? ` · ${a.no_ejecutadas} no ejecutada${a.no_ejecutadas > 1 ? 's' : ''}` : ''}</small>
+            <small>${a.aprobadas || 0} aprobada${a.aprobadas === 1 ? '' : 's'} por la Secretaría${a.por_revisar ? ` · <b class="emp-alerta">${a.por_revisar} por revisar</b>` : ''}${a.devueltas ? ` · ${a.devueltas} devuelta${a.devueltas > 1 ? 's' : ''}` : ''}</small>
         </div>`;
     }
+    const REVISION = {
+        enviada: ['En revisión de la Secretaría Técnica', 'emp-pend'],
+        aprobada: ['✓ Aprobada por la Secretaría Técnica', 'emp-ok'],
+        devuelta: ['Devuelta: corrige y vuelve a enviar', 'emp-no'],
+    };
+    const fechaCorta = (f) => new Date(f).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
     const enDemo = (cont) => { cont.innerHTML = '<p class="tarjeta vacio">En la demostración no hay emprendimientos reales: en la plataforma aquí se asignan y se les hace seguimiento.</p>'; };
 
     // ================================================================ Secretaría: asignación
@@ -38,23 +45,24 @@
     function filtrados() {
         const t = estadoS.texto.toLowerCase();
         return estadoS.datos.emprendimientos.filter((x) => (!estadoS.sat || x.satelite === estadoS.sat)
-            && (!estadoS.filtro || (estadoS.filtro === 'sin' ? !x.dinamizadora : !!x.dinamizadora))
+            && (!estadoS.filtro || (estadoS.filtro === 'revisar' ? x.avance.por_revisar > 0 : estadoS.filtro === 'sin' ? !x.dinamizadora : !!x.dinamizadora))
             && [x.nombre, x.cedula, x.negocio, x.municipio].join(' ').toLowerCase().includes(t));
     }
     function pintarSecretaria(cont) {
         const emp = estadoS.datos.emprendimientos;
         const sin = emp.filter((x) => !x.dinamizadora).length;
+        const porRevisar = emp.reduce((n, x) => n + (x.avance.por_revisar || 0), 0);
         const sats = C.SATELITES.filter((s) => emp.some((x) => x.satelite === s.id) || estadoS.datos.dinamizadoras.some((d) => d.satelite === s.id));
         cont.innerHTML = `
             <div class="emp-cabeza">
                 <div><h3>Emprendimientos y dinamizadoras</h3>
                 <p class="vista-intro">Asigna cada emprendimiento a una dinamizadora de su mismo satélite. Ella marcará si cada actividad se ejecutó y subirá el acta y la herramienta diligenciada.</p></div>
-                <div class="emp-kpis"><span><b>${emp.length}</b> emprendimientos</span><span class="${sin ? 'emp-alerta' : ''}"><b>${sin}</b> sin asignar</span></div>
+                <div class="emp-kpis"><span><b>${emp.length}</b> emprendimientos</span><span class="${sin ? 'emp-alerta' : ''}"><b>${sin}</b> sin asignar</span><span class="${porRevisar ? 'emp-alerta' : ''}"><b>${porRevisar}</b> actividades por revisar</span></div>
             </div>
             ${estadoS.datos.drive && estadoS.datos.drive.activo ? `<p class="emp-drive-barra">📁 Los documentos se guardan también en Google Drive, en la carpeta «CIC · Documentos de seguimiento», ordenados por satélite, emprendimiento y semana.${estadoS.datos.drive.pendientes ? ` <button type="button" class="btn btn-borde btn-pequeno" data-sincronizar>Enviar a Drive ${estadoS.datos.drive.pendientes} pendiente${estadoS.datos.drive.pendientes > 1 ? 's' : ''}</button>` : ''}</p>` : ''}
             <div class="controles">
                 <div style="flex:0 1 13rem"><label class="etiqueta" for="emp-sat">Satélite</label><select id="emp-sat" class="campo"><option value="">Todos</option>${sats.map((s) => `<option value="${esc(s.id)}" ${estadoS.sat === s.id ? 'selected' : ''}>${esc(s.nombre)}</option>`).join('')}</select></div>
-                <div style="flex:0 1 12rem"><label class="etiqueta" for="emp-filtro">Mostrar</label><select id="emp-filtro" class="campo"><option value="">Todos</option><option value="sin" ${estadoS.filtro === 'sin' ? 'selected' : ''}>Sin asignar</option><option value="con" ${estadoS.filtro === 'con' ? 'selected' : ''}>Asignados</option></select></div>
+                <div style="flex:0 1 12rem"><label class="etiqueta" for="emp-filtro">Mostrar</label><select id="emp-filtro" class="campo"><option value="">Todos</option><option value="sin" ${estadoS.filtro === 'sin' ? 'selected' : ''}>Sin asignar</option><option value="con" ${estadoS.filtro === 'con' ? 'selected' : ''}>Asignados</option><option value="revisar" ${estadoS.filtro === 'revisar' ? 'selected' : ''}>Con actividades por revisar</option></select></div>
                 <div><label class="etiqueta" for="emp-buscar">Buscar</label><input id="emp-buscar" class="campo" type="search" placeholder="Nombre, cédula, negocio…" value="${esc(estadoS.texto)}"></div>
             </div>
             <div id="emp-lote" class="emp-lote" hidden></div>
@@ -92,7 +100,7 @@
                     <select id="din-${esc(x.cedula)}" class="campo campo-mini" data-asignar="${esc(x.cedula)}">${opcionesDin(x.satelite, x.dinamizadora)}</select>
                     ${dinDe(x.satelite).length ? '' : '<small class="emp-alerta">Este satélite aún no tiene dinamizadoras en el directorio</small>'}</td>
                 <td>${barraAvance(x.avance)}</td>
-                <td><button type="button" class="boton-texto" data-ver="${esc(x.cedula)}">Ver seguimiento</button></td>
+                <td><button type="button" class="boton-texto" data-ver="${esc(x.cedula)}">${x.avance.por_revisar ? 'Revisar actividades' : 'Ver seguimiento'}</button></td>
             </tr>`).join('')}</tbody></table></div>`;
         $('#emp-todos', caja).addEventListener('change', (e) => { lista.forEach((x) => (e.target.checked ? estadoS.sel.add(x.cedula) : estadoS.sel.delete(x.cedula))); pintarTabla(cont); });
         caja.onchange = async (e) => {
@@ -146,7 +154,7 @@
         const lista = r.emprendimientos;
         cont.innerHTML = `
             <div class="emp-cabeza"><div><h3>Mis emprendimientos</h3>
-            <p class="vista-intro">Estos son los emprendimientos que la Secretaría Técnica te asignó. Después de cada sesión, marca si se ejecutó y sube el acta y la herramienta diligenciada.</p></div>
+            <p class="vista-intro">Estos son los emprendimientos que la Secretaría Técnica te asignó. Después de cada sesión, marca si se ejecutó, sube el acta y la herramienta diligenciada y toca «Enviar a la Secretaría Técnica» para que la apruebe.</p></div>
             <div class="emp-kpis"><span><b>${lista.length}</b> asignados</span></div></div>
             ${lista.length ? `<ul class="emp-tarjetas lista-limpia">${lista.map((x) => `<li class="emp-tarjeta">
                 <div><b>${esc(x.nombre)}</b><small>${esc(x.negocio || 'Sin nombre de negocio')} · ${esc(x.municipio || '')}</small></div>
@@ -172,16 +180,22 @@
     }
     function tarjetaActividad(a) {
         const clave = `${a.ruta}-${a.n}`;
-        return `<li class="emp-act ${a.ejecutada === true ? 'es-si' : a.ejecutada === false ? 'es-no' : ''}" data-act="${clave}">
-            <div class="emp-act-cabeza"><h5>${esc(a.ruta === 'hacer' ? `Semana ${a.n}` : `Taller ${a.n}`)}</h5>${estadoChip(a)}</div>
+        const rev = a.revision ? a.revision.estado : null;
+        const esDin = C.perfil.rol === 'dinamizadora';
+        // En revisión o aprobada, la dinamizadora ya no la cambia (la Secretaría sí puede)
+        const fija = esDin && (rev === 'enviada' || rev === 'aprobada');
+        const completa = a.ejecutada === true ? a.requeridos.every((d) => a.documentos[d.tipo]) : a.ejecutada === false && !!a.motivo;
+        const comentarios = a.comentarios || [];
+        return `<li class="emp-act ${a.ejecutada === true ? 'es-si' : a.ejecutada === false ? 'es-no' : ''} ${rev ? 'rev-' + rev : ''}" data-act="${clave}">
+            <div class="emp-act-cabeza"><h5>${esc(a.ruta === 'hacer' ? `Semana ${a.n}` : `Taller ${a.n}`)}</h5>${estadoChip(a)}${rev ? `<span class="chip ${REVISION[rev][1]}">${esc(REVISION[rev][0])}</span>` : ''}</div>
             <p class="emp-pregunta">¿Se ejecutó la actividad?</p>
             <div class="emp-sino" role="group" aria-label="¿Se ejecutó ${esc(a.nombre)}?">
-                <button type="button" class="emp-si" data-marcar="si" aria-pressed="${a.ejecutada === true}">✓ Sí</button>
-                <button type="button" class="emp-no-btn" data-marcar="no" aria-pressed="${a.ejecutada === false}">✕ No</button>
+                <button type="button" class="emp-si" data-marcar="si" aria-pressed="${a.ejecutada === true}" ${fija ? 'disabled' : ''}>✓ Sí</button>
+                <button type="button" class="emp-no-btn" data-marcar="no" aria-pressed="${a.ejecutada === false}" ${fija ? 'disabled' : ''}>✕ No</button>
             </div>
             ${a.ejecutada === true ? `
                 <label class="etiqueta" for="fecha-${clave}">Fecha de la sesión</label>
-                <input type="date" id="fecha-${clave}" class="campo campo-mini" data-fecha value="${esc(a.fecha || '')}">
+                <input type="date" id="fecha-${clave}" class="campo campo-mini" data-fecha value="${esc(a.fecha || '')}" ${fija ? 'disabled' : ''}>
                 <p class="emp-pregunta">Documentos que debes subir</p>
                 <ul class="emp-docs lista-limpia">${a.requeridos.map((d) => {
                     const m = a.documentos[d.tipo];
@@ -190,16 +204,44 @@
                         <div class="emp-doc-texto"><b>${esc(d.nombre)}</b><small>${m ? `${esc(m.nombre)} · ${kb(m.bytes)}` : esc(d.detalle)}</small>${m && m.drive_url && C.perfil.rol === 'secretaria' ? `<a class="emp-drive" href="${esc(m.drive_url)}" target="_blank" rel="noopener">Abrir en Google Drive</a>` : m && m.drive_url ? '<small class="emp-drive-ok">✓ Copia guardada en Google Drive</small>' : m && m.drive_pendiente ? '<small class="emp-drive-pend">Copia en Google Drive pendiente</small>' : ''}</div>
                         <div class="emp-doc-acciones">
                             ${m ? `<button type="button" class="boton-texto" data-ver-doc="${d.tipo}">Ver</button>` : ''}
-                            <label class="btn ${m ? 'btn-borde' : 'btn-primario'} btn-pequeno emp-subir">${m ? 'Reemplazar' : 'Subir foto o PDF'}<input type="file" accept="image/*,application/pdf" data-subir="${d.tipo}" hidden></label>
-                            ${m ? `<button type="button" class="boton-texto emp-quitar" data-quitar-doc="${d.tipo}">Quitar</button>` : ''}
+                            ${fija ? '' : `<label class="btn ${m ? 'btn-borde' : 'btn-primario'} btn-pequeno emp-subir">${m ? 'Reemplazar' : 'Subir foto o PDF'}<input type="file" accept="image/*,application/pdf" data-subir="${d.tipo}" hidden></label>
+                            ${m ? `<button type="button" class="boton-texto emp-quitar" data-quitar-doc="${d.tipo}">Quitar</button>` : ''}`}
                         </div>
                     </li>`;
                 }).join('')}</ul>` : ''}
             ${a.ejecutada === false ? `
-                <label class="etiqueta" for="motivo-${clave}">¿Por qué no se ejecutó? (opcional)</label>
-                <textarea id="motivo-${clave}" class="campo" rows="2" maxlength="300" data-motivo placeholder="Por ejemplo: la emprendedora no estaba disponible">${esc(a.motivo || '')}</textarea>
-                <button type="button" class="btn btn-borde btn-pequeno" data-guardar-motivo>Guardar motivo</button>` : ''}
+                <label class="etiqueta" for="motivo-${clave}">¿Por qué no se ejecutó?</label>
+                <textarea id="motivo-${clave}" class="campo" rows="2" maxlength="300" data-motivo placeholder="Por ejemplo: la emprendedora no estaba disponible" ${fija ? 'disabled' : ''}>${esc(a.motivo || '')}</textarea>
+                ${fija ? '' : '<button type="button" class="btn btn-borde btn-pequeno" data-guardar-motivo>Guardar motivo</button>'}` : ''}
+            ${bloqueRevision(a, rev, esDin, completa)}
+            <details class="emp-comentarios" ${comentarios.length ? 'open' : ''}>
+                <summary>Comentarios${comentarios.length ? ` (${comentarios.length})` : ''}</summary>
+                ${comentarios.length ? `<ol class="lista-limpia emp-com-lista">${comentarios.map((c) => `<li class="${c.estado ? 'com-' + c.estado : ''}"><p class="emp-com-meta"><b>${esc(c.autor)}</b> · ${esc(c.rol)} · ${esc(fechaCorta(c.en))}${c.estado ? ` · <span class="chip ${(REVISION[c.estado] || ['', ''])[1]}">${c.estado === 'enviada' ? 'Enviada a revisión' : c.estado === 'aprobada' ? 'Aprobó' : 'Devolvió'}</span>` : ''}</p><p>${esc(c.texto)}</p></li>`).join('')}</ol>` : '<p class="texto-suave">Todavía no hay comentarios.</p>'}
+                <label class="etiqueta" for="com-${clave}">${C.perfil.rol === 'secretaria' ? 'Anotación para la dinamizadora' : 'Escribe a la Secretaría Técnica'}</label>
+                <textarea id="com-${clave}" class="campo" rows="2" maxlength="1000" data-comentario></textarea>
+                <button type="button" class="btn btn-borde btn-pequeno" data-comentar>Comentar</button>
+            </details>
         </li>`;
+    }
+    // Envío a la Secretaría Técnica (dinamizadora) o aprobación y devolución (Secretaría)
+    function bloqueRevision(a, rev, esDin, completa) {
+        if (a.ejecutada === null) return '';
+        if (esDin) {
+            if (rev === 'enviada') return `<p class="emp-revision texto-suave">Enviada a la Secretaría Técnica (${esc(fechaCorta(a.revision.enviada_en))}). Te avisaremos aquí cuando la revise.</p>`;
+            if (rev === 'aprobada') return `<p class="emp-revision paso-ok">✓ Aprobada${a.revision.revisada_por ? ` por ${esc(a.revision.revisada_por)}` : ''} (${esc(fechaCorta(a.revision.revisada_en))})</p>`;
+            return `<div class="emp-revision">
+                ${completa ? '' : `<p class="ayuda-campo">${a.ejecutada ? 'Sube el acta y la herramienta para poder enviarla.' : 'Escribe y guarda el motivo para poder enviarla.'}</p>`}
+                <button type="button" class="btn btn-primario btn-pequeno" data-enviar-act ${completa ? '' : 'disabled'}>${rev === 'devuelta' ? 'Volver a enviar a la Secretaría Técnica' : 'Enviar a la Secretaría Técnica'}</button>
+            </div>`;
+        }
+        if (C.perfil.rol !== 'secretaria') return '';
+        if (rev !== 'enviada') return `<p class="emp-revision texto-suave">${rev === 'aprobada' ? `✓ Aprobada (${esc(fechaCorta(a.revision.revisada_en))})` : rev === 'devuelta' ? 'Devuelta a la dinamizadora: espera que la corrija y la vuelva a enviar.' : 'La dinamizadora todavía no la ha enviado para aprobación.'}</p>`;
+        return `<div class="emp-revision emp-revisar">
+            <p class="emp-pregunta">¿Apruebas esta actividad?</p>
+            <label class="etiqueta" for="rev-${a.ruta}-${a.n}">Comentario (obligatorio si la devuelves)</label>
+            <textarea id="rev-${a.ruta}-${a.n}" class="campo" rows="2" maxlength="1000" data-comentario-revision></textarea>
+            <div class="botones"><button type="button" class="btn btn-primario btn-pequeno" data-revisar-act="aprobada">Aprobar</button><button type="button" class="btn btn-borde btn-pequeno" data-revisar-act="devuelta">Devolver con comentario</button></div>
+        </div>`;
     }
     function pintarSeguimiento(cont, s, volver) {
         const e = s.emprendimiento;
@@ -229,6 +271,30 @@
             if (g) {
                 const li = g.closest('[data-act]');
                 try { actualizar(await C.llamar('marcar-actividad', { ...actividad(g), ejecutada: false, motivo: $('[data-motivo]', li).value }, true)); C.aviso('Motivo guardado.'); } catch (err) { C.aviso(err.message); }
+                return;
+            }
+            const env = t.closest('[data-enviar-act]');
+            if (env) {
+                env.disabled = true;
+                try { actualizar(await C.llamar('enviar-actividad', actividad(env), true)); C.aviso('Enviada a la Secretaría Técnica para aprobación.'); } catch (err) { C.aviso(err.message); env.disabled = false; }
+                return;
+            }
+            const rv = t.closest('[data-revisar-act]');
+            if (rv) {
+                const li = rv.closest('[data-act]');
+                const comentario = $('[data-comentario-revision]', li).value.trim();
+                if (rv.dataset.revisarAct === 'devuelta' && comentario.length < 5) { C.aviso('Escribe qué debe corregir la dinamizadora antes de devolverla.'); $('[data-comentario-revision]', li).focus(); return; }
+                rv.disabled = true;
+                try { actualizar(await C.llamar('revisar-actividad', { ...actividad(rv), estado: rv.dataset.revisarAct, comentario }, true)); C.aviso(rv.dataset.revisarAct === 'aprobada' ? 'Actividad aprobada.' : 'Actividad devuelta con tu comentario.'); } catch (err) { C.aviso(err.message); rv.disabled = false; }
+                return;
+            }
+            const cm = t.closest('[data-comentar]');
+            if (cm) {
+                const li = cm.closest('[data-act]');
+                const txt = $('[data-comentario]', li).value.trim();
+                if (txt.length < 2) { C.aviso('Escribe el comentario.'); return; }
+                cm.disabled = true;
+                try { actualizar(await C.llamar('comentar-actividad', { ...actividad(cm), texto: txt }, true)); C.aviso('Comentario guardado.'); } catch (err) { C.aviso(err.message); cm.disabled = false; }
                 return;
             }
             const v = t.closest('[data-ver-doc]');

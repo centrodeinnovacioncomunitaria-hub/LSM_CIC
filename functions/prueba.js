@@ -48,6 +48,7 @@ function cuentasFalsas() {
     verificarToken: async (t) => { if (!usuarios.has(t)) throw new Error('token'); return t; }, // el «token» es el uid
     verificarClave: async (email, clave) => [...usuarios.values()].some((u) => u.email === email && u.clave === clave),
     enviarEnlace: async (email) => { enlaces.push(email); return true; },
+    uidPorCorreo: async (email) => ([...usuarios.entries()].find(([, u]) => u.email === email) || [null])[0],
     // Simula que la persona abrió el enlace del correo y creó su contraseña
     abrirEnlace: (email, clave) => { [...usuarios.values()].find((u) => u.email === email).clave = clave; },
     uidDe: (email) => [...usuarios.entries()].find(([, u]) => u.email === email)[0],
@@ -114,7 +115,13 @@ function cuentasFalsas() {
   assert.equal(cuentas.enlaces.length, 2);
   paso('Activación: el enlace llega solo a quien tiene correo; se muestra a cuál se envió y cada intento queda registrado');
 
-  await falla('ingresar', { cedula: '22222222', clave: 'cualquiera1', rol: 'dinamizadora' }, null, 401);
+  const sinActivar = await falla('ingresar', { cedula: '33333333', clave: 'cualquiera1', rol: 'dinamizadora' }, null, 401);
+  assert.match(sinActivar.mensaje, /Activar mi cuenta/, 'quien está en el directorio sin cuenta: se le dice que la active');
+  assert.match((await falla('ingresar', { cedula: '98989898', clave: 'cualquiera1', rol: 'dinamizadora' }, null, 401)).mensaje, /no está registrada/);
+  assert.match((await falla('ingresar', { cedula: '98989899', clave: 'cualquiera1', rol: 'emprendedora' }, null, 401)).mensaje, /Inscribirme/);
+  const claveMala = await falla('ingresar', { cedula: '22222222', clave: 'cualquiera1', rol: 'dinamizadora' }, null, 401);
+  assert.match(claveMala.mensaje, /contraseña no es correcta/); assert.equal(claveMala.quedan, 4);
+  assert.match(claveMala.mensaje, /quedan 4 intentos/);
   cuentas.abrirEnlace('dina@correo.co', 'DinaClave2026');
   const dina = await ok('ingresar', { cedula: '22222222', clave: 'DinaClave2026', rol: 'dinamizadora' });
   assert.equal(dina.cuenta, 'dina@correo.co');
@@ -125,6 +132,7 @@ function cuentasFalsas() {
   assert.equal(rolMal.rol, 'dinamizadora');
   paso('Ingreso con cédula y contraseña; avisa el perfil correcto solo con la contraseña buena');
 
+  avanzar(16);
   for (let i = 0; i < 5; i++) await falla('ingresar', { cedula: '22222222', clave: 'mala-clave', rol: 'dinamizadora' }, null, 401);
   await falla('ingresar', { cedula: '22222222', clave: 'DinaClave2026', rol: 'dinamizadora' }, null, 429);
   avanzar(16);
@@ -237,11 +245,20 @@ function cuentasFalsas() {
       const c = await ok('cuestionario', { curso, unidad: u }, token);
       assert.equal((await ok('responder', { id: c.id, respuestas: responder(c, 10) }, token)).aprobado, true);
     }
+    if ((CURSOS[curso].sin_actividad || []).includes(u)) return { constancia: (await ok('mi-progreso', {}, token)).constancias.find((c) => c.curso === curso) };
     return ok('entregar', { curso, unidad: u, texto: 'Evidencia de la unidad con suficiente detalle.' }, token);
   }
   let fin;
   for (let u = 2; u <= 4; u++) fin = await completar(tDina, 'gestion', u);
   assert.match(fin.constancia.codigo, /^CIC-GESM-[A-Z0-9]{6}$/);
+  p = await ok('mi-progreso', {}, tDina);
+  assert.equal(p.cursos.gestion[3].sin_actividad, true, 'el módulo 4 de Gestión no tiene actividad');
+  await falla('entregar', { curso: 'gestion', unidad: 4, texto: 'Intento de actividad en el módulo 4 que ya no existe.' }, tDina, 400);
+  const foroM1 = await ok('foro-tema', { id: 'modulo_gestion_1' }, tDina);
+  assert.equal(foroM1.tema.categoria, 'equipo');
+  assert.equal(foroM1.respuestas.length, 1, 'la actividad del módulo queda publicada en el foro');
+  assert.equal(foroM1.respuestas[0].texto, 'Mi actividad del módulo 1 con suficiente detalle.');
+  assert.equal((await ok('foro-modulo', { curso: 'gestion', unidad: 2 }, tDina)).respuestas.length, 1);
   const ver = await ok('verificar', { codigo: fin.constancia.codigo });
   assert.deepEqual([ver.valida, ver.iniciales], [true, 'D. D. D.']);
   assert.equal((await ok('verificar', { codigo: 'CIC-GESM-XXXXXX' })).valida, false);
@@ -258,24 +275,31 @@ function cuentasFalsas() {
 
   // ---------- Secretaría: su formación sin cuestionario y luego las rutas ----------
   await ok('hito', { hito: 'compromiso' }, tSara);
+  p = await ok('mi-progreso', {}, tSara);
+  assert.deepEqual(Object.keys(p.cursos), ['gestion', 'acompanar-hacer', 'facilitar-ser'], 'ya no existe el curso de Formación de la Secretaría');
   for (let u = 1; u <= 4; u++) {
     await ok('material', { curso: 'gestion', unidad: u }, tSara);
     if (u === 1) { await ok('iniciar-video', { curso: 'gestion', unidad: 1 }, tSara); avanzar(2); await ok('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tSara); }
     else await falla('marcar', { curso: 'gestion', unidad: u, que: 'video' }, tSara, 400); // sin video
     const c = await ok('cuestionario', { curso: 'gestion', unidad: u }, tSara);
     await ok('responder', { id: c.id, respuestas: responder(c, 10) }, tSara);
-    await ok('entregar', { curso: 'gestion', unidad: u, texto: 'Evidencia de la unidad con suficiente detalle.' }, tSara);
+    if (u < 4) {
+      if (u === 2) { // responder en la conversación del módulo desde el foro también cuenta como la actividad
+        avanzar(1);
+        await ok('foro-responder', { id: 'modulo_gestion_2', texto: 'Mi aporte del módulo 2 escrito directamente en el foro.' }, tSara);
+      } else await ok('entregar', { curso: 'gestion', unidad: u, texto: 'Evidencia de la unidad con suficiente detalle.' }, tSara);
+    }
   }
   p = await ok('mi-progreso', {}, tSara);
-  assert.ok(p.cursos['formacion-secretaria']);
-  assert.match(p.cursos['acompanar-hacer'][0].motivo, /Formación/);
-  await falla('entregar', { curso: 'formacion-secretaria', unidad: 1, texto: 'Actividad sin haber visto el material todavía.' }, tSara, 400);
-  for (let u = 1; u <= 6; u++) fin = await completar(tSara, 'formacion-secretaria', u);
-  assert.ok(fin.constancia);
-  p = await ok('mi-progreso', {}, tSara);
+  assert.equal(p.cursos.gestion[1].evidencia.tipo, 'foro');
+  assert.ok(p.constancias.some((c) => c.curso === 'gestion'));
   assert.equal(p.cursos['acompanar-hacer'][0].estado, 'disponible');
   assert.equal(p.cursos['facilitar-ser'][0].estado, 'disponible');
-  paso('Secretaría: Gestión → Formación de la Secretaría (sin cuestionario) → HACER y SER');
+  await falla('entregar', { curso: 'formacion-secretaria', unidad: 1, texto: 'El curso de formación ya no existe en la plataforma.' }, tSara, 400);
+  const mt = await ok('material-transferencia', {}, tSara);
+  assert.equal(mt.unidades.length, 6); assert.equal(mt.unidades[0].titulo, 'Método Insight');
+  await falla('material-transferencia', {}, tDina, 403);
+  paso('Secretaría: Gestión → HACER y SER (sin curso de Formación); el material de transferencia va aparte');
 
   // ---------- Panel de la Secretaría ----------
   await falla('equipo', {}, tDina, 403);
@@ -283,6 +307,7 @@ function cuentasFalsas() {
   assert.equal(eq.personas.length, 3);
   assert.equal(eq.personas.find((x) => x.cedula === '22222222').avance.gestion, 4);
   assert.ok(eq.pendientes.length >= 5);
+  assert.equal(typeof eq.pendientes[0].id, 'string', 'los id de las evidencias son texto (antes la página los convertía a número)');
   await falla('revisar', { id: eq.pendientes[0].id, estado: 'devuelta', comentario: '' }, tSara, 400);
   await ok('revisar', { id: eq.pendientes[0].id, estado: 'devuelta', comentario: 'Agrega la foto de la sesión.' }, tSara);
   await falla('revisar', { id: eq.pendientes[1].id, estado: 'aprobada' }, tDina, 403);
@@ -325,7 +350,7 @@ function cuentasFalsas() {
   assert.equal(conv.respuestas[0].autor_rol, 'Dinamizadora');
   await ok('foro-publicar', { categoria: 'equipo', titulo: 'Reunión de la Secretaría con el equipo', texto: 'Recordatorio de la reunión del viernes.' }, tSara);
   assert.equal((await ok('foro-temas', {}, tRosa)).temas.length, 1, 'la emprendedora no ve los temas del equipo');
-  assert.equal((await ok('foro-temas', {}, tDina)).temas.length, 2);
+  assert.equal((await ok('foro-temas', {}, tDina)).temas.filter((t) => !t.id.startsWith('modulo_')).length, 2);
   assert.equal((await ok('foro-temas', { categoria: 'hacer' }, tDina)).temas[0].respuestas, 1);
   await falla('foro-borrar', { tipo: 'tema', id: tema.id }, tDina, 403);
   await ok('foro-fijar', { id: tema.id, fijado: true }, tSara);
@@ -413,7 +438,32 @@ function cuentasFalsas() {
   sg = await ok('quitar-documento', { ...act, tipo: 'herramienta' }, tDina);
   assert.equal(sg.actividades[0].documentos.herramienta, null);
   em = await ok('emprendimientos', {}, tSara);
-  assert.deepEqual(em.emprendimientos.find((x) => x.cedula === '44444444').avance, { total: 10, ejecutadas: 1, no_ejecutadas: 1, con_documentos: 0 });
+  assert.deepEqual(em.emprendimientos.find((x) => x.cedula === '44444444').avance, { total: 10, ejecutadas: 1, no_ejecutadas: 1, con_documentos: 0, por_revisar: 0, aprobadas: 0, devueltas: 0 });
+  // Envío a la Secretaría Técnica, revisión con comentarios y estado para la emprendedora
+  await falla('enviar-actividad', act, tDina, 400); // falta la herramienta
+  await ok('subir-documento', { ...act, tipo: 'herramienta', mime: 'image/jpeg', nombre: 'a1.jpg', base64: '/9j/4AAQ' }, tDina);
+  await falla('enviar-actividad', act, tSara, 403);
+  sg = await ok('enviar-actividad', { ...act, nota: 'Lista para revisar.' }, tDina);
+  assert.equal(sg.actividades[0].revision.estado, 'enviada');
+  assert.equal(sg.actividades[0].comentarios[0].texto, 'Lista para revisar.');
+  await falla('quitar-documento', { ...act, tipo: 'acta' }, tDina, 409); // en revisión no se cambia
+  assert.equal((await ok('emprendimientos', {}, tSara)).emprendimientos.find((x) => x.cedula === '44444444').avance.por_revisar, 1);
+  assert.equal((await ok('mi-avance', {}, tRosa)).actividades[0].estado, 'en_revision');
+  await falla('revisar-actividad', { ...act, estado: 'aprobada' }, tDina, 403);
+  await falla('revisar-actividad', { ...act, estado: 'devuelta', comentario: '' }, tSara, 400);
+  sg = await ok('revisar-actividad', { ...act, estado: 'devuelta', comentario: 'El acta no tiene la firma de la emprendedora.' }, tSara);
+  assert.equal(sg.actividades[0].revision.estado, 'devuelta');
+  await ok('subir-documento', { ...act, tipo: 'acta', mime: 'image/png', nombre: 'acta firmada.png', base64: 'iVBORw0KGgo=' }, tDina);
+  sg = await ok('comentar-actividad', { ...act, texto: 'Ya subí el acta firmada.' }, tDina);
+  await ok('enviar-actividad', act, tDina);
+  sg = await ok('revisar-actividad', { ...act, estado: 'aprobada' }, tSara);
+  assert.equal(sg.actividades[0].revision.estado, 'aprobada');
+  assert.deepEqual(sg.actividades[0].comentarios.map((c) => c.estado), ['enviada', 'devuelta', null, 'aprobada']);
+  await falla('marcar-actividad', { ...act, ejecutada: false }, tDina, 409); // aprobada: ya no se cambia
+  const av = await ok('mi-avance', {}, tRosa);
+  assert.equal(av.actividades[0].estado, 'aprobada'); assert.equal(av.aprobadas, 1);
+  await falla('mi-avance', {}, tDina, 403);
+  paso('Seguimiento: la dinamizadora envía a la Secretaría; la Secretaría aprueba o devuelve con comentarios; la emprendedora ve si se aprobó');
   await ok('asignar', { cedulas: ['44444444'], dinamizadora: null }, tSara);
   await falla('seguimiento', { cedula: '44444444' }, tDina, 403); // ya no la tiene asignada
   assert.equal((await ok('mis-emprendimientos', {}, tDina)).emprendimientos.length, 0);
@@ -428,15 +478,16 @@ function cuentasFalsas() {
   assert.ok(enDrive.some((c) => c.accion === 'quitar'), 'al quitar un documento, también sale de Drive');
   await ok('asignar', { cedulas: ['44444444'], dinamizadora: '22222222' }, tSara);
   driveCaido = true;
-  sg = await ok('subir-documento', { ...act, tipo: 'herramienta', mime: 'image/jpeg', nombre: 'a1.jpg', base64: '/9j/4AAQ' }, tDina);
-  assert.equal(sg.actividades[0].documentos.herramienta.drive_pendiente, true, 'si Drive falla, el documento queda en la plataforma y pendiente');
+  await ok('marcar-actividad', { ...act, n: 2, ejecutada: true }, tDina);
+  sg = await ok('subir-documento', { ...act, n: 2, tipo: 'herramienta', mime: 'image/jpeg', nombre: 'a1.jpg', base64: '/9j/4AAQ' }, tDina);
+  assert.equal(sg.actividades[1].documentos.herramienta.drive_pendiente, true, 'si Drive falla, el documento queda en la plataforma y pendiente');
   assert.equal((await ok('emprendimientos', {}, tSara)).drive.pendientes, 1);
   await falla('sincronizar-drive', {}, tDina, 403);
   driveCaido = false;
   const sync = await ok('sincronizar-drive', {}, tSara);
   assert.deepEqual(sync, { enviados: 1, pendientes: 0 });
   sg = await ok('seguimiento', { cedula: '44444444' }, tDina);
-  assert.ok(sg.actividades[0].documentos.herramienta.drive_url.startsWith('https://drive.google.com/'));
+  assert.ok(sg.actividades[1].documentos.herramienta.drive_url.startsWith('https://drive.google.com/'));
   await ok('asignar', { cedulas: ['44444444'], dinamizadora: null }, tSara);
   paso('Documentos de seguimiento: copia en Google Drive por satélite, emprendimiento y semana; pendientes se reenvían');
 
@@ -518,6 +569,15 @@ function cuentasFalsas() {
   await ok('admin-guardar-persona', { ...nueva, rol: 'secretaria', satelite: '', otro_rol: 'dinamizadora', otro_satelite: 'sucre' }, tAdmin);
   assert.equal((await ok('admin-equipo', {}, tAdmin)).personas.find((x) => x.cedula === '77777001').otros_roles.dinamizadora.satelite, 'sucre');
   await falla('admin-equipo', {}, tSara, 403);
+  await falla('admin-agregar-administradora', { correo: 'nueva@correo.co' }, tSara, 403);
+  await falla('admin-agregar-administradora', { correo: 'dina@correo.co' }, tAdmin, 409); // es la cuenta de una dinamizadora
+  const ad = await ok('admin-agregar-administradora', { correo: 'Centro.Nuevo@correo.co' }, tAdmin);
+  assert.equal(ad.enviado, true);
+  assert.ok(cuentas.enlaces.includes('centro.nuevo@correo.co'));
+  assert.equal((await ok('admin-administradoras', {}, tAdmin)).administradoras.length, 2);
+  await ok('admin-agregar-administradora', { correo: 'admin@correo.co' }, tAdmin); // ya es administración: no falla
+  assert.equal((await ok('material-transferencia', {}, tAdmin)).unidades.length, 6);
+  assert.ok((await ok('admin-contenido', {}, tAdmin)).cursos['formacion-secretaria'], 'los videos del material de transferencia se cargan desde admin/');
   paso('Registro del equipo: la administración registra y edita secretarías y dinamizadoras (con segundo perfil)');
 
   // ---------- Mi cuenta ----------

@@ -24,13 +24,15 @@ function crearCuentas(auth, claveWeb, sitio) {
     cambiarCorreo: (uid, email) => auth.updateUser(uid, { email }),
     verificarToken: async (token) => (await auth.verifyIdToken(token)).uid,
     verificarClave: (email, clave) => identidad('signInWithPassword', { email, password: clave, returnSecureToken: false }),
-    // Lanza un error con el motivo que da Google si no se pudo enviar (queda en el registro de envíos)
-    enviarEnlace: async (email) => {
+    uidPorCorreo: async (email) => { try { return (await auth.getUserByEmail(email)).uid; } catch (e) { return null; } },
+    // Lanza un error con el motivo que da Google si no se pudo enviar (queda en el registro de envíos).
+    // destino: página a la que vuelve después de crear la contraseña (por defecto, el ingreso; «admin/» para la administración).
+    enviarEnlace: async (email, destino = '#ingresar') => {
       const base = process.env.FIREBASE_AUTH_EMULATOR_HOST ? `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com` : 'https://identitytoolkit.googleapis.com';
       const r = await fetch(`${base}/v1/accounts:sendOobCode?key=${claveWeb()}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Firebase-Locale': 'es' },
-        body: JSON.stringify({ requestType: 'PASSWORD_RESET', email, continueUrl: `${sitio()}#ingresar` }),
+        body: JSON.stringify({ requestType: 'PASSWORD_RESET', email, continueUrl: new URL(destino, sitio()).href }),
       });
       if (r.ok) return true;
       const j = await r.json().catch(() => ({}));

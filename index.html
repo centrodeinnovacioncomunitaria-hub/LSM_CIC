@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261028">
+    <link rel="stylesheet" href="assets/cic.css?v=20261029">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -737,13 +737,13 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261028"></script>
-    <script src="assets/datos-cic.js?v=20261028"></script>
-    <script src="assets/sitio.js?v=20261028"></script>
-    <script src="assets/cursos-equipo.js?v=20261028"></script>
-    <script src="assets/soporte.js?v=20261028"></script>
-    <script src="assets/soporte-flotante.js?v=20261028"></script>
-    <script src="assets/emprendimientos.js?v=20261028"></script>
+    <script src="./config.js?v=20261029"></script>
+    <script src="assets/datos-cic.js?v=20261029"></script>
+    <script src="assets/sitio.js?v=20261029"></script>
+    <script src="assets/cursos-equipo.js?v=20261029"></script>
+    <script src="assets/soporte.js?v=20261029"></script>
+    <script src="assets/soporte-flotante.js?v=20261029"></script>
+    <script src="assets/emprendimientos.js?v=20261029"></script>
     <script>
     (() => {
         'use strict';
@@ -817,16 +817,7 @@
             'facilitar-ser': { titulo: 'Facilitar la ruta SER', color: 'bg-lavanda', prefijo: 'SER-T', meta: '4 talleres en grupo', pagina: null, ancla: 'taller',
                 modulos: DATOS.ser.map((t) => [`Taller ${t.n} · ${t.titulo}`, t.modalidad]) },
         };
-        // Formación de la Secretaría Técnica: guías y presentaciones de la transferencia (carpeta del Drive)
-        CURSOS['formacion-secretaria'] = { titulo: 'Formación de la Secretaría Técnica', color: 'bg-mantequilla', prefijo: 'STF-U', meta: '6 unidades · guías y presentaciones de la transferencia', pagina: null, ancla: 'unidad',
-            modulos: [
-                ['Unidad 1 · Método Insight', 'Descubrir las necesidades reales de la emprendedora y convertirlas en oportunidades.'],
-                ['Unidad 2 · Oportunidad significativa emergente', 'Reconocer oportunidades de negocio con sentido en el territorio.'],
-                ['Unidad 3 · Modelo de negocio Canvas', 'Describir y ajustar el modelo de negocio en nueve bloques.'],
-                ['Unidad 4 · Producto mínimo viable y Lean Startup', 'Diseñar y validar una idea con poca plata y mucho aprendizaje.'],
-                ['Unidad 5 · Gestión financiera estratégica', 'Finanzas del negocio para la autonomía económica.'],
-                ['Unidad 6 · Guía metodológica del facilitador', 'Cómo facilitar y transferir estas metodologías a las dinamizadoras.'],
-            ] };
+        // La Formación de la Secretaría Técnica ya no es un curso: su material está en «Material de transferencia» (Mis cursos)
         const CURSOS_EQUIPO = ['gestion', 'acompanar-hacer', 'facilitar-ser'];
         const codigoModulo = (id, i) => `${CURSOS[id].prefijo}${i + 1}`;
 
@@ -875,8 +866,16 @@
             return auth && auth.currentUser ? auth.currentUser.getIdToken() : null;
         }
         // Tras verificar la contraseña en el servidor, abre la sesión de Firebase en este navegador
+        // Los errores de Firebase llegan en inglés: se traducen para que la persona sepa qué hacer.
+        const ERRORES_SESION = {
+            'auth/too-many-requests': 'Hubo muchos intentos desde este dispositivo. Espera unos minutos y vuelve a intentarlo.',
+            'auth/network-request-failed': 'Se cortó la conexión mientras entrabas. Revisa tu internet e intenta de nuevo.',
+            'auth/user-disabled': 'Tu cuenta está desactivada. Toca «¿No puedes entrar? Pide soporte».',
+            'auth/web-storage-unsupported': 'Tu navegador no permite guardar la sesión (¿modo incógnito?). Abre la página en una ventana normal o en otro navegador.',
+        };
         async function abrirSesion(cuenta, clave) {
-            await auth.signInWithEmailAndPassword(cuenta, clave);
+            try { await auth.signInWithEmailAndPassword(cuenta, clave); }
+            catch (e) { throw new Error(ERRORES_SESION[e.code] || 'Tu contraseña es correcta, pero no pudimos abrir la sesión en este navegador. Recarga la página e intenta de nuevo; si sigue igual, prueba en otro navegador o toca «¿No puedes entrar? Pide soporte».'); }
             guardar(localStorage, CLAVE_SESION, 1);
         }
         async function llamar(accion, datos = {}, conSesion = false) {
@@ -1211,7 +1210,10 @@
                     <span class="video-tapa" aria-hidden="true"></span>
                 </div>
                 <p class="video-pie">${esc(v.titulo)}${v.duracion_min ? ` · ${esc(v.duracion_min)} min` : ''}</p>
+                <p class="video-ayuda" role="note"><span aria-hidden="true">⟳</span> ¿No carga? <button type="button" class="boton-texto" data-recargar-pagina>Recarga la página</button></p>
             </div>`;
+        // Aviso bajo los videos: si no cargan (pasa con Drive o con mala señal), recargar la página lo resuelve
+        document.addEventListener('click', (e) => { if (e.target.closest('[data-recargar-pagina]')) location.reload(); });
         async function traerVideos() {
             if (DEMO) return leer(sessionStorage, 'cic-demo-videos') || [];
             return (await llamar('videos', {}, true)).videos || [];
@@ -1282,6 +1284,9 @@
                         </div>
                     </aside>
                 </div>
+                <h3 class="vista-subtitulo">Tu avance</h3>
+                <p class="vista-intro">Cada sesión y taller que haces con tu dinamizadora lo revisa la Secretaría Técnica. Aquí ves cuáles ya fueron aprobados.</p>
+                <div id="mi-avance"><p class="vista-intro" role="status">Cargando…</p></div>
                 <h3 class="vista-subtitulo">Descarga la guía de tu próximo taller</h3>
                 <p class="vista-intro">Está en PDF: puedes guardarla en tu celular o imprimirla.</p>
                 <div class="descargas descargas-grandes">${botonesDescarga(t.descargas)}</div>
@@ -1304,11 +1309,34 @@
                 ${d ? `<h3>${esc(d.nombre)}</h3><p class="texto-suave">${esc(d.cargo || 'Dinamizadora de tu satélite')}</p>
                 ${wa ? `<a class="btn btn-primario" href="${wa}" target="_blank" rel="noopener">Escribirle por WhatsApp</a>` : DEMO ? '<p class="texto-suave" style="font-size:.95rem">En la plataforma real aquí verás su botón de WhatsApp.</p>' : ''}`
                 : '<h3>Por asignar</h3><p class="texto-suave">Muy pronto verás aquí a tu dinamizadora.</p>'}`;
+            pintarMiAvance();
             let grab = [];
             try { grab = (await traerVideos()).filter((x) => x.audiencia === 'emprendedoras' && (!x.satelite || x.satelite === perfil.satelite)); } catch (e) { /* sin grabaciones */ }
             $('#mis-grabaciones').innerHTML = grab.length
                 ? `<div class="rejilla r3">${grab.map(reproductor).join('')}</div>`
                 : '<p class="tarjeta vacio">Cuando se graben los talleres virtuales (SER 2 y SER 4) los verás aquí, por si no pudiste conectarte.</p>';
+        }
+
+        // Estado de cada actividad de la emprendedora: si la Secretaría Técnica ya la aprobó
+        const ESTADO_AVANCE = {
+            aprobada: ['✓ Aprobada', 'bg-menta'], en_revision: ['En revisión', 'bg-mantequilla'], realizada: ['Realizada', 'bg-lavanda'],
+            no_realizada: ['No se hizo', 'bg-coral'], pendiente: ['Pendiente', ''],
+        };
+        async function pintarMiAvance() {
+            const caja = $('#mi-avance');
+            if (!caja) return;
+            let r;
+            if (DEMO) r = { aprobadas: 1, total: 10, actividades: [...DATOS.hacer.map((x) => ({ ruta: 'hacer', n: x.n })), ...DATOS.ser.map((x) => ({ ruta: 'ser', n: x.n }))].map((a, i) => ({ ...a, estado: i === 0 ? 'aprobada' : i === 1 ? 'en_revision' : 'pendiente' })) };
+            else { try { r = await llamar('mi-avance', {}, true); } catch (e) { caja.innerHTML = ''; return; } }
+            const grupo = (ruta, titulo, nombre) => `<div class="avance-grupo"><p class="semana-sub">${titulo}</p><ul class="lista-limpia avance-lista">${r.actividades.filter((a) => a.ruta === ruta).map((a) => {
+                const [txt, color] = ESTADO_AVANCE[a.estado] || ESTADO_AVANCE.pendiente;
+                return `<li class="avance-item est-${esc(a.estado)}"><span>${nombre} ${a.n}</span><span class="chip ${color}">${txt}</span></li>`;
+            }).join('')}</ul></div>`;
+            caja.innerHTML = `<div class="tarjeta mi-avance">
+                <p><b>${r.aprobadas} de ${r.total}</b> actividades aprobadas por la Secretaría Técnica</p>
+                <div class="barra-avance" role="progressbar" aria-label="Actividades aprobadas" aria-valuemin="0" aria-valuemax="${r.total}" aria-valuenow="${r.aprobadas}"><span style="width:${r.aprobadas / r.total * 100}%"></span></div>
+                <div class="avance-grupos">${grupo('hacer', 'Ruta HACER · sesiones en tu negocio', 'Semana')}${grupo('ser', 'Ruta SER · talleres en grupo', 'Taller')}</div>
+            </div>`;
         }
 
         // ---------- Mis cursos (equipo): video, tema y avance por módulo ----------

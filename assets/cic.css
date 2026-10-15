@@ -1514,3 +1514,55 @@ button.descarga:disabled, button.archivo:disabled { opacity: .6; cursor: progres
 .repaso-video .paso-ok { margin: 0 0 0 auto; font-size: .85rem; }
 .repaso-icono { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--coralp); color: #fff; font-size: .8rem; }
 .repaso-video[open] .video-grande { margin: 0 1.3rem 1.3rem; }
+
+/* ---------- Caja de ingreso: los tres perfiles caben en cualquier celular (antes «Secretaría» se cortaba y la caja se movía de lado) ---------- */
+dialog { overflow-x: hidden; }
+.perfiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.perfil { position: relative; min-width: 0; }
+.perfil span { overflow-wrap: anywhere; hyphens: auto; }
+@media (max-width: 420px) {
+    .dialogo { padding: 1.2rem 1rem; }
+    .perfiles { gap: .35rem; }
+    .perfil span { font-size: .78rem; padding: .55rem .15rem; letter-spacing: -.01em; }
+}
+
+/* ---------- Aviso bajo los videos: si no cargan, recargar la página ---------- */
+.video-ayuda { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin: .5rem 0 0; font-size: .9rem; color: var(--bosque); background: var(--crema-2); border-radius: .8rem; padding: .45rem .8rem; }
+.video-ayuda .boton-texto { font-size: .9rem; }
+
+/* ---------- Material de transferencia (Secretaría Técnica) ---------- */
+.transferencia-acceso { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin: 1rem 0; }
+.transferencia-acceso h3 { margin: 0 0 .2rem; }
+.transferencia-lista { display: grid; gap: .8rem; margin-top: 1rem; }
+.transferencia-unidad > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
+.transferencia-unidad > summary small { color: var(--bosque-suave, #4F6B5E); }
+.transferencia-unidad[open] > summary { margin-bottom: .8rem; }
+
+/* ---------- Actividad del módulo en el foro ---------- */
+.aporte-propio { margin: .6rem 0; padding: .7rem 1rem; border-left: 4px solid var(--menta); background: #fff; border-radius: .6rem; white-space: pre-line; }
+.foro-modulo { margin-top: 1rem; }
+.aportes { display: grid; gap: .5rem; }
+.aportes li { background: #fff; border: 1px solid var(--linea); border-radius: .8rem; padding: .6rem .9rem; }
+.aportes li p { margin: .25rem 0 0; white-space: pre-line; }
+
+/* ---------- Seguimiento: envío a la Secretaría, aprobación y comentarios ---------- */
+.emp-act-cabeza { flex-wrap: wrap; gap: .4rem; }
+.emp-revision { margin-top: .8rem; padding-top: .7rem; border-top: 1px dashed var(--linea); }
+.emp-revisar { background: rgba(244, 225, 161, .25); border-radius: .8rem; padding: .7rem .9rem; border-top: 0; }
+.emp-revision .botones { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
+.emp-act.rev-aprobada { border-color: var(--menta); }
+.emp-comentarios { margin-top: .8rem; }
+.emp-comentarios > summary { cursor: pointer; font-weight: 700; }
+.emp-com-lista { display: grid; gap: .45rem; margin: .6rem 0; }
+.emp-com-lista li { background: #fff; border-radius: .7rem; padding: .5rem .8rem; border: 1px solid var(--linea); }
+.emp-com-lista li.com-devuelta { border-color: #EE9884; }
+.emp-com-lista li.com-aprobada { border-color: var(--menta); }
+.emp-com-lista p { margin: 0; }
+.emp-com-meta { font-size: .85rem; }
+.emp-sino button:disabled { opacity: .55; cursor: not-allowed; }
+
+/* ---------- Mi semana: avance aprobado por la Secretaría ---------- */
+.mi-avance .barra-avance { margin: .5rem 0 1rem; }
+.avance-grupos { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.avance-lista { display: grid; gap: .35rem; }
+.avance-item { display: flex; justify-content: space-between; align-items: center; gap: .5rem; padding: .4rem .2rem; border-bottom: 1px solid var(--linea); }
