@@ -59,10 +59,10 @@ async function vaciar(coleccion) {
     const malas = personas.filter((p) => !/^\d{5,12}$/.test(p.cedula || '') || !['secretaria', 'dinamizadora'].includes(p.rol));
     if (malas.length) throw new Error(`Hay ${malas.length} personas sin cédula válida o sin rol (secretaria / dinamizadora).`);
     await escribirLotes('directorio', personas.map(({ cedula, ...p }) => [cedula, p]));
-    // A quien ya tiene cuenta se le actualizan rol, cargo y satélite (sin tocar su contraseña)
+    // A quien ya tiene cuenta se le actualizan rol, cargo, satélite y segundo perfil (sin tocar su contraseña)
     for (const p of personas) {
       const cuentas = (await db.collection('perfiles').where('cedula', '==', p.cedula).get()).docs;
-      for (const c of cuentas) await c.ref.update({ rol: p.rol, cargo: p.cargo || null, departamento: p.departamento || null, satelite: p.satelite || null });
+      for (const c of cuentas) await c.ref.update({ rol: p.rol, cargo: p.cargo || null, subtitulo: p.subtitulo || null, departamento: p.departamento || null, satelite: p.satelite || null, otros_roles: p.otros_roles || null });
     }
     console.log(`Directorio: ${personas.length} personas cargadas.`);
   }

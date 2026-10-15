@@ -84,6 +84,18 @@ const publico = (id, p) => ({
   creado_en: p.creado_en || null, debe_cambiar_clave: false,
 });
 
+// Una persona del equipo puede tener un segundo perfil («otros_roles» en el directorio), p. ej. Secretaría y Dinamizadora.
+// Datos propios de cada perfil: lo demás (nombre, correo, contraseña, avance en los cursos) es el mismo.
+const CAMPOS_ROL = ['cargo', 'subtitulo', 'departamento', 'satelite'];
+const datosRol = (p) => Object.fromEntries(CAMPOS_ROL.map((k) => [k, p[k] || null]));
+// La ficha del directorio vista como dinamizadora (la principal o la del segundo perfil), o null si no lo es.
+const comoDinamizadora = (d) => {
+  if (!d) return null;
+  if (d.rol === 'dinamizadora') return d;
+  const o = d.otros_roles && d.otros_roles.dinamizadora;
+  return o ? { ...d, ...datosRol(o), rol: 'dinamizadora' } : null;
+};
+
 function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archivos: {}, material: {} }, leerArchivo = () => null, drive = null }) {
   const CATALOGO = catalogo;
   const hoy = () => ahora().toISOString();
@@ -156,7 +168,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   async function cuentaDesdeDirectorio(cedula, d, clave) {
     return crearCuenta(cedula, clave, {
       nombre: d.nombre, rol: d.rol, cargo: d.cargo || null, subtitulo: d.subtitulo || null, correo: d.correo || null, celular: d.celular || null,
-      departamento: d.departamento || null, satelite: d.satelite || null,
+      departamento: d.departamento || null, satelite: d.satelite || null, otros_roles: d.otros_roles || null,
     });
   }
 
@@ -270,7 +282,16 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     }
     await col('bloqueos').doc(cedula).delete();
     // La contraseña ya se verificó: aquí sí podemos decirle cuál es su perfil.
-    if (p.rol !== rol) throw new Falla(403, 'rol', `Tu cuenta está registrada como ${NOMBRE_ROL[p.rol]}. Elige ese perfil para entrar.`, { rol: p.rol });
+    if (p.rol !== rol) {
+      const otro = p.otros_roles && p.otros_roles[rol];
+      if (!otro) throw new Falla(403, 'rol', `Tu cuenta está registrada como ${NOMBRE_ROL[p.rol]}. Elige ese perfil para entrar.`, { rol: p.rol });
+      // Tiene los dos perfiles: entra con el que eligió y el otro queda guardado para la próxima vez.
+      const otros = { ...p.otros_roles, [p.rol]: datosRol(p) };
+      delete otros[rol];
+      const cambio = { rol, ...datosRol(otro), otros_roles: otros };
+      await col('perfiles').doc(p.id).update(cambio);
+      return respuestaSesion({ ...p, ...cambio });
+    }
     return respuestaSesion(p);
   }
 
@@ -486,10 +507,10 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   // Dinamizadora de una emprendedora: la asignada o la de «acompañamiento» de su satélite.
   async function miDinamizadora(token) {
     const p = await usuarioDelToken(token);
-    let d = p.dinamizadora_cedula ? await datos(col('directorio').doc(p.dinamizadora_cedula)) : null;
+    let d = p.dinamizadora_cedula ? comoDinamizadora(await datos(col('directorio').doc(p.dinamizadora_cedula))) : null;
     if (!d && p.satelite) {
-      const del = (await lista(col('directorio').where('satelite', '==', p.satelite)))
-        .filter((x) => x.rol === 'dinamizadora').sort((a, b) => a._id.localeCompare(b._id));
+      const del = (await lista(col('directorio'))).map(comoDinamizadora)
+        .filter((x) => x && x.satelite === p.satelite).sort((a, b) => a._id.localeCompare(b._id));
       d = del.find((x) => /acompa/i.test(x.cargo || '')) || del[0] || null;
     }
     return { dinamizadora: d ? { nombre: d.nombre, cargo: d.cargo || null, celular: d.celular || null } : null };
@@ -708,7 +729,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     return (id) => avanceDe(porPersona[id] || []);
   }
   async function dinamizadorasDirectorio() {
-    return (await lista(col('directorio'))).filter((x) => x.rol === 'dinamizadora')
+    return (await lista(col('directorio'))).map(comoDinamizadora).filter(Boolean)
       .map((x) => ({ cedula: x._id, nombre: x.nombre, cargo: x.cargo || null, satelite: x.satelite || null }))
       .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
   }
@@ -768,8 +789,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     let din = null;
     if (b.dinamizadora) {
       const ced = soloDigitos(b.dinamizadora);
-      const d = await datos(col('directorio').doc(ced));
-      if (!d || d.rol !== 'dinamizadora') throw new Falla(404, 'dinamizadora', 'No encontramos a esa dinamizadora.');
+      const d = comoDinamizadora(await datos(col('directorio').doc(ced)));
+      if (!d) throw new Falla(404, 'dinamizadora', 'No encontramos a esa dinamizadora.');
       din = { cedula: ced, ...d };
     }
     const perfiles = [];

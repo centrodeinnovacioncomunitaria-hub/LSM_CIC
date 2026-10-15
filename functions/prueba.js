@@ -490,6 +490,20 @@ function cuentasFalsas() {
   await falla('envios-correo', {}, tRosa, 403);
   paso('Soporte: tickets con respuestas, estados y adjunto; solicitud sin cuenta con límite; sin tocar el avance');
 
+  // ---------- Dos perfiles: Secretaría y Dinamizadora con la misma cédula ----------
+  const segundo = { dinamizadora: { cargo: 'Acompañamiento - Magdalena', subtitulo: null, departamento: 'Magdalena', satelite: 'magdalena' } };
+  await db.collection('directorio').doc('11111111').update({ otros_roles: segundo });
+  await db.collection('perfiles').doc(tSara).update({ otros_roles: segundo });
+  const comoDina = await ok('ingresar', { cedula: '11111111', clave: 'SaraClave2026', rol: 'dinamizadora' });
+  assert.equal(comoDina.perfil.rol, 'dinamizadora'); assert.equal(comoDina.perfil.satelite, 'magdalena');
+  await ok('mis-emprendimientos', {}, tSara);
+  await falla('emprendimientos', {}, tSara, 403);
+  const comoSec = await ok('ingresar', { cedula: '11111111', clave: 'SaraClave2026', rol: 'secretaria' });
+  assert.equal(comoSec.perfil.rol, 'secretaria'); assert.equal(comoSec.perfil.satelite, null);
+  assert.ok((await ok('emprendimientos', {}, tSara)).dinamizadoras.some((x) => x.cedula === '11111111'), 'aparece entre las dinamizadoras asignables');
+  await falla('ingresar', { cedula: '11111111', clave: 'SaraClave2026', rol: 'emprendedora' }, null, 403);
+  paso('Dos perfiles: la misma cédula entra como Secretaría o como Dinamizadora');
+
   // ---------- Mi cuenta ----------
   await falla('cambiar-clave', { clave_actual: 'mala', clave_nueva: 'OtraClave2026' }, tDina, 401);
   await falla('cambiar-clave', { clave_actual: 'DinaClave2026', clave_nueva: '22222222' }, tDina, 400);
