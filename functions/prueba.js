@@ -504,6 +504,22 @@ function cuentasFalsas() {
   await falla('ingresar', { cedula: '11111111', clave: 'SaraClave2026', rol: 'emprendedora' }, null, 403);
   paso('Dos perfiles: la misma cédula entra como Secretaría o como Dinamizadora');
 
+  // ---------- Registro del equipo desde la administración ----------
+  const nueva = { cedula: '77777001', nombre: 'Lina Nueva Dinamizadora', rol: 'dinamizadora', satelite: 'sucre', cargo: 'Acompañamiento - Sucre', correo: 'lina@correo.co', celular: '3005555555' };
+  await falla('admin-guardar-persona', nueva, tSara, 403);
+  await falla('admin-guardar-persona', { ...nueva, satelite: '' }, tAdmin, 400);
+  await falla('admin-guardar-persona', { ...nueva, cedula: '44444444' }, tAdmin, 409);
+  assert.equal((await ok('admin-guardar-persona', nueva, tAdmin)).nuevo, true);
+  const regEq = await ok('admin-equipo', {}, tAdmin);
+  const lina = regEq.personas.find((x) => x.cedula === '77777001');
+  assert.equal(lina.departamento, 'Sucre'); assert.equal(lina.activada, false);
+  await ok('solicitar-enlace', { cedula: '77777001' });
+  assert.ok(cuentas.enlaces.includes('lina@correo.co'), 'la persona registrada ya puede activar su cuenta');
+  await ok('admin-guardar-persona', { ...nueva, rol: 'secretaria', satelite: '', otro_rol: 'dinamizadora', otro_satelite: 'sucre' }, tAdmin);
+  assert.equal((await ok('admin-equipo', {}, tAdmin)).personas.find((x) => x.cedula === '77777001').otros_roles.dinamizadora.satelite, 'sucre');
+  await falla('admin-equipo', {}, tSara, 403);
+  paso('Registro del equipo: la administración registra y edita secretarías y dinamizadoras (con segundo perfil)');
+
   // ---------- Mi cuenta ----------
   await falla('cambiar-clave', { clave_actual: 'mala', clave_nueva: 'OtraClave2026' }, tDina, 401);
   await falla('cambiar-clave', { clave_actual: 'DinaClave2026', clave_nueva: '22222222' }, tDina, 400);

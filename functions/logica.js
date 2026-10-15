@@ -215,6 +215,64 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     };
   }
   // Administración: últimos envíos de correo
+  // ---------- Registro del equipo (solo administración) ----------
+  // Secretarías y dinamizadoras viven en «directorio»; con eso ya pueden «Activar mi cuenta» desde la página.
+  async function adminEquipo(token) {
+    const p = await usuarioDelToken(token);
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'El registro del equipo es para la administración.');
+    const cuentasEquipo = {};
+    for (const x of await lista(col('perfiles'))) if (x.rol !== 'emprendedora') cuentasEquipo[x.cedula] = x;
+    const personas = (await lista(col('directorio'))).map((d) => {
+      const c = cuentasEquipo[d._id];
+      return {
+        cedula: d._id, nombre: d.nombre, rol: d.rol, cargo: d.cargo || null, subtitulo: d.subtitulo || null, correo: d.correo || null,
+        celular: d.celular || null, satelite: d.satelite || null, departamento: d.departamento || null, otros_roles: d.otros_roles || null,
+        activada: !!c, en_uso: c ? c.rol : null,
+      };
+    }).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    return { personas, satelites: Object.entries(SATELITES).map(([id, x]) => ({ id, departamento: x.departamento, municipios: x.municipios })) };
+  }
+  const ROLES_EQUIPO = ['secretaria', 'dinamizadora'];
+  async function adminGuardarPersona(token, b) {
+    const p = await usuarioDelToken(token);
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'El registro del equipo es para la administración.');
+    const cedula = validarCedula(b.cedula);
+    const nombre = texto(b.nombre, 90);
+    const correo = texto(b.correo, 120).toLowerCase();
+    const celular = soloDigitos(b.celular).slice(0, 12);
+    if (nombre.length < 5 || !nombre.includes(' ')) throw new Falla(400, 'nombre', 'Escribe nombre y apellido.');
+    if (!correoValido(correo)) throw new Falla(400, 'correo', 'Escribe un correo válido: ahí le llega el enlace para crear su contraseña.');
+    const perfilRol = (rol, satelite, cargo, subtitulo, campo) => {
+      if (!ROLES_EQUIPO.includes(rol)) throw new Falla(400, campo, 'Elige Secretaría Técnica o Dinamizadora.');
+      const sat = satelite ? String(satelite) : null;
+      if (sat && !SATELITES[sat]) throw new Falla(400, campo, 'Elige un satélite de la lista.');
+      if (rol === 'dinamizadora' && !sat) throw new Falla(400, campo, 'A la dinamizadora hay que asignarle su satélite.');
+      return { cargo: texto(cargo, 90) || null, subtitulo: texto(subtitulo, 90) || null, departamento: sat ? SATELITES[sat].departamento : null, satelite: sat };
+    };
+    const rol = String(b.rol || '');
+    const principal = perfilRol(rol, b.satelite, b.cargo, b.subtitulo, 'rol');
+    let otros = null;
+    if (b.otro_rol) {
+      const otro = String(b.otro_rol);
+      if (otro === rol) throw new Falla(400, 'otro_rol', 'El segundo perfil debe ser distinto del principal.');
+      otros = { [otro]: perfilRol(otro, b.otro_satelite, b.otro_cargo, null, 'otro_rol') };
+    }
+    const existente = await perfilPorCedula(cedula);
+    // Nunca se convierte la cuenta de una emprendedora: perdería su ruta y su avance.
+    if (existente && existente.rol === 'emprendedora') throw new Falla(409, 'emprendedora', 'Esa cédula ya está inscrita como emprendedora. No se puede pasar al equipo desde aquí para no afectar su avance.');
+    const anterior = await datos(col('directorio').doc(cedula));
+    const ficha = { nombre, rol, ...principal, correo, celular: celular || null, otros_roles: otros };
+    await col('directorio').doc(cedula).set({ ...(anterior || {}), ...ficha, actualizado_en: hoy(), actualizado_por: p.id });
+    if (existente) {
+      const cambios = { nombre, rol, ...principal, correo, celular: celular || null, otros_roles: otros };
+      if (correo !== existente.cuenta_email) {
+        try { await cuentas.cambiarCorreo(existente.id, correo); cambios.cuenta_email = correo; } catch (e) { /* ese correo ya lo usa otra cuenta: queda solo como contacto */ }
+      }
+      await col('perfiles').doc(existente.id).update(cambios);
+    }
+    return { ok: true, nuevo: !anterior, activada: !!existente };
+  }
+
   async function verEnviosCorreo(token) {
     const p = await usuarioDelToken(token);
     if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Este registro es para la administración.');
@@ -1358,6 +1416,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
         case 'ticket-estado': r = await estadoTicket(token, b); break;
         case 'ticket-adjunto': r = await adjuntoTicket(token, b); break;
         case 'envios-correo': r = await verEnviosCorreo(token); break;
+        case 'admin-equipo': r = await adminEquipo(token); break;
+        case 'admin-guardar-persona': r = await adminGuardarPersona(token, b); break;
         // Cursos del equipo
         case 'mi-progreso': r = await miProgreso(token); break;
         case 'marcar': r = await marcar(token, b); break;

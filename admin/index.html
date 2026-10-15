@@ -66,11 +66,13 @@
                 <button type="button" role="tab" aria-selected="false" data-tab="grabaciones">Grabaciones de talleres SER</button>
                 <button type="button" role="tab" aria-selected="false" data-tab="soporte">Soporte técnico</button>
                 <button type="button" role="tab" aria-selected="false" data-tab="correos">Correos enviados</button>
+                <button type="button" role="tab" aria-selected="false" data-tab="equipo">Registrar equipo</button>
             </div>
             <div id="tab-cursos"></div>
             <div id="tab-grabaciones" hidden></div>
             <div id="tab-soporte" hidden></div>
             <div id="tab-correos" hidden></div>
+            <div id="tab-equipo" hidden></div>
         </section>
     </main>
 
@@ -174,9 +176,10 @@
         // ---------- Pestañas ----------
         $$('[data-tab]').forEach((b) => b.addEventListener('click', () => {
             $$('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
-            ['cursos', 'grabaciones', 'soporte', 'correos'].forEach((t) => { $(`#tab-${t}`).hidden = b.dataset.tab !== t; });
+            ['cursos', 'grabaciones', 'soporte', 'correos', 'equipo'].forEach((t) => { $(`#tab-${t}`).hidden = b.dataset.tab !== t; });
             if (b.dataset.tab === 'soporte') window.CICSoporte.pintar($('#tab-soporte'), { perfil: yo, esc, aviso, pedir: llamar, satelite: (id) => DATOS.satelites.find((x) => x.id === id) || null });
             if (b.dataset.tab === 'correos') pintarCorreos();
+            if (b.dataset.tab === 'equipo') pintarEquipo();
         }));
 
         // ---------- Registro de correos de contraseña (colección «envios_correo» de Firestore) ----------
@@ -200,6 +203,70 @@
                     <td><span class="chip ${(ESTADO_ENVIO[x.estado] || [])[1] || ''}">${esc((ESTADO_ENVIO[x.estado] || [x.estado])[0])}</span></td>
                     <td><small>${esc(x.error || x.motivo || '')}</small></td></tr>`).join('') || '<tr><td colspan="5">Todavía no hay registros.</td></tr>'}</tbody></table></div>`;
             $('#solo-problemas').addEventListener('change', (e) => { soloProblemas = e.target.checked; pintarCorreos(); });
+        }
+
+        // ---------- Registro de secretarías y dinamizadoras (colección «directorio») ----------
+        const NOMBRE_ROL = { secretaria: 'Secretaría Técnica', dinamizadora: 'Dinamizadora' };
+        let equipoDatos = null, filtroEquipo = '';
+        async function pintarEquipo(editar) {
+            const caja = $('#tab-equipo');
+            if (!equipoDatos) {
+                caja.innerHTML = '<p class="vista-intro">Cargando…</p>';
+                try { equipoDatos = await llamar('admin-equipo'); } catch (e) { caja.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; return; }
+            }
+            const x = editar || {};
+            const otroRol = x.otros_roles ? Object.keys(x.otros_roles)[0] : '';
+            const otro = otroRol ? x.otros_roles[otroRol] : {};
+            const opcionesSat = (sel) => '<option value="">Sin satélite</option>' + equipoDatos.satelites.map((s) => `<option value="${s.id}" ${s.id === sel ? 'selected' : ''}>${esc(s.departamento)} · ${esc(s.municipios.join(', '))}</option>`).join('');
+            const opcionesRol = (sel, vacio) => (vacio ? '<option value="">No tiene</option>' : '') + Object.entries(NOMBRE_ROL).map(([k, v]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${v}</option>`).join('');
+            caja.innerHTML = `
+                <p class="vista-intro">Registra aquí a las secretarías y dinamizadoras. Apenas la guardes, la persona entra a la página → <b>Ingresar</b> → su perfil → <b>Activar mi cuenta</b>, escribe su cédula y le llega al correo el enlace para crear su contraseña. Las emprendedoras se inscriben solas desde la página.</p>
+                <form id="form-equipo" class="tarjeta" novalidate style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.5rem 1rem;align-items:end">
+                    <h3 class="subtitulo-seccion" style="grid-column:1/-1;margin:0 0 .4rem">${editar ? 'Editar a ' + esc(x.nombre) : 'Registrar a una persona del equipo'}</h3>
+                    <label><span class="etiqueta">Cédula</span><input class="campo" name="cedula" inputmode="numeric" required value="${esc(x.cedula || '')}" ${editar ? 'readonly' : ''}></label>
+                    <label><span class="etiqueta">Nombre y apellido</span><input class="campo" name="nombre" required value="${esc(x.nombre || '')}"></label>
+                    <label><span class="etiqueta">Correo (le llega el enlace)</span><input class="campo" name="correo" type="email" required value="${esc(x.correo || '')}"></label>
+                    <label><span class="etiqueta">Celular</span><input class="campo" name="celular" inputmode="tel" value="${esc(x.celular || '')}"></label>
+                    <label><span class="etiqueta">Perfil</span><select class="campo" name="rol">${opcionesRol(x.rol || 'dinamizadora')}</select></label>
+                    <label><span class="etiqueta">Satélite (obligatorio para dinamizadora)</span><select class="campo" name="satelite">${opcionesSat(x.satelite)}</select></label>
+                    <label><span class="etiqueta">Cargo</span><input class="campo" name="cargo" placeholder="Ej.: Acompañamiento - Sucre" value="${esc(x.cargo || '')}"></label>
+                    <label><span class="etiqueta">Subtítulo (opcional)</span><input class="campo" name="subtitulo" placeholder="Ej.: Soporte a la Transferencia" value="${esc(x.subtitulo || '')}"></label>
+                    <fieldset style="grid-column:1/-1;border:1px dashed rgba(46,74,62,.3);border-radius:12px;padding:.6rem 1rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.5rem 1rem">
+                        <legend class="etiqueta">Segundo perfil (si también es secretaría o dinamizadora)</legend>
+                        <label><span class="etiqueta">Perfil</span><select class="campo" name="otro_rol">${opcionesRol(otroRol, true)}</select></label>
+                        <label><span class="etiqueta">Satélite</span><select class="campo" name="otro_satelite">${opcionesSat(otro.satelite)}</select></label>
+                        <label><span class="etiqueta">Cargo</span><input class="campo" name="otro_cargo" value="${esc(otro.cargo || '')}"></label>
+                    </fieldset>
+                    <p class="mensaje" id="equipo-msj" role="alert" style="grid-column:1/-1;margin:0"></p>
+                    <div class="botones" style="grid-column:1/-1;margin-top:0"><button class="btn btn-primario" type="submit">${editar ? 'Guardar cambios' : 'Registrar'}</button>${editar ? '<button class="btn btn-borde" type="button" id="equipo-cancelar">Cancelar</button>' : ''}</div>
+                </form>
+                <p style="margin-top:1.2rem"><label><span class="etiqueta">Buscar</span> <input class="campo" id="equipo-buscar" placeholder="Nombre, cédula o cargo" value="${esc(filtroEquipo)}" style="max-width:320px"></label> <small>${equipoDatos.personas.length} personas en el equipo</small></p>
+                <div class="tabla-caja"><table><thead><tr><th scope="col">Persona</th><th scope="col">Perfil</th><th scope="col">Satélite</th><th scope="col">Cuenta</th><th scope="col"></th></tr></thead>
+                <tbody id="equipo-filas"></tbody></table></div>`;
+            const pintarFilas = () => {
+                const q = filtroEquipo.toLowerCase();
+                const filas = equipoDatos.personas.filter((p) => !q || (p.nombre + ' ' + p.cedula + ' ' + (p.cargo || '')).toLowerCase().includes(q));
+                $('#equipo-filas').innerHTML = filas.map((p) => `<tr><td><b>${esc(p.nombre)}</b><small>CC ${esc(p.cedula)} · ${esc(p.correo || 'sin correo')}</small></td>
+                    <td>${esc(NOMBRE_ROL[p.rol] || p.rol)}${p.otros_roles ? ' + ' + Object.keys(p.otros_roles).map((k) => esc(NOMBRE_ROL[k] || k)).join(', ') : ''}<small>${esc(p.subtitulo || p.cargo || '')}</small></td>
+                    <td>${esc(p.departamento || '—')}</td>
+                    <td><span class="chip ${p.activada ? 'sop-resuelto' : 'sop-cerrado'}">${p.activada ? 'Activada' : 'Sin activar'}</span></td>
+                    <td><button type="button" class="boton-texto" data-editar-persona="${esc(p.cedula)}">Editar</button></td></tr>`).join('') || '<tr><td colspan="5">No hay coincidencias.</td></tr>';
+                $('[data-editar-persona]').forEach((b) => b.addEventListener('click', () => { pintarEquipo(equipoDatos.personas.find((p) => p.cedula === b.dataset.editarPersona)); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
+            };
+            pintarFilas();
+            $('#equipo-buscar').addEventListener('input', (e) => { filtroEquipo = e.target.value; pintarFilas(); });
+            if (editar) $('#equipo-cancelar').addEventListener('click', () => pintarEquipo());
+            $('#form-equipo').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const f = Object.fromEntries(new FormData(e.target));
+                const boton = e.target.querySelector('[type=submit]');
+                boton.disabled = true;
+                try {
+                    const r = await llamar('admin-guardar-persona', f);
+                    aviso(r.nuevo ? `Listo: ${f.nombre} quedó registrada. Ya puede tocar «Activar mi cuenta» en la página.` : `Listo: se guardaron los cambios de ${f.nombre}.`);
+                    equipoDatos = null; pintarEquipo();
+                } catch (err) { $('#equipo-msj').textContent = err.message; $('#equipo-msj').className = 'mensaje error'; boton.disabled = false; }
+            });
         }
 
         async function recargar() {
