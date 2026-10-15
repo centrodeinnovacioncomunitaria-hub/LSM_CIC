@@ -562,11 +562,53 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     try { await drive({ accion: 'correo', asunto, texto: cuerpo }); }
     catch (err) { console.error(`No se pudo avisar por correo la solicitud ${t.numero}:`, err.message); }
   }
+  // Cuando una dinamizadora no puede entrar, se avisa también a su secretaria encargada para que le genere
+  // el código de acceso: la secretaría del mismo pilar (acompañamiento, mercados o financiamiento); si no se
+  // reconoce el pilar, la Dirección Técnica. Los datos salen del directorio (Firestore), nunca del código.
+  const PILARES_SECRETARIA = [
+    { area: 'Acompañamiento', clave: /acompa/i },
+    { area: 'Acceso a Mercados', clave: /mercad/i },
+    { area: 'Acceso a Financiamiento', clave: /financ|capitaliz/i },
+  ];
+  async function secretariaEncargada(cargoDinamizadora) {
+    const secretarias = (await lista(col('directorio').where('rol', '==', 'secretaria'))).filter((s) => correoValido(s.correo));
+    const pilar = PILARES_SECRETARIA.find((x) => x.clave.test(String(cargoDinamizadora || '')));
+    return (pilar && secretarias.find((s) => pilar.clave.test(String(s.cargo || ''))))
+      || secretarias.find((s) => /direcci[oó]n t[eé]cnica/i.test(String(s.cargo || '')))
+      || null;
+  }
+  async function avisarSecretaria(t, texto) {
+    if (t.categoria !== 'acceso' || !driveActivo()) return null;
+    const d = await datos(col('directorio').doc(t.cedula));
+    if (!d || d.rol !== 'dinamizadora') return null;
+    const s = await secretariaEncargada(d.cargo);
+    if (!s) { console.warn(`Solicitud ${t.numero}: no se encontró secretaria encargada con correo.`); return null; }
+    const asunto = `[CIC] ${d.nombre} necesita un código de acceso (${t.numero})`;
+    const cuerpo = [
+      `Hola, ${String(s.nombre).split(' ')[0]}:`, '',
+      `La dinamizadora ${d.nombre} no puede entrar a la plataforma y pidió ayuda. Como secretaria encargada de su pilar, por favor genérale un código de acceso:`, '',
+      `1. Entra a ${PANEL_SOPORTE.replace(/admin\/$/, '')} con tu cédula y elige «Secretaria».`,
+      `2. Ve a «Seguimiento» → «Código de acceso» y escribe la cédula ${t.cedula}.`,
+      '3. Envíale el código de 6 números por WhatsApp. Vence en 24 horas.', '',
+      'Ella debe tocar «Ingresar» → «Dinamizadora» → «Activar mi cuenta» y escribir su cédula, el código y una contraseña nueva (mínimo 8 letras o números, que no sea su cédula).', '',
+      `Dinamizadora: ${d.nombre} · CC ${t.cedula} · ${d.cargo || 'Dinamizadora'}${d.departamento ? ` · ${d.departamento}` : ''}`,
+      `Contacto que dejó en la solicitud: ${t.contacto || 'no indicó'}${d.celular && !String(t.contacto || '').includes(d.celular) ? ` (en el directorio: ${d.celular})` : ''}`,
+      `Lo que escribió: ${texto}`, '',
+      `Solicitud ${t.numero}. Si ya la ayudaste, no tienes que hacer nada más: la administración la cierra.`,
+    ].join('\n');
+    try {
+      await drive({ accion: 'correo', para: s.correo, asunto, texto: cuerpo });
+      return { nombre: s.nombre, cargo: s.cargo || null, avisada_en: hoy() };
+    } catch (err) {
+      console.error(`No se pudo avisar a la secretaria encargada de la solicitud ${t.numero}:`, err.message);
+      return null;
+    }
+  }
   const numeroTicket = () => `T-${hoy().slice(2, 10).replace(/-/g, '')}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
   const vistaTicket = (x, conMensajes) => ({
     id: x._id, numero: x.numero, categoria: x.categoria, categoria_nombre: CATEGORIAS_SOPORTE[x.categoria] || 'Otro', asunto: x.asunto,
     estado: x.estado, nombre: x.nombre, cedula: x.cedula, rol: x.rol || null, satelite: x.satelite || null, contacto: x.contacto || null,
-    publico: !!x.publico, dispositivo: x.dispositivo || null, adjunto: x.adjunto ? { nombre: x.adjunto.nombre, mime: x.adjunto.mime, bytes: x.adjunto.bytes } : null,
+    publico: !!x.publico, dispositivo: x.dispositivo || null, secretaria_avisada: x.secretaria_avisada || null, adjunto: x.adjunto ? { nombre: x.adjunto.nombre, mime: x.adjunto.mime, bytes: x.adjunto.bytes } : null,
     creado_en: x.creado_en, actualizado_en: x.actualizado_en, mensajes_total: (x.mensajes || []).length,
     ultimo_de: (x.mensajes || []).length ? x.mensajes[x.mensajes.length - 1].de : null,
     ...(conMensajes ? { mensajes: x.mensajes || [] } : {}),
@@ -601,6 +643,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     };
     await ref.set(fila);
     await avisarSoporte(fila, 'nuevo', descripcion);
+    const secretaria = await avisarSecretaria(fila, descripcion);
+    if (secretaria) await ref.update({ secretaria_avisada: secretaria });
     return { ticket: vistaTicket({ _id: ref.id, ...fila }, true) };
   }
   // Sin sesión (botón flotante o «¿No puedes entrar?»): cédula, nombre, un contacto, el tema y la descripción.
@@ -628,6 +672,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     };
     await ref.set(fila);
     await avisarSoporte(fila, 'nuevo', descripcion);
+    const secretaria = await avisarSecretaria(fila, descripcion);
+    if (secretaria) await ref.update({ secretaria_avisada: secretaria });
     return { ok: true, numero: fila.numero };
   }
   async function misTickets(token) {
