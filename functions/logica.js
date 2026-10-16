@@ -927,10 +927,23 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   }
   const vistaRevision = (x) => (x && x.revision ? { estado: x.revision.estado, enviada_en: x.revision.enviada_en || null, revisada_en: x.revision.revisada_en || null, revisada_por: x.revision.revisada_por_nombre || null } : null);
   const vistaComentarios = (x) => ((x && x.comentarios) || []).map((c) => ({ autor: c.autor, rol: c.rol, texto: c.texto, estado: c.estado || null, en: c.en }));
+  // Avance de cada emprendedora, con el estado de cada actividad (celdas de la tabla de seguimiento) y del cuestionario semanal
   async function avancePorEmprendedora() {
     const porPersona = {};
     for (const x of await lista(col('seguimiento'))) (porPersona[x.emprendedora] = porPersona[x.emprendedora] || []).push(x);
-    return (id) => avanceDe(porPersona[id] || []);
+    const cuestionarios = {};
+    for (const x of await lista(col('aprendizajes'))) (cuestionarios[x.emprendedora] = cuestionarios[x.emprendedora] || []).push(x);
+    const avance = (id) => avanceDe(porPersona[id] || []);
+    avance.celdas = (id) => Object.fromEntries((porPersona[id] || []).map((x) => [`${x.ruta}_${x.n}`, {
+      e: typeof x.ejecutada === 'boolean' ? x.ejecutada : null,
+      d: TIPOS_DOCUMENTO.every((t) => x.documentos && x.documentos[t]),
+      r: estadoRevision(x), f: x.fecha || null, c: (x.comentarios || []).length,
+    }]));
+    avance.aprendizaje = (id) => {
+      const filas = cuestionarios[id] || [];
+      return { habilitadas: filas.filter((x) => x.habilitada).map((x) => x.semana).sort(), respondidas: filas.filter((x) => x.respondida_en).map((x) => x.semana).sort() };
+    };
+    return avance;
   }
   async function dinamizadorasDirectorio() {
     return (await lista(col('directorio'))).map(comoDinamizadora).filter(Boolean)
@@ -942,6 +955,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     celular: x.celular || null, semana_actual: x.semana_actual || 1,
     dinamizadora: x.dinamizadora_cedula || null, dinamizadora_nombre: x.dinamizadora_cedula ? (nombres[x.dinamizadora_cedula] || null) : null,
     avance: avance(x._id),
+    celdas: avance.celdas ? avance.celdas(x._id) : {},
+    aprendizaje: avance.aprendizaje ? avance.aprendizaje(x._id) : { habilitadas: [], respondidas: [] },
   });
 
   // Secretaría: emprendimientos (con su dinamizadora y avance) y las dinamizadoras de cada satélite
@@ -1043,7 +1058,73 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
         };
       }),
       avance: avanceDe(Object.values(filas)),
+      aprendizaje: await semanasAprendizaje(e.id, true),
+      preguntas_aprendizaje: PREGUNTAS_APRENDIZAJE,
     };
+  }
+
+  // ---------- Cuestionario de aprendizaje semanal (emprendedoras) ----------
+  // La Secretaría o la dinamizadora asignada habilitan cada semana a cada emprendedora; ella lo diligencia
+  // en «Mi semana» y las respuestas quedan en «aprendizajes» (una por emprendedora y semana).
+  const SEMANAS_APRENDIZAJE = 6;
+  const PREGUNTAS_APRENDIZAJE = [
+    { id: 'aprendi', tipo: 'texto', texto: '¿Qué fue lo más importante que aprendiste esta semana?', obligatoria: true },
+    { id: 'aplicare', tipo: 'texto', texto: '¿Qué vas a aplicar en tu negocio a partir de esta semana?', obligatoria: true },
+    { id: 'dificultad', tipo: 'texto', texto: '¿Qué se te dificultó o qué te gustaría reforzar?', obligatoria: false },
+    { id: 'utilidad', tipo: 'escala', texto: '¿Qué tan útil fue esta semana para tu negocio?', obligatoria: true },
+    { id: 'confianza', tipo: 'escala', texto: '¿Qué tan segura te sientes para aplicar lo aprendido?', obligatoria: true },
+  ];
+  const idAprendizaje = (emp, semana) => `${emp}_${semana}`;
+  async function semanasAprendizaje(empId, conRespuestas) {
+    const filas = Object.fromEntries((await lista(col('aprendizajes').where('emprendedora', '==', empId))).map((x) => [x.semana, x]));
+    return Array.from({ length: SEMANAS_APRENDIZAJE }, (_, i) => {
+      const x = filas[i + 1];
+      return {
+        semana: i + 1, habilitada: !!(x && x.habilitada), habilitada_en: (x && x.habilitada_en) || null,
+        respondida_en: (x && x.respondida_en) || null,
+        ...(conRespuestas && x && x.respondida_en ? { respuestas: x.respuestas } : {}),
+      };
+    });
+  }
+  const validarSemana = (s) => { const n = Number(s); if (!Number.isInteger(n) || n < 1 || n > SEMANAS_APRENDIZAJE) throw new Falla(400, 'semana', `La semana debe estar entre 1 y ${SEMANAS_APRENDIZAJE}.`); return n; };
+  async function habilitarAprendizaje(token, b) {
+    const { p, e } = await emprendimientoPermitido(token, b.cedula);
+    const semana = validarSemana(b.semana);
+    const ref = col('aprendizajes').doc(idAprendizaje(e.id, semana));
+    const x = await datos(ref);
+    if (x && x.respondida_en) throw new Falla(409, 'respondida', 'Esa semana ya fue respondida: no se puede cambiar.');
+    const habilitada = b.habilitada !== false;
+    await ref.set({ ...(x || {}), emprendedora: e.id, semana, habilitada, habilitada_por: p.id, habilitada_en: habilitada ? hoy() : null, respondida_en: null, respuestas: null });
+    return verSeguimiento(token, b);
+  }
+  async function miAprendizaje(token) {
+    const p = await usuarioDelToken(token);
+    if (p.rol !== 'emprendedora') throw new Falla(403, 'permiso', 'Este cuestionario es para las emprendedoras.');
+    return { preguntas: PREGUNTAS_APRENDIZAJE, semanas: await semanasAprendizaje(p.id, true) };
+  }
+  async function responderAprendizaje(token, b) {
+    const p = await usuarioDelToken(token);
+    if (p.rol !== 'emprendedora') throw new Falla(403, 'permiso', 'Este cuestionario es para las emprendedoras.');
+    const semana = validarSemana(b.semana);
+    const ref = col('aprendizajes').doc(idAprendizaje(p.id, semana));
+    const x = await datos(ref);
+    if (!x || !x.habilitada) throw new Falla(403, 'no_habilitada', 'Este cuestionario todavía no está habilitado. Tu dinamizadora lo habilita al terminar la semana.');
+    if (x.respondida_en) throw new Falla(409, 'respondida', 'Ya respondiste el cuestionario de esta semana. ¡Gracias!');
+    const r = b.respuestas || {};
+    const respuestas = {};
+    for (const q of PREGUNTAS_APRENDIZAJE) {
+      if (q.tipo === 'escala') {
+        const v = Number(r[q.id]);
+        if (!Number.isInteger(v) || v < 1 || v > 5) { if (q.obligatoria) throw new Falla(400, q.id, `Elige un número del 1 al 5 en: «${q.texto}»`); continue; }
+        respuestas[q.id] = v;
+      } else {
+        const v = String(r[q.id] ?? '').trim().slice(0, 1500);
+        if (q.obligatoria && v.length < 3) throw new Falla(400, q.id, `Responde: «${q.texto}»`);
+        respuestas[q.id] = v || null;
+      }
+    }
+    await ref.set({ ...x, respuestas, respondida_en: hoy() });
+    return miAprendizaje(token);
   }
   async function marcarActividad(token, b) {
     const { p, e } = await emprendimientoPermitido(token, b.cedula);
@@ -1614,6 +1695,9 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
         case 'revisar-actividad': r = await revisarActividad(token, b); break;
         case 'comentar-actividad': r = await comentarActividad(token, b); break;
         case 'mi-avance': r = await miAvance(token); break;
+        case 'habilitar-aprendizaje': r = await habilitarAprendizaje(token, b); break;
+        case 'mi-aprendizaje': r = await miAprendizaje(token); break;
+        case 'responder-aprendizaje': r = await responderAprendizaje(token, b); break;
         case 'material-transferencia': r = await materialTransferencia(token); break;
         case 'archivo-transferencia': r = await archivoTransferencia(token, b); break;
         case 'foro-modulo': r = await foroModulo(token, b); break;

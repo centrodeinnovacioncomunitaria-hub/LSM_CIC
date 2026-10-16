@@ -27,94 +27,149 @@
     const fechaCorta = (f) => new Date(f).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
     const enDemo = (cont) => { cont.innerHTML = '<p class="tarjeta vacio">En la demostración no hay emprendimientos reales: en la plataforma aquí se asignan y se les hace seguimiento.</p>'; };
 
-    // ================================================================ Secretaría: asignación
-    let estadoS = { datos: null, sat: '', filtro: '', texto: '', sel: new Set() };
-    async function secretaria(cont, ctx) {
-        C = ctx;
-        cont.onclick = null; cont.onchange = null;
-        if (C.DEMO) return enDemo(cont);
-        cont.innerHTML = '<p class="vista-intro" role="status">Cargando emprendimientos…</p>';
-        try { estadoS.datos = await C.llamar('emprendimientos', {}, true); } catch (e) { cont.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; return; }
-        estadoS.sel = new Set();
-        pintarSecretaria(cont);
+    // ================================================================ Tabla de seguimiento (tipo hoja de cálculo)
+    // Una fila por emprendimiento y una celda por actividad (6 semanas HACER y 4 talleres SER), con filtros.
+    // La Secretaría ve todos y asigna dinamizadora; la dinamizadora ve los suyos. Tocar una celda abre esa actividad.
+    const COLUMNAS = [...[1, 2, 3, 4, 5, 6].map((n) => ['hacer', n, `S${n}`]), ...[1, 2, 3, 4].map((n) => ['ser', n, `T${n}`])];
+    const ESTADO_CELDA = {
+        pendiente: ['·', 'c-pendiente', 'Pendiente'],
+        sin_docs: ['◐', 'c-sin-docs', 'Ejecutada · faltan documentos'],
+        lista: ['E', 'c-lista', 'Ejecutada · lista para enviar'],
+        revision: ['…', 'c-revision', 'En revisión de la Secretaría'],
+        aprobada: ['✓', 'c-aprobada', 'Aprobada'],
+        devuelta: ['!', 'c-devuelta', 'Devuelta para corregir'],
+        no: ['✕', 'c-no', 'No se ejecutó'],
+    };
+    function estadoCelda(c) {
+        if (!c || c.e === null) return 'pendiente';
+        if (c.r === 'aprobada') return 'aprobada';
+        if (c.r === 'devuelta') return 'devuelta';
+        if (c.r === 'enviada') return 'revision';
+        if (c.e === false) return 'no';
+        return c.d ? 'lista' : 'sin_docs';
     }
-    const dinDe = (sat) => estadoS.datos.dinamizadoras.filter((d) => d.satelite === sat);
+    const FILTROS = {
+        '': 'Todos',
+        sin: 'Sin dinamizadora asignada',
+        revisar: 'Con actividades por revisar',
+        devueltas: 'Con actividades devueltas',
+        pendientes_envio: 'Con actividades sin enviar',
+        sin_avance: 'Sin ninguna actividad registrada',
+        cuestionario: 'Cuestionario habilitado sin responder',
+    };
+    let H = { datos: null, rol: '', sat: '', din: '', filtro: '', texto: '', sel: new Set() };
+    const filas = () => H.datos.emprendimientos;
+    function cumpleFiltro(x) {
+        const estados = COLUMNAS.map(([r, n]) => estadoCelda(x.celdas[`${r}_${n}`]));
+        switch (H.filtro) {
+            case 'sin': return !x.dinamizadora;
+            case 'revisar': return estados.includes('revision');
+            case 'devueltas': return estados.includes('devuelta');
+            case 'pendientes_envio': return estados.includes('lista') || estados.includes('sin_docs');
+            case 'sin_avance': return estados.every((e) => e === 'pendiente');
+            case 'cuestionario': return x.aprendizaje.habilitadas.some((s) => !x.aprendizaje.respondidas.includes(s));
+            default: return true;
+        }
+    }
+    function filtrados() {
+        const t = H.texto.toLowerCase();
+        return filas().filter((x) => (!H.sat || x.satelite === H.sat) && (!H.din || x.dinamizadora === H.din) && cumpleFiltro(x)
+            && [x.nombre, x.cedula, x.negocio, x.municipio, x.dinamizadora_nombre].join(' ').toLowerCase().includes(t));
+    }
+    const dinDe = (sat) => (H.datos.dinamizadoras || []).filter((d) => d.satelite === sat);
     function opcionesDin(sat, actual) {
         return `<option value="">Sin asignar</option>${dinDe(sat).map((d) => `<option value="${esc(d.cedula)}" ${d.cedula === actual ? 'selected' : ''}>${esc(d.nombre)}</option>`).join('')}`;
     }
-    function filtrados() {
-        const t = estadoS.texto.toLowerCase();
-        return estadoS.datos.emprendimientos.filter((x) => (!estadoS.sat || x.satelite === estadoS.sat)
-            && (!estadoS.filtro || (estadoS.filtro === 'revisar' ? x.avance.por_revisar > 0 : estadoS.filtro === 'sin' ? !x.dinamizadora : !!x.dinamizadora))
-            && [x.nombre, x.cedula, x.negocio, x.municipio].join(' ').toLowerCase().includes(t));
+
+    async function secretaria(cont, ctx) { C = ctx; await cargarHoja(cont, 'secretaria'); }
+    async function dinamizadora(cont, ctx) { C = ctx; await cargarHoja(cont, 'dinamizadora'); }
+    async function cargarHoja(cont, rol) {
+        cont.onclick = null; cont.onchange = null;
+        if (C.DEMO) return enDemo(cont);
+        cont.innerHTML = '<p class="vista-intro" role="status">Cargando el seguimiento…</p>';
+        try { H.datos = await C.llamar(rol === 'secretaria' ? 'emprendimientos' : 'mis-emprendimientos', {}, true); } catch (e) { cont.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; return; }
+        if (H.rol !== rol) H = { datos: H.datos, rol, sat: '', din: '', filtro: '', texto: '', sel: new Set() };
+        H.sel = new Set();
+        pintarHoja(cont);
     }
-    function pintarSecretaria(cont) {
-        const emp = estadoS.datos.emprendimientos;
-        const sin = emp.filter((x) => !x.dinamizadora).length;
-        const porRevisar = emp.reduce((n, x) => n + (x.avance.por_revisar || 0), 0);
-        const sats = C.SATELITES.filter((s) => emp.some((x) => x.satelite === s.id) || estadoS.datos.dinamizadoras.some((d) => d.satelite === s.id));
+    const recargarHoja = (cont) => cargarHoja(cont, H.rol);
+
+    function pintarHoja(cont) {
+        const sec = H.rol === 'secretaria';
+        const emp = filas();
+        const cuenta = (f) => emp.filter((x) => { const g = H.filtro; H.filtro = f; const r = cumpleFiltro(x); H.filtro = g; return r; }).length;
+        const sats = C.SATELITES.filter((s) => emp.some((x) => x.satelite === s.id) || (H.datos.dinamizadoras || []).some((d) => d.satelite === s.id));
+        const dins = sec ? (H.datos.dinamizadoras || []).filter((d) => !H.sat || d.satelite === H.sat) : [];
         cont.innerHTML = `
             <div class="emp-cabeza">
-                <div><h3>Emprendimientos y dinamizadoras</h3>
-                <p class="vista-intro">Asigna cada emprendimiento a una dinamizadora de su mismo satélite. Ella marcará si cada actividad se ejecutó y subirá el acta y la herramienta diligenciada.</p></div>
-                <div class="emp-kpis"><span><b>${emp.length}</b> emprendimientos</span><span class="${sin ? 'emp-alerta' : ''}"><b>${sin}</b> sin asignar</span><span class="${porRevisar ? 'emp-alerta' : ''}"><b>${porRevisar}</b> actividades por revisar</span></div>
+                <div><h3>${sec ? 'Seguimiento de los emprendimientos' : 'Mis emprendimientos'}</h3>
+                <p class="vista-intro">${sec ? 'Cada fila es un emprendimiento y cada casilla una actividad. Asigna la dinamizadora en la columna «Dinamizadora» y toca una casilla para revisar esa actividad.' : 'Cada fila es un emprendimiento que te asignó la Secretaría Técnica. Toca una casilla para marcar la actividad, subir el acta y la herramienta y enviarla a la Secretaría.'}</p></div>
+                <div class="emp-kpis"><span><b>${emp.length}</b> emprendimientos</span>${sec ? `<span class="${cuenta('sin') ? 'emp-alerta' : ''}"><b>${cuenta('sin')}</b> sin asignar</span>` : ''}<span class="${cuenta('revisar') ? 'emp-alerta' : ''}"><b>${cuenta('revisar')}</b> con actividades por revisar</span></div>
             </div>
-            ${estadoS.datos.drive && estadoS.datos.drive.activo ? `<p class="emp-drive-barra">📁 Los documentos se guardan también en Google Drive, en la carpeta «CIC · Documentos de seguimiento», ordenados por satélite, emprendimiento y semana.${estadoS.datos.drive.pendientes ? ` <button type="button" class="btn btn-borde btn-pequeno" data-sincronizar>Enviar a Drive ${estadoS.datos.drive.pendientes} pendiente${estadoS.datos.drive.pendientes > 1 ? 's' : ''}</button>` : ''}</p>` : ''}
-            <div class="controles">
-                <div style="flex:0 1 13rem"><label class="etiqueta" for="emp-sat">Satélite</label><select id="emp-sat" class="campo"><option value="">Todos</option>${sats.map((s) => `<option value="${esc(s.id)}" ${estadoS.sat === s.id ? 'selected' : ''}>${esc(s.nombre)}</option>`).join('')}</select></div>
-                <div style="flex:0 1 12rem"><label class="etiqueta" for="emp-filtro">Mostrar</label><select id="emp-filtro" class="campo"><option value="">Todos</option><option value="sin" ${estadoS.filtro === 'sin' ? 'selected' : ''}>Sin asignar</option><option value="con" ${estadoS.filtro === 'con' ? 'selected' : ''}>Asignados</option><option value="revisar" ${estadoS.filtro === 'revisar' ? 'selected' : ''}>Con actividades por revisar</option></select></div>
-                <div><label class="etiqueta" for="emp-buscar">Buscar</label><input id="emp-buscar" class="campo" type="search" placeholder="Nombre, cédula, negocio…" value="${esc(estadoS.texto)}"></div>
+            ${sec && H.datos.drive && H.datos.drive.activo ? `<p class="emp-drive-barra">📁 Los documentos se guardan también en Google Drive, en la carpeta «CIC · Documentos de seguimiento».${H.datos.drive.pendientes ? ` <button type="button" class="btn btn-borde btn-pequeno" data-sincronizar>Enviar a Drive ${H.datos.drive.pendientes} pendiente${H.datos.drive.pendientes > 1 ? 's' : ''}</button>` : ''}</p>` : ''}
+            <div class="hoja-controles">
+                ${sec ? `<div><label class="etiqueta" for="h-sat">Satélite</label><select id="h-sat" class="campo"><option value="">Todos</option>${sats.map((s) => `<option value="${esc(s.id)}" ${H.sat === s.id ? 'selected' : ''}>${esc(s.nombre)}</option>`).join('')}</select></div>
+                <div><label class="etiqueta" for="h-din">Dinamizadora</label><select id="h-din" class="campo"><option value="">Todas</option>${dins.map((d) => `<option value="${esc(d.cedula)}" ${H.din === d.cedula ? 'selected' : ''}>${esc(d.nombre)}</option>`).join('')}</select></div>` : ''}
+                <div><label class="etiqueta" for="h-filtro">Mostrar</label><select id="h-filtro" class="campo">${Object.entries(FILTROS).filter(([k]) => sec || k !== 'sin').map(([k, t]) => `<option value="${k}" ${H.filtro === k ? 'selected' : ''}>${esc(t)}${k ? ` (${cuenta(k)})` : ''}</option>`).join('')}</select></div>
+                <div class="hoja-buscar"><label class="etiqueta" for="h-buscar">Buscar</label><input id="h-buscar" class="campo" type="search" placeholder="Nombre, cédula, negocio, municipio…" value="${esc(H.texto)}"></div>
+                <div><button type="button" class="btn btn-borde btn-pequeno" data-excel>⬇ Descargar en Excel</button></div>
             </div>
-            <div id="emp-lote" class="emp-lote" hidden></div>
+            <div class="hoja-leyenda" aria-label="Convenciones"><span><b>S1–S6</b> semanas de la ruta HACER · <b>T1–T4</b> talleres de la ruta SER</span>${Object.values(ESTADO_CELDA).map(([s, c, t]) => `<span><span class="celda ${c}" aria-hidden="true">${s}</span>${esc(t)}</span>`).join('')}</div>
+            ${sec ? '<div id="emp-lote" class="emp-lote" hidden></div>' : ''}
             <div id="emp-tabla"></div>`;
-        pintarTabla(cont);
-        $('#emp-sat', cont).addEventListener('change', (e) => { estadoS.sat = e.target.value; estadoS.sel.clear(); pintarTabla(cont); });
+        pintarFilas(cont);
+        const cambiar = (id, k) => { const el = $(id, cont); if (el) el.addEventListener('change', (e) => { H[k] = e.target.value; if (k === 'sat') { H.din = ''; H.sel.clear(); pintarHoja(cont); } else pintarFilas(cont); }); };
+        cambiar('#h-sat', 'sat'); cambiar('#h-din', 'din'); cambiar('#h-filtro', 'filtro');
+        $('#h-buscar', cont).addEventListener('input', (e) => { H.texto = e.target.value; pintarFilas(cont); });
+        $('[data-excel]', cont).addEventListener('click', descargarExcel);
         const sinc = $('[data-sincronizar]', cont);
         if (sinc) sinc.addEventListener('click', async () => {
             sinc.disabled = true; sinc.textContent = 'Enviando…';
             try {
                 const r = await C.llamar('sincronizar-drive', {}, true);
                 C.aviso(r.pendientes ? `Se enviaron ${r.enviados}. Quedan ${r.pendientes}: vuelve a tocar el botón.` : `Listo: se enviaron ${r.enviados} documentos a Google Drive.`);
-                estadoS.datos = await C.llamar('emprendimientos', {}, true);
-                pintarSecretaria(cont);
+                recargarHoja(cont);
             } catch (e) { C.aviso(e.message); sinc.disabled = false; sinc.textContent = 'Enviar a Drive'; }
         });
-        $('#emp-filtro', cont).addEventListener('change', (e) => { estadoS.filtro = e.target.value; pintarTabla(cont); });
-        $('#emp-buscar', cont).addEventListener('input', (e) => { estadoS.texto = e.target.value; pintarTabla(cont); });
     }
-    function pintarTabla(cont) {
+    function pintarFilas(cont) {
+        const sec = H.rol === 'secretaria';
         const lista = filtrados();
         const caja = $('#emp-tabla', cont);
-        if (!lista.length) { caja.innerHTML = '<p class="tarjeta vacio">No hay emprendimientos con ese filtro.</p>'; pintarLote(cont); return; }
-        const todos = lista.every((x) => estadoS.sel.has(x.cedula));
-        caja.innerHTML = `<div class="tabla-caja"><table class="emp-tabla">
-            <thead><tr>
-                <th scope="col" class="emp-check"><input type="checkbox" id="emp-todos" aria-label="Seleccionar todos" ${todos ? 'checked' : ''}></th>
-                <th scope="col">Emprendimiento</th><th scope="col">Satélite</th><th scope="col">Dinamizadora</th><th scope="col">Seguimiento</th><th scope="col"><span class="sr-only">Acciones</span></th>
-            </tr></thead>
+        if (!lista.length) { caja.innerHTML = `<p class="tarjeta vacio">${filas().length ? 'No hay emprendimientos con ese filtro.' : sec ? 'Todavía no hay emprendimientos inscritos.' : 'Todavía no tienes emprendimientos asignados. Cuando la Secretaría Técnica te los asigne, aparecerán aquí.'}</p>`; if (sec) pintarLote(cont); return; }
+        const todos = lista.every((x) => H.sel.has(x.cedula));
+        caja.innerHTML = `<div class="hoja-caja"><table class="hoja-calculo">
+            <thead><tr>${sec ? '<th><input type="checkbox" id="emp-todos" aria-label="Seleccionar todos" ' + (todos ? 'checked' : '') + '></th>' : ''}
+                <th class="col-fija" scope="col">Emprendimiento</th><th scope="col">Satélite</th><th scope="col">Dinamizadora</th><th scope="col">Semana</th>
+                ${COLUMNAS.map(([r, n, t]) => `<th scope="col" title="${r === 'hacer' ? 'Ruta HACER · semana ' : 'Ruta SER · taller '}${n}">${t}</th>`).join('')}
+                <th scope="col">Aprobadas</th><th scope="col">Cuestionario</th></tr>
+            </thead>
             <tbody>${lista.map((x) => `<tr>
-                <td class="emp-check"><input type="checkbox" data-sel="${esc(x.cedula)}" aria-label="Seleccionar ${esc(x.nombre)}" ${estadoS.sel.has(x.cedula) ? 'checked' : ''}></td>
-                <td><b>${esc(x.nombre)}</b><small>${esc(x.negocio || 'Sin nombre de negocio')} · CC ${esc(x.cedula)}</small></td>
-                <td>${esc(nombreSat(x.satelite))}<small>${esc(x.municipio || '')}</small></td>
-                <td><label class="sr-only" for="din-${esc(x.cedula)}">Dinamizadora de ${esc(x.nombre)}</label>
-                    <select id="din-${esc(x.cedula)}" class="campo campo-mini" data-asignar="${esc(x.cedula)}">${opcionesDin(x.satelite, x.dinamizadora)}</select>
-                    ${dinDe(x.satelite).length ? '' : '<small class="emp-alerta">Este satélite aún no tiene dinamizadoras en el directorio</small>'}</td>
-                <td>${barraAvance(x.avance)}</td>
-                <td><button type="button" class="boton-texto" data-ver="${esc(x.cedula)}">${x.avance.por_revisar ? 'Revisar actividades' : 'Ver seguimiento'}</button></td>
-            </tr>`).join('')}</tbody></table></div>`;
-        $('#emp-todos', caja).addEventListener('change', (e) => { lista.forEach((x) => (e.target.checked ? estadoS.sel.add(x.cedula) : estadoS.sel.delete(x.cedula))); pintarTabla(cont); });
+                ${sec ? `<td><input type="checkbox" data-sel="${esc(x.cedula)}" aria-label="Seleccionar ${esc(x.nombre)}" ${H.sel.has(x.cedula) ? 'checked' : ''}></td>` : ''}
+                <td class="col-fija"><button type="button" class="boton-texto" data-ver="${esc(x.cedula)}"><b>${esc(x.nombre)}</b></button><small>${esc(x.negocio || 'Sin nombre de negocio')} · CC ${esc(x.cedula)}</small></td>
+                <td class="izq">${esc(nombreSat(x.satelite))}<small style="display:block">${esc(x.municipio || '')}</small></td>
+                <td class="izq">${sec ? `<label class="sr-only" for="din-${esc(x.cedula)}">Dinamizadora de ${esc(x.nombre)}</label><select id="din-${esc(x.cedula)}" class="campo campo-mini" data-asignar="${esc(x.cedula)}">${opcionesDin(x.satelite, x.dinamizadora)}</select>` : esc(x.dinamizadora_nombre || '')}</td>
+                <td>${esc(x.semana_actual || 1)}</td>
+                ${COLUMNAS.map(([r, n, t]) => { const c = x.celdas[`${r}_${n}`]; const [s, cl, txt] = ESTADO_CELDA[estadoCelda(c)]; return `<td><button type="button" class="celda ${cl}" data-ver="${esc(x.cedula)}" data-foco="${r}-${n}" title="${esc(`${t} · ${txt}${c && c.f ? ` · ${c.f}` : ''}${c && c.c ? ` · ${c.c} comentario(s)` : ''}`)}" aria-label="${esc(`${x.nombre}, ${r === 'hacer' ? 'semana' : 'taller'} ${n}: ${txt}`)}">${s}</button></td>`; }).join('')}
+                <td><b>${x.avance.aprobadas || 0}</b>/${x.avance.total}</td>
+                <td class="apr-mini">${x.aprendizaje.respondidas.length}/${x.aprendizaje.habilitadas.length || 0} respondidos${x.aprendizaje.habilitadas.some((s) => !x.aprendizaje.respondidas.includes(s)) ? ' · <span class="emp-alerta">pendiente</span>' : ''}</td>
+            </tr>`).join('')}</tbody></table></div>
+            <div class="hoja-pie"><span>${lista.length} de ${filas().length} emprendimientos</span><span class="texto-suave">Desliza la tabla hacia los lados para ver todas las actividades.</span></div>`;
+        const todosChk = $('#emp-todos', caja);
+        if (todosChk) todosChk.addEventListener('change', (e) => { lista.forEach((x) => (e.target.checked ? H.sel.add(x.cedula) : H.sel.delete(x.cedula))); pintarFilas(cont); });
         caja.onchange = async (e) => {
             const s = e.target.closest('[data-sel]');
-            if (s) { s.checked ? estadoS.sel.add(s.dataset.sel) : estadoS.sel.delete(s.dataset.sel); pintarLote(cont); return; }
+            if (s) { s.checked ? H.sel.add(s.dataset.sel) : H.sel.delete(s.dataset.sel); pintarLote(cont); return; }
             const a = e.target.closest('[data-asignar]');
             if (a) await asignar(cont, [a.dataset.asignar], a.value);
         };
-        caja.onclick = (e) => { const b = e.target.closest('[data-ver]'); if (b) abrirSeguimiento(cont, b.dataset.ver, () => secretaria(cont, C)); };
-        pintarLote(cont);
+        caja.onclick = (e) => { const b = e.target.closest('[data-ver]'); if (b) abrirSeguimiento(cont, b.dataset.ver, () => recargarHoja(cont), b.dataset.foco); };
+        if (sec) pintarLote(cont);
     }
     function pintarLote(cont) {
         const lote = $('#emp-lote', cont);
-        const elegidos = estadoS.datos.emprendimientos.filter((x) => estadoS.sel.has(x.cedula));
+        if (!lote) return;
+        const elegidos = filas().filter((x) => H.sel.has(x.cedula));
         if (!elegidos.length) { lote.hidden = true; return; }
         const sats = [...new Set(elegidos.map((x) => x.satelite))];
         lote.hidden = false;
@@ -131,47 +186,54 @@
             asignar(cont, elegidos.map((x) => x.cedula), v === 'quitar' ? null : v);
         });
     }
-    async function asignar(cont, cedulas, dinamizadora) {
+    async function asignar(cont, cedulas, din) {
         try {
-            const r = await C.llamar('asignar', { cedulas, dinamizadora: dinamizadora || null }, true);
+            const r = await C.llamar('asignar', { cedulas, dinamizadora: din || null }, true);
             C.aviso(r.dinamizadora ? `Listo: ${r.asignados} emprendimiento${r.asignados > 1 ? 's' : ''} asignado${r.asignados > 1 ? 's' : ''} a ${r.dinamizadora}.` : 'Listo: se quitó la asignación.');
-            estadoS.datos = await C.llamar('emprendimientos', {}, true);
-            estadoS.sel.clear();
-            pintarTabla(cont);
-            const kpis = cont.querySelector('.emp-kpis');
-            if (kpis) { const sin = estadoS.datos.emprendimientos.filter((x) => !x.dinamizadora).length; kpis.innerHTML = `<span><b>${estadoS.datos.emprendimientos.length}</b> emprendimientos</span><span class="${sin ? 'emp-alerta' : ''}"><b>${sin}</b> sin asignar</span>`; }
-        } catch (e) { C.aviso(e.message); pintarTabla(cont); }
+            H.datos = await C.llamar('emprendimientos', {}, true);
+            H.sel.clear();
+            pintarHoja(cont);
+        } catch (e) { C.aviso(e.message); pintarFilas(cont); }
     }
-
-    // ================================================================ Dinamizadora: sus emprendimientos
-    async function dinamizadora(cont, ctx) {
-        C = ctx;
-        cont.onclick = null; cont.onchange = null;
-        if (C.DEMO) return enDemo(cont);
-        cont.innerHTML = '<p class="vista-intro" role="status">Cargando tus emprendimientos…</p>';
-        let r;
-        try { r = await C.llamar('mis-emprendimientos', {}, true); } catch (e) { cont.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; return; }
-        const lista = r.emprendimientos;
-        cont.innerHTML = `
-            <div class="emp-cabeza"><div><h3>Mis emprendimientos</h3>
-            <p class="vista-intro">Estos son los emprendimientos que la Secretaría Técnica te asignó. Después de cada sesión, marca si se ejecutó, sube el acta y la herramienta diligenciada y toca «Enviar a la Secretaría Técnica» para que la apruebe.</p></div>
-            <div class="emp-kpis"><span><b>${lista.length}</b> asignados</span></div></div>
-            ${lista.length ? `<ul class="emp-tarjetas lista-limpia">${lista.map((x) => `<li class="emp-tarjeta">
-                <div><b>${esc(x.nombre)}</b><small>${esc(x.negocio || 'Sin nombre de negocio')} · ${esc(x.municipio || '')}</small></div>
-                ${barraAvance(x.avance)}
-                <button type="button" class="btn btn-primario btn-pequeno" data-ver="${esc(x.cedula)}">Hacer seguimiento</button>
-            </li>`).join('')}</ul>` : '<p class="tarjeta vacio">Todavía no tienes emprendimientos asignados. Cuando la Secretaría Técnica te los asigne, aparecerán aquí.</p>'}`;
-        cont.onclick = (e) => { const b = e.target.closest('[data-ver]'); if (b) abrirSeguimiento(cont, b.dataset.ver, () => dinamizadora(cont, C)); };
+    // Descarga lo que se ve (con los filtros) en un archivo que abre Excel (CSV separado por punto y coma)
+    function descargarExcel() {
+        const celda = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+        const cab = ['Emprendimiento', 'Cédula', 'Negocio', 'Municipio', 'Satélite', 'Dinamizadora', 'Semana actual', ...COLUMNAS.map(([r, n]) => (r === 'hacer' ? `HACER semana ${n}` : `SER taller ${n}`)), 'Aprobadas', 'Cuestionarios respondidos', 'Cuestionarios habilitados'];
+        const filasCsv = filtrados().map((x) => [x.nombre, x.cedula, x.negocio, x.municipio, nombreSat(x.satelite), x.dinamizadora_nombre, x.semana_actual || 1,
+            ...COLUMNAS.map(([r, n]) => ESTADO_CELDA[estadoCelda(x.celdas[`${r}_${n}`])][2]), x.avance.aprobadas || 0, x.aprendizaje.respondidas.length, x.aprendizaje.habilitadas.length]);
+        const csv = '﻿' + [cab, ...filasCsv].map((f) => f.map(celda).join(';')).join('\r\n');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        a.download = `CIC_seguimiento_${new Date().toLocaleDateString('en-CA')}.csv`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 30000);
     }
 
     // ================================================================ Seguimiento de un emprendimiento
-    async function abrirSeguimiento(cont, cedula, volver) {
+    async function abrirSeguimiento(cont, cedula, volver, foco) {
         cont.onclick = null; cont.onchange = null;
         cont.innerHTML = '<p class="vista-intro" role="status">Cargando el seguimiento…</p>';
         let s;
         try { s = await C.llamar('seguimiento', { cedula }, true); } catch (e) { C.aviso(e.message); volver(); return; }
         pintarSeguimiento(cont, s, volver);
-        cont.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Si se tocó una casilla de la tabla, se va directo a esa actividad
+        const destino = foco && cont.querySelector(`[data-act="${foco}"]`);
+        (destino || cont).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (destino) { destino.classList.add('resaltada'); setTimeout(() => destino.classList.remove('resaltada'), 2500); }
+    }
+    // Cuestionario de aprendizaje semanal: la Secretaría o la dinamizadora habilitan cada semana y ven las respuestas
+    function bloqueAprendizaje(s) {
+        const preguntas = s.preguntas_aprendizaje || [];
+        const semanas = s.aprendizaje || [];
+        return `<section class="emp-grupo" id="aprendizaje"><h4>Cuestionario de aprendizaje semanal</h4>
+            <p class="texto-suave">Al terminar cada semana, habilítale el cuestionario a la emprendedora: lo verá en «Mi semana» y sus respuestas aparecen aquí.</p>
+            <ul class="lista-limpia aprendizaje-semanas">${semanas.map((w) => `<li class="aprendizaje-semana" data-semana="${w.semana}">
+                <b>Semana ${w.semana}</b>
+                ${w.respondida_en ? `<span class="chip emp-ok">✓ Respondido · ${esc(fechaCorta(w.respondida_en))}</span>`
+                    : w.habilitada ? `<span><span class="chip emp-pend">Habilitado · esperando respuesta</span> <button type="button" class="boton-texto" data-apr="quitar">Deshabilitar</button></span>`
+                    : '<button type="button" class="btn btn-borde btn-pequeno" data-apr="habilitar">Habilitar cuestionario</button>'}
+                ${w.respuestas ? `<dl class="aprendizaje-respuestas">${preguntas.map((q) => `<dt>${esc(q.texto)}</dt><dd>${w.respuestas[q.id] == null || w.respuestas[q.id] === '' ? '—' : q.tipo === 'escala' ? `${esc(w.respuestas[q.id])} de 5` : esc(w.respuestas[q.id])}</dd>`).join('')}</dl>` : ''}
+            </li>`).join('')}</ul></section>`;
     }
     function estadoChip(a) {
         if (a.ejecutada === true) { const completos = a.requeridos.every((d) => a.documentos[d.tipo]); return completos ? '<span class="chip emp-ok">Ejecutada · documentos completos</span>' : '<span class="chip emp-pend">Ejecutada · faltan documentos</span>'; }
@@ -248,18 +310,27 @@
         const wa = whatsapp(e.celular);
         const grupo = (ruta, titulo) => `<section class="emp-grupo"><h4>${titulo}</h4><ol class="emp-actividades lista-limpia">${s.actividades.filter((a) => a.ruta === ruta).map(tarjetaActividad).join('')}</ol></section>`;
         cont.innerHTML = `
-            <button type="button" class="boton-texto emp-volver" data-volver>← Volver a la lista</button>
+            <button type="button" class="boton-texto emp-volver" data-volver>← Volver a la tabla</button>
             <div class="emp-ficha">
                 <div><h3>${esc(e.nombre)}</h3><p class="texto-suave">${esc(e.negocio || 'Sin nombre de negocio')} · ${esc(e.municipio || '')} · ${esc(nombreSat(e.satelite))}${e.dinamizadora_nombre ? ` · Dinamizadora: ${esc(e.dinamizadora_nombre)}` : ''}</p></div>
                 <div class="emp-ficha-lado">${barraAvance(s.avance)}${wa ? `<a class="enlace" href="${wa}" target="_blank" rel="noopener">Escribir por WhatsApp</a>` : ''}</div>
             </div>
             ${grupo('hacer', 'Ruta HACER · sesiones semanales en el negocio')}
-            ${grupo('ser', 'Ruta SER · talleres en grupo')}`;
+            ${grupo('ser', 'Ruta SER · talleres en grupo')}
+            ${bloqueAprendizaje(s)}`;
         const actividad = (el) => { const [ruta, n] = el.closest('[data-act]').dataset.act.split('-'); return { cedula: e.cedula, ruta, n: Number(n) }; };
         const actualizar = (nuevo) => { const y = scrollY; pintarSeguimiento(cont, nuevo, volver); scrollTo(0, y); };
         cont.onclick = async (ev) => {
             const t = ev.target;
             if (t.closest('[data-volver]')) { volver(); return; }
+            const ap = t.closest('[data-apr]');
+            if (ap) {
+                const semana = Number(ap.closest('[data-semana]').dataset.semana);
+                ap.disabled = true;
+                try { actualizar(await C.llamar('habilitar-aprendizaje', { cedula: e.cedula, semana, habilitada: ap.dataset.apr === 'habilitar' }, true)); C.aviso(ap.dataset.apr === 'habilitar' ? `Cuestionario de la semana ${semana} habilitado: ya lo ve en «Mi semana».` : 'Cuestionario deshabilitado.'); }
+                catch (err) { C.aviso(err.message); ap.disabled = false; }
+                return;
+            }
             const m = t.closest('[data-marcar]');
             if (m) {
                 const a = actividad(m);

@@ -463,6 +463,26 @@ function cuentasFalsas() {
   const av = await ok('mi-avance', {}, tRosa);
   assert.equal(av.actividades[0].estado, 'aprobada'); assert.equal(av.aprobadas, 1);
   await falla('mi-avance', {}, tDina, 403);
+  // Tabla de seguimiento: cada actividad viene como celda
+  const filaTabla = (await ok('emprendimientos', {}, tSara)).emprendimientos.find((x) => x.cedula === '44444444');
+  assert.deepEqual(filaTabla.celdas.hacer_1, { e: true, d: true, r: 'aprobada', f: '2026-10-08', c: 4 });
+  // Cuestionario de aprendizaje semanal
+  await falla('responder-aprendizaje', { semana: 1, respuestas: {} }, tRosa, 403); // aún no habilitado
+  await falla('habilitar-aprendizaje', { cedula: '44444444', semana: 7 }, tDina, 400);
+  sg = await ok('habilitar-aprendizaje', { cedula: '44444444', semana: 1 }, tDina);
+  assert.equal(sg.aprendizaje[0].habilitada, true);
+  let apr = await ok('mi-aprendizaje', {}, tRosa);
+  assert.equal(apr.semanas[0].habilitada, true); assert.equal(apr.semanas[1].habilitada, false);
+  await falla('responder-aprendizaje', { semana: 1, respuestas: { aprendi: 'Registrar mis ventas' } }, tRosa, 400);
+  const resp = { aprendi: 'A registrar mis ventas cada día', aplicare: 'Un cuaderno de ventas', utilidad: 5, confianza: 4 };
+  apr = await ok('responder-aprendizaje', { semana: 1, respuestas: resp }, tRosa);
+  assert.equal(apr.semanas[0].respuestas.utilidad, 5);
+  await falla('responder-aprendizaje', { semana: 1, respuestas: resp }, tRosa, 409);
+  await falla('habilitar-aprendizaje', { cedula: '44444444', semana: 1, habilitada: false }, tDina, 409);
+  sg = await ok('seguimiento', { cedula: '44444444' }, tSara);
+  assert.equal(sg.aprendizaje[0].respuestas.aprendi, 'A registrar mis ventas cada día');
+  assert.deepEqual((await ok('emprendimientos', {}, tSara)).emprendimientos.find((x) => x.cedula === '44444444').aprendizaje, { habilitadas: [1], respondidas: [1] });
+  await falla('mi-aprendizaje', {}, tDina, 403);
   paso('Seguimiento: la dinamizadora envía a la Secretaría; la Secretaría aprueba o devuelve con comentarios; la emprendedora ve si se aprobó');
   await ok('asignar', { cedulas: ['44444444'], dinamizadora: null }, tSara);
   await falla('seguimiento', { cedula: '44444444' }, tDina, 403); // ya no la tiene asignada

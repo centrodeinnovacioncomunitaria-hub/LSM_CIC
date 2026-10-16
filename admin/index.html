@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/cic.css?v=20261029">
+    <link rel="stylesheet" href="../assets/cic.css?v=20261030">
     <style>
         .admin-cab { background: var(--bosque); color: #fff; padding: 1.2rem 0; }
         .admin-cab .contenedor { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -80,9 +80,9 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="../config.js?v=20261029"></script>
-    <script src="../assets/soporte.js?v=20261029"></script>
-    <script src="../assets/datos-cic.js?v=20261029"></script>
+    <script src="../config.js?v=20261030"></script>
+    <script src="../assets/soporte.js?v=20261030"></script>
+    <script src="../assets/datos-cic.js?v=20261030"></script>
     <script>
     (() => {
         'use strict';
@@ -243,15 +243,17 @@
                     <p class="mensaje" id="equipo-msj" role="alert" style="grid-column:1/-1;margin:0"></p>
                     <div class="botones" style="grid-column:1/-1;margin-top:0"><button class="btn btn-primario" type="submit">${editar ? 'Guardar cambios' : 'Registrar'}</button>${editar ? '<button class="btn btn-borde" type="button" id="equipo-cancelar">Cancelar</button>' : ''}</div>
                 </form>
-                <p style="margin-top:1.2rem"><label><span class="etiqueta">Buscar</span> <input class="campo" id="equipo-buscar" placeholder="Nombre, cédula o cargo" value="${esc(filtroEquipo)}" style="max-width:320px"></label> <small>${equipoDatos.personas.length} personas en el equipo</small></p>
+                <p style="margin-top:1.2rem"><label><span class="etiqueta">Buscar</span> <input class="campo" id="equipo-buscar" placeholder="Nombre, cédula, cargo o satélite" value="${esc(filtroEquipo)}" style="max-width:320px"></label> <small>${equipoDatos.personas.length} personas en el equipo</small></p>
                 <div class="tabla-caja"><table><thead><tr><th scope="col">Persona</th><th scope="col">Perfil</th><th scope="col">Satélite</th><th scope="col">Cuenta</th><th scope="col"></th></tr></thead>
                 <tbody id="equipo-filas"></tbody></table></div>`;
+            // Satélite (no el departamento): el Cesar tiene dos, Valledupar y Pueblo Bello
+            const nombreSatelite = (id) => { const s = equipoDatos.satelites.find((x) => x.id === id); return s ? s.municipios.join(' y ') + ' (' + s.departamento + ')' : (id ? id : 'Sin satélite'); };
             const pintarFilas = () => {
                 const q = filtroEquipo.toLowerCase();
-                const filas = equipoDatos.personas.filter((p) => !q || (p.nombre + ' ' + p.cedula + ' ' + (p.cargo || '')).toLowerCase().includes(q));
+                const filas = equipoDatos.personas.filter((p) => !q || (p.nombre + ' ' + p.cedula + ' ' + (p.cargo || '') + ' ' + nombreSatelite(p.satelite)).toLowerCase().includes(q));
                 $('#equipo-filas').innerHTML = filas.map((p) => `<tr><td><b>${esc(p.nombre)}</b><small>CC ${esc(p.cedula)} · ${esc(p.correo || 'sin correo')}</small></td>
                     <td>${esc(NOMBRE_ROL[p.rol] || p.rol)}${p.otros_roles ? ' + ' + Object.keys(p.otros_roles).map((k) => esc(NOMBRE_ROL[k] || k)).join(', ') : ''}<small>${esc(p.subtitulo || p.cargo || '')}</small></td>
-                    <td>${esc(p.departamento || '—')}</td>
+                    <td>${esc(nombreSatelite(p.satelite))}${p.otros_roles && p.otros_roles.dinamizadora && p.otros_roles.dinamizadora.satelite ? '<small>2.º perfil: ' + esc(nombreSatelite(p.otros_roles.dinamizadora.satelite)) + '</small>' : ''}</td>
                     <td><span class="chip ${p.activada ? 'sop-resuelto' : 'sop-cerrado'}">${p.activada ? 'Activada' : 'Sin activar'}</span></td>
                     <td><button type="button" class="boton-texto" data-editar-persona="${esc(p.cedula)}">Editar</button></td></tr>`).join('') || '<tr><td colspan="5">No hay coincidencias.</td></tr>';
                 $('[data-editar-persona]').forEach((b) => b.addEventListener('click', () => { pintarEquipo(equipoDatos.personas.find((p) => p.cedula === b.dataset.editarPersona)); window.scrollTo({ top: 0, behavior: 'smooth' }); }));

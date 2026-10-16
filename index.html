@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261029">
+    <link rel="stylesheet" href="assets/cic.css?v=20261030">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -115,6 +115,7 @@
             </nav>
             <div class="acciones">
                 <button type="button" id="btn-ingresar" class="btn btn-primario btn-pequeno" data-abrir="ingresar">Ingresar <span aria-hidden="true">›</span></button>
+                <button type="button" id="btn-mi-panel" class="btn btn-primario btn-pequeno" hidden>Mi panel <span aria-hidden="true">›</span></button>
                 <button type="button" id="menu-btn" class="menu-btn" aria-controls="nav-publica" aria-expanded="false" aria-label="Abrir menú">
                     <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 </button>
@@ -574,17 +575,19 @@
                 </div>
             </div>
         </section>
-        <div class="contenedor">
-            <div class="pestanas" role="tablist" id="pestanas-plataforma" aria-label="Secciones de la plataforma">
-                <button type="button" class="pestana" role="tab" id="tab-cursos" aria-controls="vista-cursos" data-vista="cursos">Mis talleres</button>
-                <button type="button" class="pestana" role="tab" id="tab-seguimiento" aria-controls="vista-seguimiento" data-vista="seguimiento">Seguimiento</button>
-                <button type="button" class="pestana" role="tab" id="tab-soporte" aria-controls="vista-soporte" data-vista="soporte">Soporte</button>
-                <button type="button" class="pestana" role="tab" id="tab-cuenta" aria-controls="vista-cuenta" data-vista="cuenta">Mi cuenta</button>
+        <div class="contenedor plataforma-cuerpo">
+            <div class="pestanas" role="tablist" id="pestanas-plataforma" aria-label="Secciones de la plataforma" aria-orientation="vertical">
+                <button type="button" class="pestana" role="tab" id="tab-cursos" aria-controls="vista-cursos" data-vista="cursos"><span class="pestana-icono" aria-hidden="true">📚</span><span class="pestana-texto">Mis talleres</span></button>
+                <button type="button" class="pestana" role="tab" id="tab-seguimiento" aria-controls="vista-seguimiento" data-vista="seguimiento"><span class="pestana-icono" aria-hidden="true">📊</span><span class="pestana-texto">Seguimiento</span></button>
+                <button type="button" class="pestana" role="tab" id="tab-soporte" aria-controls="vista-soporte" data-vista="soporte"><span class="pestana-icono" aria-hidden="true">🛟</span><span class="pestana-texto">Soporte</span></button>
+                <button type="button" class="pestana" role="tab" id="tab-cuenta" aria-controls="vista-cuenta" data-vista="cuenta"><span class="pestana-icono" aria-hidden="true">👤</span><span class="pestana-texto">Mi cuenta</span></button>
             </div>
+            <div class="plataforma-vistas">
             <section id="vista-cursos" class="vista" role="tabpanel" aria-labelledby="tab-cursos"></section>
             <section id="vista-seguimiento" class="vista" role="tabpanel" aria-labelledby="tab-seguimiento" hidden></section>
             <section id="vista-soporte" class="vista" role="tabpanel" aria-labelledby="tab-soporte" hidden></section>
             <section id="vista-cuenta" class="vista" role="tabpanel" aria-labelledby="tab-cuenta" hidden></section>
+            </div>
         </div>
     </main>
 
@@ -737,13 +740,13 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261029"></script>
-    <script src="assets/datos-cic.js?v=20261029"></script>
-    <script src="assets/sitio.js?v=20261029"></script>
-    <script src="assets/cursos-equipo.js?v=20261029"></script>
-    <script src="assets/soporte.js?v=20261029"></script>
-    <script src="assets/soporte-flotante.js?v=20261029"></script>
-    <script src="assets/emprendimientos.js?v=20261029"></script>
+    <script src="./config.js?v=20261030"></script>
+    <script src="assets/datos-cic.js?v=20261030"></script>
+    <script src="assets/sitio.js?v=20261030"></script>
+    <script src="assets/cursos-equipo.js?v=20261030"></script>
+    <script src="assets/soporte.js?v=20261030"></script>
+    <script src="assets/soporte-flotante.js?v=20261030"></script>
+    <script src="assets/emprendimientos.js?v=20261030"></script>
     <script>
     (() => {
         'use strict';
@@ -948,6 +951,7 @@
             mensaje('');
         }
         function abrir(m, rol) {
+            if (perfil) { volverAlPanel(); return; } // ya tiene la sesión abierta: va a su panel
             const valor = m === 'registro' ? 'emprendedora' : (rol || '');
             $$('input[name="perfil"]').forEach((r) => { r.checked = r.value === valor; });
             actualizarPerfil();
@@ -1118,7 +1122,7 @@
             nav.hidden = true; menu.hidden = true;
             $('#btn-ingresar').hidden = true;
             $('#usuaria').classList.add('activa');
-            $('#logo').setAttribute('href', '#plataforma');
+            $('#btn-mi-panel').hidden = true;
             $('#usuaria-nombre').textContent = perfil.nombre;
             $('#usuaria-rol').textContent = perfil.subtitulo || ROL[perfil.rol].nombre;
             $('#usuaria-inicial').textContent = primerNombre(perfil.nombre).charAt(0).toUpperCase();
@@ -1130,7 +1134,7 @@
                 ? (perfil.rol === 'secretaria' ? 'Tus cursos, el seguimiento de los 8 satélites y la revisión de evidencias del equipo.' : 'Tus cursos para acompañar las rutas HACER y SER, y las emprendedoras de tu satélite.')
                 : `Tu próximo taller es el SER ${proximoTaller().n}: «${proximoTaller().titulo}».`;
             $('#aviso-clave').hidden = !perfil.debe_cambiar_clave;
-            $('#tab-cursos').textContent = esEquipo() ? 'Mis cursos' : 'Mis talleres';
+            $('#tab-cursos .pestana-texto').textContent = esEquipo() ? 'Mis cursos' : 'Mis talleres';
             $('#tab-seguimiento').hidden = !esEquipo();
             $('#continuar').hidden = true;
             if (esEquipo()) pintarCursos(); else pintarSemana();
@@ -1151,9 +1155,33 @@
             nav.hidden = false; menu.hidden = false;
             $('#btn-ingresar').hidden = false;
             $('#usuaria').classList.remove('activa');
-            $('#logo').setAttribute('href', '#inicio');
+            $('#btn-mi-panel').hidden = true;
             window.scrollTo(0, 0);
         }
+        // Con la sesión abierta, el logo lleva a la página de inicio del CIC sin cerrar la sesión;
+        // «Mi panel» (arriba a la derecha) devuelve a la plataforma donde estaba.
+        function verPortal() {
+            $('#plataforma').hidden = true;
+            $('#publico').hidden = false;
+            nav.hidden = false; menu.hidden = false;
+            $('#btn-mi-panel').hidden = false;
+            window.scrollTo(0, 0);
+        }
+        function volverAlPanel() {
+            $('#publico').hidden = true;
+            $('#plataforma').hidden = false;
+            nav.hidden = true; menu.hidden = true;
+            $('#btn-mi-panel').hidden = true;
+            nav.classList.remove('abierta'); menu.setAttribute('aria-expanded', 'false');
+            window.scrollTo(0, 0);
+        }
+        $('#logo').addEventListener('click', (e) => {
+            if (!perfil) return;
+            e.preventDefault();
+            if (!$('#plataforma').hidden) verPortal();
+            else window.scrollTo(0, 0);
+        });
+        $('#btn-mi-panel').addEventListener('click', volverAlPanel);
         $('#btn-salir').addEventListener('click', async () => {
             guardar(localStorage, CLAVE_SESION, null);
             if (auth) await auth.signOut().catch(() => {});
@@ -1173,13 +1201,18 @@
                 t.tabIndex = activa ? 0 : -1;
             });
             if (enfocar) $(`#tab-${vista}`).focus();
+            // En celulares la barra queda arriba: al cambiar de sección se vuelve al comienzo de la sección
+            const cuerpo = $('.plataforma-cuerpo');
+            if (enfocar && cuerpo && cuerpo.getBoundingClientRect().top < 0) window.scrollTo({ top: cuerpo.getBoundingClientRect().top + window.scrollY - 80 });
         }
         $$('[data-vista]').forEach((b) => b.addEventListener('click', () => ir(b.dataset.vista)));
         $('#pestanas-plataforma').addEventListener('keydown', (e) => {
-            if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+            const adelante = e.key === 'ArrowRight' || e.key === 'ArrowDown';
+            if (!adelante && e.key !== 'ArrowLeft' && e.key !== 'ArrowUp') return;
+            e.preventDefault();
             const v = visibles();
             const i = v.findIndex((x) => !$(`#vista-${x}`).hidden);
-            ir(v[(i + (e.key === 'ArrowRight' ? 1 : v.length - 1)) % v.length]);
+            ir(v[(i + (adelante ? 1 : v.length - 1)) % v.length]);
         });
         document.addEventListener('click', (e) => {
             const b = e.target.closest('[data-ir]');
@@ -1284,6 +1317,7 @@
                         </div>
                     </aside>
                 </div>
+                <div id="mi-aprendizaje"></div>
                 <h3 class="vista-subtitulo">Tu avance</h3>
                 <p class="vista-intro">Cada sesión y taller que haces con tu dinamizadora lo revisa la Secretaría Técnica. Aquí ves cuáles ya fueron aprobados.</p>
                 <div id="mi-avance"><p class="vista-intro" role="status">Cargando…</p></div>
@@ -1310,6 +1344,7 @@
                 ${wa ? `<a class="btn btn-primario" href="${wa}" target="_blank" rel="noopener">Escribirle por WhatsApp</a>` : DEMO ? '<p class="texto-suave" style="font-size:.95rem">En la plataforma real aquí verás su botón de WhatsApp.</p>' : ''}`
                 : '<h3>Por asignar</h3><p class="texto-suave">Muy pronto verás aquí a tu dinamizadora.</p>'}`;
             pintarMiAvance();
+            pintarMiAprendizaje();
             let grab = [];
             try { grab = (await traerVideos()).filter((x) => x.audiencia === 'emprendedoras' && (!x.satelite || x.satelite === perfil.satelite)); } catch (e) { /* sin grabaciones */ }
             $('#mis-grabaciones').innerHTML = grab.length
@@ -1337,6 +1372,56 @@
                 <div class="barra-avance" role="progressbar" aria-label="Actividades aprobadas" aria-valuemin="0" aria-valuemax="${r.total}" aria-valuenow="${r.aprobadas}"><span style="width:${r.aprobadas / r.total * 100}%"></span></div>
                 <div class="avance-grupos">${grupo('hacer', 'Ruta HACER · sesiones en tu negocio', 'Semana')}${grupo('ser', 'Ruta SER · talleres en grupo', 'Taller')}</div>
             </div>`;
+        }
+
+        // Cuestionario de aprendizaje semanal: aparece cuando la dinamizadora o la Secretaría habilitan la semana
+        const PREGUNTAS_DEMO = [
+            { id: 'aprendi', tipo: 'texto', texto: '¿Qué fue lo más importante que aprendiste esta semana?', obligatoria: true },
+            { id: 'aplicare', tipo: 'texto', texto: '¿Qué vas a aplicar en tu negocio a partir de esta semana?', obligatoria: true },
+            { id: 'dificultad', tipo: 'texto', texto: '¿Qué se te dificultó o qué te gustaría reforzar?', obligatoria: false },
+            { id: 'utilidad', tipo: 'escala', texto: '¿Qué tan útil fue esta semana para tu negocio?', obligatoria: true },
+            { id: 'confianza', tipo: 'escala', texto: '¿Qué tan segura te sientes para aplicar lo aprendido?', obligatoria: true },
+        ];
+        async function pintarMiAprendizaje() {
+            const caja = $('#mi-aprendizaje');
+            if (!caja) return;
+            let r;
+            if (DEMO) r = { preguntas: PREGUNTAS_DEMO, semanas: [1, 2, 3, 4, 5, 6].map((n) => ({ semana: n, habilitada: n === 1, respondida_en: null })) };
+            else { try { r = await llamar('mi-aprendizaje', {}, true); } catch (e) { caja.innerHTML = ''; return; } }
+            const pendientes = r.semanas.filter((w) => w.habilitada && !w.respondida_en);
+            const hechas = r.semanas.filter((w) => w.respondida_en);
+            if (!pendientes.length && !hechas.length) { caja.innerHTML = ''; return; }
+            const campo = (q, n) => q.tipo === 'escala'
+                ? `<fieldset class="pregunta-apr"><legend class="etiqueta">${esc(q.texto)}</legend><p class="ayuda-campo">1 = nada · 5 = mucho</p><div class="escala">${[1, 2, 3, 4, 5].map((v) => `<label><input type="radio" name="${q.id}" value="${v}"><span>${v}</span></label>`).join('')}</div></fieldset>`
+                : `<div class="pregunta-apr"><label class="etiqueta" for="apr-${n}-${q.id}">${esc(q.texto)}${q.obligatoria ? '' : ' (opcional)'}</label><textarea class="campo" id="apr-${n}-${q.id}" name="${q.id}" rows="3" maxlength="1500"></textarea></div>`;
+            caja.innerHTML = `<h3 class="vista-subtitulo">Tu cuestionario de aprendizaje</h3>
+                ${pendientes.map((w) => `<form class="tarjeta form-aprendizaje" data-semana="${w.semana}" novalidate>
+                    <p class="eyebrow">Semana ${w.semana} · te lo habilitó tu dinamizadora</p>
+                    <p class="texto-suave">Cuéntanos qué aprendiste esta semana. Tus respuestas las lee tu dinamizadora para acompañarte mejor.</p>
+                    ${r.preguntas.map((q) => campo(q, w.semana)).join('')}
+                    <p class="mensaje error" role="alert" hidden></p>
+                    <button type="submit" class="btn btn-primario" style="margin-top:1rem">Enviar mis respuestas</button>
+                </form>`).join('')}
+                ${hechas.length ? `<p class="texto-suave" style="margin-top:.6rem">✓ Ya respondiste: ${hechas.map((w) => `semana ${w.semana}`).join(', ')}. ¡Gracias!</p>` : ''}`;
+            caja.querySelectorAll('.form-aprendizaje').forEach((f) => f.addEventListener('submit', async (ev) => {
+                ev.preventDefault();
+                const m = f.querySelector('.mensaje');
+                const respuestas = {};
+                for (const q of r.preguntas) {
+                    if (q.tipo === 'escala') { const x = f.querySelector(`input[name="${q.id}"]:checked`); respuestas[q.id] = x ? Number(x.value) : null; }
+                    else respuestas[q.id] = f.elements[q.id].value.trim();
+                    const vacia = respuestas[q.id] === null || respuestas[q.id] === '';
+                    if (q.obligatoria && vacia) { m.textContent = `Te falta responder: «${q.texto}»`; m.hidden = false; return; }
+                }
+                const b = f.querySelector('button[type="submit"]');
+                b.disabled = true; b.textContent = 'Enviando…';
+                try {
+                    if (!DEMO) await llamar('responder-aprendizaje', { semana: Number(f.dataset.semana), respuestas }, true);
+                    aviso('¡Gracias! Tus respuestas quedaron guardadas.');
+                    if (DEMO) { f.remove(); return; }
+                    pintarMiAprendizaje();
+                } catch (e) { m.textContent = e.message; m.hidden = false; b.disabled = false; b.textContent = 'Enviar mis respuestas'; }
+            }));
         }
 
         // ---------- Mis cursos (equipo): video, tema y avance por módulo ----------
