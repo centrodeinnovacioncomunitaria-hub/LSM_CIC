@@ -590,6 +590,7 @@ function cuentasFalsas() {
   await falla('admin-guardar-persona', { ...nueva, satelite: '' }, tAdmin, 400);
   await falla('admin-guardar-persona', { ...nueva, cedula: '44444444' }, tAdmin, 409);
   assert.equal((await ok('admin-guardar-persona', nueva, tAdmin)).nuevo, true);
+  assert.match((await falla('admin-guardar-persona', { ...nueva, cedula: '77777002', nombre: 'Lina  Nueva Dinamizadora (prueba)' }, tAdmin, 409)).mensaje, /ese nombre/, 'no deja registrar dos personas con el mismo nombre');
   const regEq = await ok('admin-equipo', {}, tAdmin);
   const lina = regEq.personas.find((x) => x.cedula === '77777001');
   assert.equal(lina.departamento, 'Sucre'); assert.equal(lina.activada, false);

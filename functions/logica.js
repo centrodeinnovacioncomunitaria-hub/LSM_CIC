@@ -269,6 +269,10 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const existente = await perfilPorCedula(cedula);
     // Nunca se convierte la cuenta de una emprendedora: perdería su ruta y su avance.
     if (existente && existente.rol === 'emprendedora') throw new Falla(409, 'emprendedora', 'Esa cédula ya está inscrita como emprendedora. No se puede pasar al equipo desde aquí para no afectar su avance.');
+    // Dos personas con el mismo nombre se confunden al asignar emprendimientos: se avisa antes de guardar.
+    const llaveNombre = (n) => String(n || '').replace(/\(.*?\)/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const gemela = (await lista(col('directorio'))).find((x) => x._id !== cedula && llaveNombre(x.nombre) === llaveNombre(nombre));
+    if (gemela) throw new Falla(409, 'nombre', `Ya hay otra persona del equipo con ese nombre (CC ${gemela._id}). Si es la misma persona, edítala a ella; si es otra, agrega su segundo apellido para distinguirlas.`);
     const anterior = await datos(col('directorio').doc(cedula));
     const ficha = { nombre, rol, ...principal, correo, celular: celular || null, otros_roles: otros };
     await col('directorio').doc(cedula).set({ ...(anterior || {}), ...ficha, actualizado_en: hoy(), actualizado_por: p.id });
