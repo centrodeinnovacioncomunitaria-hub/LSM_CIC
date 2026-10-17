@@ -1725,3 +1725,4 @@ dialog { overflow-x: hidden; }
     #plataforma .tabla-caja td, #vista-panel .tabla-caja td { border: 0; padding: .25rem 0 !important; }
     #plataforma .tabla-caja td[data-etiqueta]::before, #vista-panel .tabla-caja td[data-etiqueta]::before { content: attr(data-etiqueta); display: block; font-size: .8rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--musgo); }
 }
+.emp-mensaje-din { background: #fff; border-left: 5px solid var(--menta); border-radius: .8rem; padding: .7rem .9rem; display: grid; gap: .2rem; }

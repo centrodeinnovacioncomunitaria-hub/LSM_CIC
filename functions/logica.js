@@ -1180,23 +1180,28 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const nota = texto(b.nota, 1000);
     const comentarios = [...(fila.comentarios || []), ...(nota ? [comentario(p, nota, 'enviada')] : [])];
     await col('seguimiento').doc(id).set({ ...fila, comentarios, revision: { estado: 'enviada', enviada_en: hoy(), enviada_por: p.id } });
-    await avisarEnvioActividad(p, e, a, fila);
+    await avisarEnvioActividad(p, e, a, fila, nota);
     return verSeguimiento(token, b);
   }
   // Correo a la Secretaría: «tal dinamizadora envió documentos para su aprobación». Si falla, el envío igual queda hecho.
-  async function avisarEnvioActividad(p, e, a, fila) {
+  async function avisarEnvioActividad(p, e, a, fila, nota) {
     if (!driveActivo()) return;
     try {
+      // La secretaria que asignó el emprendimiento (aunque en ese momento haya entrado con otro perfil);
+      // si no la hay, la encargada del pilar. Las cuentas de prueba solo avisan a soporte.
       const asignadora = e.asignada_por ? await perfilPorId(e.asignada_por) : null;
-      const s = asignadora && asignadora.rol === 'secretaria' && correoValido(asignadora.correo) ? asignadora : await secretariaEncargada(p.cargo);
-      if (!s) { console.warn(`Envío de ${p.nombre}: no hay secretaria con correo para avisar.`); return; }
+      const esSecretaria = (x) => x && (x.rol === 'secretaria' || (x.otros_roles && x.otros_roles.secretaria));
+      const prueba = /prueba/i.test(`${p.cargo || ''} ${p.nombre || ''}`);
+      const s = esSecretaria(asignadora) && correoValido(asignadora.correo) ? asignadora : prueba ? null : await secretariaEncargada(p.cargo);
+      if (!s) { await drive({ accion: 'correo', asunto: `[CIC] ${p.nombre} envió documentos para aprobar · ${e.nombre}`, texto: `La dinamizadora ${p.nombre} envió documentos de ${e.nombre} (${a.ruta === 'hacer' ? `Semana ${a.n}` : `Taller ${a.n}`}), pero no se encontró una secretaria con correo para avisarle. Revísalo en la plataforma.${nota ? `\n\nMensaje de la dinamizadora: ${nota}` : ''}` }); return; }
       const actividad = `${a.ruta === 'hacer' ? `Semana ${a.n}` : `Taller ${a.n}`} · ${a.titulo}`;
       const cuerpo = [
         `Hola, ${String(s.nombre).split(' ')[0]}:`, '',
         `La dinamizadora ${p.nombre} envió documentos para tu aprobación.`, '',
         `Emprendimiento: ${e.nombre}${e.negocio ? ` (${e.negocio})` : ''}`,
         `Actividad: ${actividad}`,
-        fila.ejecutada ? `Sesión del ${fila.fecha || 'día sin indicar'} · acta y herramienta adjuntas en la plataforma.` : `No se ejecutó. Motivo: ${fila.motivo}`, '',
+        fila.ejecutada ? `Sesión del ${fila.fecha || 'día sin indicar'} · acta y herramienta adjuntas en la plataforma.` : `No se ejecutó. Motivo: ${fila.motivo}`,
+        nota ? `\nMensaje de la dinamizadora: «${nota}»` : '', '',
         `Para revisarla: entra a ${PANEL_SOPORTE.replace(/admin\/$/, '')} con tu cédula, elige «Secretaria», abre «Seguimiento» y toca la casilla de esa actividad.`,
         'Ahí respondes «¿Se aprueban los documentos?» con Sí o No y le dejas tus comentarios.',
       ].join('\n');

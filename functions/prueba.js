@@ -455,6 +455,7 @@ function cuentasFalsas() {
   assert.ok(avisoEnvio, 'al enviar, le llega un correo a la Secretaría');
   assert.equal(avisoEnvio.para, 'sara@correo.co', 'a la secretaria que asignó el emprendimiento');
   assert.match(avisoEnvio.texto, /envió documentos para tu aprobación/);
+  assert.match(avisoEnvio.texto, /Lista para revisar/, 'el mensaje de la dinamizadora va en el correo');
   await falla('quitar-documento', { ...act, tipo: 'acta' }, tDina, 409); // en revisión no se cambia
   assert.equal((await ok('emprendimientos', {}, tSara)).emprendimientos.find((x) => x.cedula === '44444444').avance.por_revisar, 1);
   assert.equal((await ok('mi-avance', {}, tRosa)).actividades[0].estado, 'en_revision');

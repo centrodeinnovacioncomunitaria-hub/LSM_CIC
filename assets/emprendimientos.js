@@ -295,7 +295,7 @@
                 <label class="etiqueta" for="rev-${clave}">Comentarios de la Secretaría <small>(obligatorio si respondes No)</small></label>
                 <textarea id="rev-${clave}" class="campo" rows="3" maxlength="1000" data-comentario-revision placeholder="Escribe aquí qué está bien o qué debe corregir la dinamizadora"></textarea>
             </div>` : ''}
-            <details class="emp-comentarios">
+            <details class="emp-comentarios" ${comentarios.length ? 'open' : ''}>
                 <summary>Historial de comentarios${comentarios.length ? ` (${comentarios.length})` : ''}</summary>
                 ${comentarios.length ? `<ol class="lista-limpia emp-com-lista">${comentarios.map((c) => `<li class="${c.estado ? 'com-' + c.estado : ''}"><p class="emp-com-meta"><b>${esc(c.autor)}</b> · ${esc(c.rol)} · ${esc(fechaCorta(c.en))}${c.estado ? ` · <span class="chip ${(REVISION[c.estado] || ['', ''])[1]}">${c.estado === 'enviada' ? 'Envió a revisión' : c.estado === 'aprobada' ? 'Aprobó' : 'Pidió corregir'}</span>` : ''}</p><p>${esc(c.texto)}</p></li>`).join('')}</ol>` : '<p class="texto-suave">Todavía no hay comentarios.</p>'}
                 <label class="etiqueta" for="com-${clave}">${esSec ? 'Escribe una nota a la dinamizadora' : 'Escribe a la Secretaría Técnica'}</label>
@@ -305,14 +305,15 @@
         </li>`;
     }
     // Secretaría: la pregunta va arriba de la tarjeta, como en la hoja de la sesión
-    const bloqueAprobar = (a, clave) => `<div class="emp-aprobar">
+    const bloqueAprobar = (a, clave) => { const msj = [...(a.comentarios || [])].reverse().find((c) => c.estado === 'enviada'); return `<div class="emp-aprobar">
+        ${msj ? `<div class="emp-mensaje-din"><b>Mensaje de ${esc(msj.autor)}:</b><p>${esc(msj.texto)}</p></div>` : ''}
         <p class="emp-pregunta">¿Se aprueban los documentos?</p>
         <p class="texto-suave">La dinamizadora los envió (${esc(fechaCorta(a.revision.enviada_en))}). Revísalos abajo antes de responder.</p>
         <div class="emp-sino" role="group" aria-label="¿Se aprueban los documentos de ${esc(a.titulo || a.nombre)}?">
             <button type="button" class="emp-si" data-revisar-act="aprobada">✓ Sí</button>
             <button type="button" class="emp-no-btn" data-revisar-act="devuelta">✕ No</button>
         </div>
-    </div>`;
+    </div>`; };
     // Envío a la Secretaría Técnica (dinamizadora) y estado de la revisión
     function bloqueRevision(a, rev, esDin, completa) {
         if (a.ejecutada === null) return '';
@@ -321,6 +322,8 @@
             if (rev === 'aprobada') return `<p class="emp-revision paso-ok">✓ Aprobada${a.revision.revisada_por_nombre ? ` por ${esc(a.revision.revisada_por_nombre)}` : ''} el ${esc(fechaCorta(a.revision.revisada_en))}</p>`;
             return `<div class="emp-revision">
                 ${completa ? '' : `<p class="ayuda-campo">${a.ejecutada ? 'Sube el acta y la herramienta para poder enviarla.' : 'Escribe y guarda el motivo para poder enviarla.'}</p>`}
+                <label class="etiqueta" for="nota-${a.ruta}-${a.n}">Mensaje para la Secretaría <small>(opcional)</small></label>
+                <textarea id="nota-${a.ruta}-${a.n}" class="campo" rows="2" maxlength="1000" data-nota-envio placeholder="Por ejemplo: la emprendedora firmó el acta al final de la sesión"></textarea>
                 <button type="button" class="btn btn-primario emp-enviar" data-enviar-act ${completa ? '' : 'disabled'}>${rev === 'devuelta' ? 'Volver a enviar a la Secretaría Técnica' : 'Enviar a la Secretaría Técnica'}</button>
             </div>`;
         }
@@ -370,7 +373,10 @@
             const env = t.closest('[data-enviar-act]');
             if (env) {
                 env.disabled = true;
-                try { actualizar(await C.llamar('enviar-actividad', actividad(env), true)); C.aviso('Listo: se envió a la Secretaría Técnica y le llegó un correo para que la revise.'); } catch (err) { C.aviso(err.message); env.disabled = false; }
+                // El mensaje del cuadro de envío (o lo que haya quedado escrito en las notas) viaja con el envío
+                const li = env.closest('[data-act]');
+                const nota = [$('[data-nota-envio]', li), $('[data-comentario]', li)].map((x) => (x ? x.value.trim() : '')).filter(Boolean).join('\n');
+                try { actualizar(await C.llamar('enviar-actividad', { ...actividad(env), nota }, true)); C.aviso('Listo: se envió a la Secretaría Técnica y le llegó un correo para que la revise.'); } catch (err) { C.aviso(err.message); env.disabled = false; }
                 return;
             }
             const rv = t.closest('[data-revisar-act]');
