@@ -598,6 +598,8 @@ function cuentasFalsas() {
   assert.ok(cuentas.enlaces.includes('lina@correo.co'), 'la persona registrada ya puede activar su cuenta');
   await ok('admin-guardar-persona', { ...nueva, rol: 'secretaria', satelite: '', otro_rol: 'dinamizadora', otro_satelite: 'sucre' }, tAdmin);
   assert.equal((await ok('admin-equipo', {}, tAdmin)).personas.find((x) => x.cedula === '77777001').otros_roles.dinamizadora.satelite, 'sucre');
+  const listaPuente = enDrive.filter((c) => c.accion === 'secretarias').pop();
+  assert.ok(listaPuente && listaPuente.correos.includes('lina@correo.co') && listaPuente.correos.includes('sara@correo.co'), 'al registrar una secretaria, su correo pasa solo a la lista del puente');
   await falla('admin-equipo', {}, tSara, 403);
   await falla('admin-agregar-administradora', { correo: 'nueva@correo.co' }, tSara, 403);
   await falla('admin-agregar-administradora', { correo: 'dina@correo.co' }, tAdmin, 409); // es la cuenta de una dinamizadora

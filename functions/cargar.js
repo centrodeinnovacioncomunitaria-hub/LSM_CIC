@@ -65,6 +65,14 @@ async function vaciar(coleccion) {
       for (const c of cuentas) await c.ref.update({ rol: p.rol, cargo: p.cargo || null, subtitulo: p.subtitulo || null, departamento: p.departamento || null, satelite: p.satelite || null, otros_roles: p.otros_roles || null });
     }
     console.log(`Directorio: ${personas.length} personas cargadas.`);
+    // El puente de correo solo les escribe a las secretarias de su lista: se le manda la lista completa
+    if (env.CIC_DRIVE_URL && env.CIC_DRIVE_CLAVE) {
+      const correos = [...new Set((await db.collection('directorio').get()).docs.map((d) => d.data())
+        .filter((x) => x.rol === 'secretaria' || (x.otros_roles && x.otros_roles.secretaria))
+        .map((x) => String(x.correo || '').trim().toLowerCase()).filter((c) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(c)))].sort();
+      const r = await fetch(env.CIC_DRIVE_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ accion: 'secretarias', correos, clave: env.CIC_DRIVE_CLAVE }), redirect: 'follow' }).then((x) => x.json()).catch(() => null);
+      console.log(r && r.ok ? `Puente de correo: ${correos.length} secretarias.` : 'No se pudo actualizar la lista de secretarias del puente de correo.');
+    }
   }
 
   const preguntas = opcion('preguntas');

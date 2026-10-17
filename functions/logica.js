@@ -242,6 +242,16 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     return { personas, satelites: Object.entries(SATELITES).map(([id, x]) => ({ id, departamento: x.departamento, municipios: x.municipios })) };
   }
   const ROLES_EQUIPO = ['secretaria', 'dinamizadora'];
+  // El puente de correo solo les escribe a las secretarias de su lista. Cada vez que cambia el equipo se le manda
+  // la lista completa (secretarias principales y quienes tienen la Secretaría como segundo perfil).
+  async function sincronizarSecretarias() {
+    if (!driveActivo()) return null;
+    const correos = [...new Set((await lista(col('directorio')))
+      .filter((x) => x.rol === 'secretaria' || (x.otros_roles && x.otros_roles.secretaria))
+      .map((x) => String(x.correo || '').trim().toLowerCase()).filter(correoValido))].sort();
+    try { await drive({ accion: 'secretarias', correos }); return { ok: true, secretarias: correos.length }; }
+    catch (err) { console.error('No se pudo actualizar la lista de secretarias del puente:', err.message); return { ok: false }; }
+  }
   async function adminGuardarPersona(token, b) {
     const p = await usuarioDelToken(token);
     if (!esAdmin(p)) throw new Falla(403, 'permiso', 'El registro del equipo es para la administración.');
@@ -283,7 +293,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
       }
       await col('perfiles').doc(existente.id).update(cambios);
     }
-    return { ok: true, nuevo: !anterior, activada: !!existente };
+    const puente = await sincronizarSecretarias();
+    return { ok: true, nuevo: !anterior, activada: !!existente, puente };
   }
 
   async function verEnviosCorreo(token) {
