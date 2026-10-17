@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261031">
+    <link rel="stylesheet" href="assets/cic.css?v=20261032">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -739,13 +739,13 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261031"></script>
-    <script src="assets/datos-cic.js?v=20261031"></script>
-    <script src="assets/sitio.js?v=20261031"></script>
-    <script src="assets/cursos-equipo.js?v=20261031"></script>
-    <script src="assets/soporte.js?v=20261031"></script>
-    <script src="assets/soporte-flotante.js?v=20261031"></script>
-    <script src="assets/emprendimientos.js?v=20261031"></script>
+    <script src="./config.js?v=20261032"></script>
+    <script src="assets/datos-cic.js?v=20261032"></script>
+    <script src="assets/sitio.js?v=20261032"></script>
+    <script src="assets/cursos-equipo.js?v=20261032"></script>
+    <script src="assets/soporte.js?v=20261032"></script>
+    <script src="assets/soporte-flotante.js?v=20261032"></script>
+    <script src="assets/emprendimientos.js?v=20261032"></script>
     <script>
     (() => {
         'use strict';
@@ -1684,6 +1684,16 @@
             } catch (e) { /* se queda en el portal público */ }
         })().finally(abrirPorEnlace);
     })();
+    </script>
+<script>
+        (() => {
+            const marcar = (raiz) => raiz.querySelectorAll('.tabla-caja table').forEach((t) => {
+                const titulos = [...t.querySelectorAll('thead th')].map((th) => th.textContent.trim());
+                t.querySelectorAll('tbody tr').forEach((tr) => [...tr.children].forEach((td, i) => { if (titulos[i] && !td.dataset.etiqueta) td.dataset.etiqueta = titulos[i]; }));
+            });
+            const raiz = document.querySelector('#plataforma, #vista-panel');
+            if (raiz) new MutationObserver(() => marcar(raiz)).observe(raiz, { childList: true, subtree: true });
+        })();
     </script>
 </body>
 </html>

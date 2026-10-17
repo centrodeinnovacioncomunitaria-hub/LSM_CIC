@@ -1680,3 +1680,48 @@ dialog { overflow-x: hidden; }
     .emp-doc { flex-wrap: wrap; }
     .emp-doc-acciones { width: 100%; }
 }
+
+/* ---------- Seguimiento sin desplazamiento lateral (oct. 17) ---------- */
+.hoja-leyenda { display: block; margin: .6rem 0 1rem; padding: .9rem 1.1rem; background: #fff; border: 1px solid var(--linea); border-radius: 1rem; font-size: .95rem; }
+.hoja-leyenda-titulo { margin: 0 0 .6rem; }
+.hoja-leyenda-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: .5rem 1rem; }
+.hoja-leyenda-lista li { display: flex; align-items: center; gap: .55rem; line-height: 1.3; }
+.celda.celda-muestra { display: inline-grid; place-items: center; flex: 0 0 auto; width: 1.9rem; height: 1.9rem; cursor: default; }
+.hoja-caja { overflow: visible; max-height: none; }
+.hoja-calculo { width: 100%; min-width: 0 !important; }
+.hoja-calculo th, .hoja-calculo td { padding: .45rem .3rem; white-space: normal; vertical-align: middle; }
+.hoja-calculo thead th { position: static; }
+.hoja-calculo .col-fija { position: static; min-width: 12rem; max-width: none; text-align: left; padding-left: .9rem; }
+.hoja-calculo td.col-fija small { display: block; line-height: 1.35; }
+.hoja-calculo .hoja-nombre { text-align: left; }
+.hoja-abrir { margin-top: .45rem; }
+.hoja-calculo .td-din { min-width: 8.5rem; max-width: 11rem; }
+.hoja-calculo .td-din .campo { width: 100%; min-height: 2.6rem; font-size: .95rem; padding: .4rem .5rem; }
+.hoja-calculo .td-act { width: 2.6rem; }
+.hoja-calculo .td-avance { min-width: 7.5rem; text-align: left; font-size: .92rem; }
+.hoja-calculo .td-avance small { display: block; }
+.hoja-calculo .td-sel { width: 2.4rem; }
+#plataforma table, #vista-panel table { min-width: 0; }
+#plataforma td, #vista-panel td { overflow-wrap: anywhere; }
+@media (max-width: 1320px) {
+    /* Cada emprendimiento se vuelve una tarjeta con sus 10 casillas en dos filas */
+    .hoja-calculo thead { display: none; }
+    .hoja-calculo, .hoja-calculo tbody { display: block; }
+    .hoja-calculo tr { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .4rem; padding: 1rem; border-bottom: 1px solid var(--linea); }
+    .hoja-calculo td { display: block; border: 0; padding: 0; }
+    .hoja-calculo .col-fija, .hoja-calculo .td-din, .hoja-calculo .td-avance { grid-column: 1 / -1; min-width: 0; max-width: none; padding: 0; }
+    .hoja-calculo .td-sel { grid-column: 1 / -1; }
+    .hoja-calculo .td-act { width: auto; display: flex; flex-direction: column; align-items: center; gap: .15rem; }
+    .hoja-calculo .td-act::before { content: attr(data-col); font-size: .78rem; font-weight: 800; color: var(--musgo); }
+    .hoja-calculo .celda { width: 100%; max-width: 3rem; height: 2.5rem; }
+    .hoja-calculo tbody tr:hover td { background: transparent; }
+}
+/* Tablas de la plataforma y de admin/: en pantallas angostas cada fila es una tarjeta con sus etiquetas */
+@media (max-width: 760px) {
+    #plataforma .tabla-caja table, #plataforma .tabla-caja tbody, #plataforma .tabla-caja tr, #plataforma .tabla-caja td,
+    #vista-panel .tabla-caja table, #vista-panel .tabla-caja tbody, #vista-panel .tabla-caja tr, #vista-panel .tabla-caja td { display: block; width: 100%; }
+    #plataforma .tabla-caja thead, #vista-panel .tabla-caja thead { display: none; }
+    #plataforma .tabla-caja tr, #vista-panel .tabla-caja tr { padding: .9rem 1.1rem; border-top: 1px solid var(--linea); }
+    #plataforma .tabla-caja td, #vista-panel .tabla-caja td { border: 0; padding: .25rem 0 !important; }
+    #plataforma .tabla-caja td[data-etiqueta]::before, #vista-panel .tabla-caja td[data-etiqueta]::before { content: attr(data-etiqueta); display: block; font-size: .8rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--musgo); }
+}

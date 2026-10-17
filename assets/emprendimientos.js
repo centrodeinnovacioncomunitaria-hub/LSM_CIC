@@ -114,7 +114,10 @@
                 <div class="hoja-buscar"><label class="etiqueta" for="h-buscar">Buscar</label><input id="h-buscar" class="campo" type="search" placeholder="Nombre, cédula, negocio, municipio…" value="${esc(H.texto)}"></div>
                 <div><button type="button" class="btn btn-borde btn-pequeno" data-excel>⬇ Descargar en Excel</button></div>
             </div>
-            <div class="hoja-leyenda" aria-label="Convenciones"><span><b>S1–S6</b> semanas de la ruta HACER · <b>T1–T4</b> talleres de la ruta SER</span>${Object.values(ESTADO_CELDA).map(([s, c, t]) => `<span><span class="celda ${c}" aria-hidden="true">${s}</span>${esc(t)}</span>`).join('')}</div>
+            <div class="hoja-leyenda" aria-label="Convenciones">
+                <p class="hoja-leyenda-titulo"><b>S1 a S6:</b> semanas de la ruta HACER · <b>T1 a T4:</b> talleres de la ruta SER. Toca cualquier casilla o el botón «Abrir tarjetas» para ver y registrar cada sesión.</p>
+                <ul class="lista-limpia hoja-leyenda-lista">${Object.values(ESTADO_CELDA).map(([s, c, t]) => `<li><span class="celda celda-muestra ${c}" aria-hidden="true">${s}</span><span>${esc(t)}</span></li>`).join('')}</ul>
+            </div>
             ${sec ? '<div id="emp-lote" class="emp-lote" hidden></div>' : ''}
             <div id="emp-tabla"></div>`;
         pintarFilas(cont);
@@ -139,22 +142,22 @@
         if (!lista.length) { caja.innerHTML = `<p class="tarjeta vacio">${filas().length ? 'No hay emprendimientos con ese filtro.' : sec ? 'Todavía no hay emprendimientos inscritos.' : 'Todavía no tienes emprendimientos asignados. Cuando la Secretaría Técnica te los asigne, aparecerán aquí.'}</p>`; if (sec) pintarLote(cont); return; }
         const todos = lista.every((x) => H.sel.has(x.cedula));
         caja.innerHTML = `<div class="hoja-caja"><table class="hoja-calculo">
-            <thead><tr>${sec ? '<th><input type="checkbox" id="emp-todos" aria-label="Seleccionar todos" ' + (todos ? 'checked' : '') + '></th>' : ''}
-                <th class="col-fija" scope="col">Emprendimiento</th><th scope="col">Satélite</th><th scope="col">Dinamizadora</th><th scope="col">Semana</th>
-                ${COLUMNAS.map(([r, n, t]) => `<th scope="col" title="${r === 'hacer' ? 'Ruta HACER · semana ' : 'Ruta SER · taller '}${n}">${t}</th>`).join('')}
-                <th scope="col">Aprobadas</th><th scope="col">Cuestionario</th></tr>
+            <thead><tr>${sec ? '<th class="td-sel"><input type="checkbox" id="emp-todos" aria-label="Seleccionar todos" ' + (todos ? 'checked' : '') + '></th>' : ''}
+                <th class="col-fija" scope="col">Emprendimiento</th>${sec ? '<th scope="col" class="td-din">Dinamizadora</th>' : ''}
+                ${COLUMNAS.map(([r, n, t]) => `<th scope="col" class="td-act" title="${r === 'hacer' ? 'Ruta HACER · semana ' : 'Ruta SER · taller '}${n}">${t}</th>`).join('')}
+                <th scope="col" class="td-avance">Avance</th></tr>
             </thead>
             <tbody>${lista.map((x) => `<tr>
-                ${sec ? `<td><input type="checkbox" data-sel="${esc(x.cedula)}" aria-label="Seleccionar ${esc(x.nombre)}" ${H.sel.has(x.cedula) ? 'checked' : ''}></td>` : ''}
-                <td class="col-fija"><button type="button" class="boton-texto" data-ver="${esc(x.cedula)}"><b>${esc(x.nombre)}</b></button><small>${esc(x.negocio || 'Sin nombre de negocio')} · CC ${esc(x.cedula)}</small></td>
-                <td class="izq">${esc(nombreSat(x.satelite))}<small style="display:block">${esc(x.municipio || '')}</small></td>
-                <td class="izq">${sec ? `<label class="sr-only" for="din-${esc(x.cedula)}">Dinamizadora de ${esc(x.nombre)}</label><select id="din-${esc(x.cedula)}" class="campo campo-mini" data-asignar="${esc(x.cedula)}">${opcionesDin(x.satelite, x.dinamizadora)}</select>` : esc(x.dinamizadora_nombre || '')}</td>
-                <td>${esc(x.semana_actual || 1)}</td>
-                ${COLUMNAS.map(([r, n, t]) => { const c = x.celdas[`${r}_${n}`]; const [s, cl, txt] = ESTADO_CELDA[estadoCelda(c)]; return `<td><button type="button" class="celda ${cl}" data-ver="${esc(x.cedula)}" data-foco="${r}-${n}" title="${esc(`${t} · ${txt}${c && c.f ? ` · ${c.f}` : ''}${c && c.c ? ` · ${c.c} comentario(s)` : ''}`)}" aria-label="${esc(`${x.nombre}, ${r === 'hacer' ? 'semana' : 'taller'} ${n}: ${txt}`)}">${s}</button></td>`; }).join('')}
-                <td><b>${x.avance.aprobadas || 0}</b>/${x.avance.total}</td>
-                <td class="apr-mini">${x.aprendizaje.respondidas.length}/${x.aprendizaje.habilitadas.length || 0} respondidos${x.aprendizaje.habilitadas.some((s) => !x.aprendizaje.respondidas.includes(s)) ? ' · <span class="emp-alerta">pendiente</span>' : ''}</td>
+                ${sec ? `<td class="td-sel"><input type="checkbox" data-sel="${esc(x.cedula)}" aria-label="Seleccionar ${esc(x.nombre)}" ${H.sel.has(x.cedula) ? 'checked' : ''}></td>` : ''}
+                <td class="col-fija"><button type="button" class="boton-texto hoja-nombre" data-ver="${esc(x.cedula)}"><b>${esc(x.nombre)}</b></button>
+                    <small>${esc(x.negocio || 'Sin nombre de negocio')} · CC ${esc(x.cedula)}</small>
+                    <small>${esc(nombreSat(x.satelite))}${x.municipio ? ` · ${esc(x.municipio)}` : ''} · va en la semana ${esc(x.semana_actual || 1)}</small>
+                    <button type="button" class="btn btn-borde btn-pequeno hoja-abrir" data-ver="${esc(x.cedula)}">Abrir tarjetas ›</button></td>
+                ${sec ? `<td class="td-din"><label class="sr-only" for="din-${esc(x.cedula)}">Dinamizadora de ${esc(x.nombre)}</label><select id="din-${esc(x.cedula)}" class="campo campo-mini" data-asignar="${esc(x.cedula)}">${opcionesDin(x.satelite, x.dinamizadora)}</select></td>` : ''}
+                ${COLUMNAS.map(([r, n, t]) => { const c = x.celdas[`${r}_${n}`]; const [s, cl, txt] = ESTADO_CELDA[estadoCelda(c)]; return `<td class="td-act" data-col="${t}"><button type="button" class="celda ${cl}" data-ver="${esc(x.cedula)}" data-foco="${r}-${n}" title="${esc(`${t} · ${txt}${c && c.f ? ` · ${c.f}` : ''}${c && c.c ? ` · ${c.c} comentario(s)` : ''}`)}" aria-label="${esc(`${x.nombre}, ${r === 'hacer' ? 'semana' : 'taller'} ${n}: ${txt}`)}">${s}</button></td>`; }).join('')}
+                <td class="td-avance"><b>${x.avance.aprobadas || 0} de ${x.avance.total}</b> aprobadas<small>Cuestionario: ${x.aprendizaje.respondidas.length} de ${x.aprendizaje.habilitadas.length || 0} respondidos${x.aprendizaje.habilitadas.some((s) => !x.aprendizaje.respondidas.includes(s)) ? ' · <span class="emp-alerta">pendiente</span>' : ''}</small></td>
             </tr>`).join('')}</tbody></table></div>
-            <div class="hoja-pie"><span>${lista.length} de ${filas().length} emprendimientos</span><span class="texto-suave">Desliza la tabla hacia los lados para ver todas las actividades.</span></div>`;
+            <div class="hoja-pie"><span>${lista.length} de ${filas().length} emprendimientos</span><span class="texto-suave">Toca una casilla o «Abrir tarjetas» para ver cada sesión.</span></div>`;
         const todosChk = $('#emp-todos', caja);
         if (todosChk) todosChk.addEventListener('change', (e) => { lista.forEach((x) => (e.target.checked ? H.sel.add(x.cedula) : H.sel.delete(x.cedula))); pintarFilas(cont); });
         caja.onchange = async (e) => {
