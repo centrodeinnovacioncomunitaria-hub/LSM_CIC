@@ -380,7 +380,7 @@
         const hechos = lista.filter((x) => x.estado === 'aprobada').length;
         const cons = (estado.constancias || []).find((x) => x.curso === id);
         const siguiente = lista.find((x) => x.estado !== 'aprobada' && x.estado !== 'bloqueada');
-        return `<article class="curso curso-ancho" id="curso-${id}">
+        return `<article class="curso curso-ancho" id="curso-${id}" data-seccion="${esc(c.titulo)}">
             <div class="curso-cab ${c.color}">
                 <h3>${esc(c.titulo)}</h3>
                 <p style="font-size:1rem;margin-top:.2rem">${esc(c.meta)} · ${hechos} de ${lista.length} aprobados</p>
@@ -415,7 +415,7 @@
         v.innerHTML = `
             <h2>Mis cursos</h2>
             <p class="vista-intro">${C.perfil.rol === 'secretaria' ? 'Avanza en orden: al aprobar Gestión del CIC se abren las rutas HACER y SER para que las supervises.' : 'Avanza en orden: cada módulo se abre cuando apruebas el anterior.'} En cada módulo: video, material, evaluación y tu aporte en el foro del equipo.${C.DEMO ? ' <b>Demostración:</b> tu avance se guarda solo en este dispositivo y las preguntas son de ejemplo, no las oficiales.' : ''}</p>
-            ${C.perfil.rol === 'secretaria' ? `<div class="tarjeta transferencia-acceso"><div><h3>Material de transferencia</h3><p class="texto-suave">Guías, presentaciones y videos de las 6 metodologías para transferir a las dinamizadoras. No es un curso: consúltalo cuando lo necesites.</p></div><button type="button" class="btn btn-primario" data-transferencia>Abrir el material de transferencia</button></div>` : ''}
+            ${C.perfil.rol === 'secretaria' ? `<div class="tarjeta transferencia-acceso" id="sec-transferencia" data-seccion="Material de transferencia"><div><h3>Material de transferencia</h3><p class="texto-suave">Guías, presentaciones y videos de las 6 metodologías para transferir a las dinamizadoras. No es un curso: consúltalo cuando lo necesites.</p></div><button type="button" class="btn btn-primario" data-transferencia>Abrir el material de transferencia</button></div>` : ''}
             ${recorrido()}
             ${bienvenidaPendiente() ? tarjetaBienvenida() : (h.has('compromiso') ? '' : tarjetaCompromiso())}
             ${repasoBienvenida()}
@@ -834,8 +834,25 @@
                 <td><small>${esc(hace(p.ultima_actividad))}${p.pausas ? ` · ${p.pausas} en pausa` : ''}${quieto ? ' · sin avanzar' : ''}</small></td>
             </tr>`;
         }).join('');
+        // Dos secciones (cada una aparece en el submenú de la izquierda): primero lo que hay que revisar, luego el avance
         cont.innerHTML = `
+            <section class="bloque-seccion" id="sec-aportes" data-seccion="Aportes por revisar" data-seccion-cuenta="${d.pendientes.length}">
+            <h3 class="subtitulo-seccion" id="bandeja">Aportes del foro por revisar</h3>
+            <p class="vista-intro">Lo que escribieron las dinamizadoras en el foro de cada módulo. Léelo y toca <b>Aprobar</b>, o <b>Devolver</b> con un comentario que diga qué ajustar.</p>
+            ${d.pendientes.length ? d.pendientes.filter((e) => C.CURSOS[e.curso]).map((e, n) => `<article class="tarjeta evidencia" data-id="${esc(e.id)}">
+                <p class="eyebrow">${esc(C.CURSOS[e.curso].titulo)} · ${esc(C.codigoModulo(e.curso, e.unidad - 1))} · ${e.tipo === 'foro' ? 'Aporte en el foro' : e.tipo === 'actividad' ? 'Actividad' : 'Verificación de la sesión'}</p>
+                <h4>${esc(e.nombre)}</h4>
+                ${e.texto ? `<p class="evidencia-texto">${esc(e.texto)}</p>` : ''}
+                ${e.enlace ? `<p><a class="enlace" href="${esc(e.enlace)}" target="_blank" rel="noopener noreferrer">Abrir la evidencia</a></p>` : ''}
+                ${e.foro_tema ? `<p><a class="enlace" href="foro/#tema-${esc(encodeURIComponent(e.foro_tema))}" target="_blank" rel="noopener">Ver la conversación en el foro</a></p>` : ''}
+                <label class="etiqueta" for="com-${n}">Comentario (obligatorio si lo devuelves)</label>
+                <textarea class="campo" id="com-${n}" rows="2" maxlength="1000"></textarea>
+                <div class="botones"><button type="button" class="btn btn-primario" data-revisar="aprobada">Aprobar</button><button type="button" class="btn btn-borde" data-revisar="devuelta">Devolver con comentario</button></div>
+            </article>`).join('') : '<p class="tarjeta vacio">No hay evidencias pendientes. ¡Todo al día!</p>'}
+            </section>
+            <section class="bloque-seccion" id="sec-equipo" data-seccion="Avance del equipo">
             <h3 class="subtitulo-seccion">Avance del equipo en los cursos</h3>
+            <p class="vista-intro">Cómo va cada secretaria y dinamizadora en sus cursos.</p>
             <div class="rejilla r4 movil-2">
                 <div class="tarjeta kpi"><b>${d.personas.filter((p) => p.activa).length}<small class="texto-suave" style="font-size:1rem">/${d.personas.length}</small></b><span>cuentas activadas</span></div>
                 <div class="tarjeta kpi"><b>${din.filter((p) => p.constancias.some((x) => x.curso === 'gestion')).length}<small class="texto-suave" style="font-size:1rem">/${din.length}</small></b><span>dinamizadoras con Gestión aprobada</span></div>
@@ -846,17 +863,7 @@
                 <thead><tr><th scope="col">Persona</th><th scope="col">Cuenta</th><th scope="col">Gestión</th><th scope="col">HACER · SER</th><th scope="col">Actividad</th></tr></thead>
                 <tbody>${filas}</tbody></table></div>
             <p class="ayuda-campo">Las rutas HACER y SER se abren solas cuando cada persona aprueba Gestión del CIC. En rojo: personas con un módulo en pausa o más de 7 días sin avanzar.</p>
-            <h3 class="subtitulo-seccion" id="bandeja">Aportes del foro por revisar</h3>
-            ${d.pendientes.length ? d.pendientes.filter((e) => C.CURSOS[e.curso]).map((e, n) => `<article class="tarjeta evidencia" data-id="${esc(e.id)}">
-                <p class="eyebrow">${esc(C.CURSOS[e.curso].titulo)} · ${esc(C.codigoModulo(e.curso, e.unidad - 1))} · ${e.tipo === 'foro' ? 'Aporte en el foro' : e.tipo === 'actividad' ? 'Actividad' : 'Verificación de la sesión'}</p>
-                <h4>${esc(e.nombre)}</h4>
-                ${e.texto ? `<p class="evidencia-texto">${esc(e.texto)}</p>` : ''}
-                ${e.enlace ? `<p><a class="enlace" href="${esc(e.enlace)}" target="_blank" rel="noopener noreferrer">Abrir la evidencia</a></p>` : ''}
-                ${e.foro_tema ? `<p><a class="enlace" href="foro/#tema-${esc(encodeURIComponent(e.foro_tema))}" target="_blank" rel="noopener">Ver la conversación en el foro</a></p>` : ''}
-                <label class="etiqueta" for="com-${n}">Comentario (obligatorio si lo devuelves)</label>
-                <textarea class="campo" id="com-${n}" rows="2" maxlength="1000"></textarea>
-                <div class="botones"><button type="button" class="btn btn-primario" data-revisar="aprobada">Aprobar</button><button type="button" class="btn btn-borde" data-revisar="devuelta">Devolver con comentario</button></div>
-            </article>`).join('') : '<p class="tarjeta vacio">No hay evidencias pendientes. ¡Todo al día!</p>'}`;
+            </section>`;
 
         cont.addEventListener('click', async (ev) => {
             const b = ev.target.closest('[data-revisar]');
@@ -866,7 +873,7 @@
                 if (b.dataset.revisar === 'devuelta' && comentario.length < 5) { C.aviso('Escribe qué debe ajustar antes de devolverla.'); card.querySelector('textarea').focus(); return; }
                 b.disabled = true;
                 // El id es el del documento de Firestore (texto): antes se convertía a número y la revisión siempre fallaba
-                try { await api('revisar', { id: card.dataset.id, estado: b.dataset.revisar, comentario }); card.remove(); C.aviso(b.dataset.revisar === 'aprobada' ? 'Aporte aprobado.' : 'Aporte devuelto con tu comentario.'); }
+                try { await api('revisar', { id: card.dataset.id, estado: b.dataset.revisar, comentario }); const sec = card.closest('[data-seccion]'); card.remove(); if (sec) sec.dataset.seccionCuenta = Math.max(0, Number(sec.dataset.seccionCuenta || 0) - 1); C.aviso(b.dataset.revisar === 'aprobada' ? 'Aporte aprobado.' : 'Aporte devuelto con tu comentario.'); }
                 catch (e) { C.aviso(e.message); b.disabled = false; }
                 return;
             }

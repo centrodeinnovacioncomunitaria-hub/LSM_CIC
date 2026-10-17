@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261034">
+    <link rel="stylesheet" href="assets/cic.css?v=20261035">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -575,12 +575,16 @@
             </div>
         </section>
         <div class="contenedor plataforma-cuerpo">
+            <aside class="plataforma-lateral">
             <div class="pestanas" role="tablist" id="pestanas-plataforma" aria-label="Secciones de la plataforma" aria-orientation="vertical">
                 <button type="button" class="pestana" role="tab" id="tab-cursos" aria-controls="vista-cursos" data-vista="cursos"><span class="pestana-icono" aria-hidden="true">📚</span><span class="pestana-texto">Mis talleres</span></button>
                 <button type="button" class="pestana" role="tab" id="tab-seguimiento" aria-controls="vista-seguimiento" data-vista="seguimiento"><span class="pestana-icono" aria-hidden="true">📊</span><span class="pestana-texto">Seguimiento</span></button>
                 <button type="button" class="pestana" role="tab" id="tab-soporte" aria-controls="vista-soporte" data-vista="soporte"><span class="pestana-icono" aria-hidden="true">🛟</span><span class="pestana-texto">Soporte</span></button>
                 <button type="button" class="pestana" role="tab" id="tab-cuenta" aria-controls="vista-cuenta" data-vista="cuenta"><span class="pestana-icono" aria-hidden="true">👤</span><span class="pestana-texto">Mi cuenta</span></button>
             </div>
+            <!-- Submenú: las partes de la sección abierta; lo arma la página a partir de los bloques con data-seccion -->
+            <nav id="submenu-plataforma" class="submenu-lateral" aria-label="Partes de esta sección" hidden></nav>
+            </aside>
             <div class="plataforma-vistas">
             <section id="vista-cursos" class="vista" role="tabpanel" aria-labelledby="tab-cursos"></section>
             <section id="vista-seguimiento" class="vista" role="tabpanel" aria-labelledby="tab-seguimiento" hidden></section>
@@ -739,13 +743,13 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261034"></script>
-    <script src="assets/datos-cic.js?v=20261034"></script>
-    <script src="assets/sitio.js?v=20261034"></script>
-    <script src="assets/cursos-equipo.js?v=20261034"></script>
-    <script src="assets/soporte.js?v=20261034"></script>
-    <script src="assets/soporte-flotante.js?v=20261034"></script>
-    <script src="assets/emprendimientos.js?v=20261034"></script>
+    <script src="./config.js?v=20261035"></script>
+    <script src="assets/datos-cic.js?v=20261035"></script>
+    <script src="assets/sitio.js?v=20261035"></script>
+    <script src="assets/cursos-equipo.js?v=20261035"></script>
+    <script src="assets/soporte.js?v=20261035"></script>
+    <script src="assets/soporte-flotante.js?v=20261035"></script>
+    <script src="assets/emprendimientos.js?v=20261035"></script>
     <script>
     (() => {
         'use strict';
@@ -1200,6 +1204,7 @@
                 t.tabIndex = activa ? 0 : -1;
             });
             if (enfocar) $(`#tab-${vista}`).focus();
+            firmaSubmenu = null; setTimeout(pintarSubmenu, 0);
             // En celulares la barra queda arriba: al cambiar de sección se vuelve al comienzo de la sección
             const cuerpo = $('.plataforma-cuerpo');
             if (enfocar && cuerpo && cuerpo.getBoundingClientRect().top < 0) window.scrollTo({ top: cuerpo.getBoundingClientRect().top + window.scrollY - 80 });
@@ -1218,6 +1223,48 @@
             if (!b) return;
             ir(b.dataset.ir);
             if (b.dataset.ir === 'cuenta') setTimeout(() => { const c = $('#cc-actual'); if (c) c.focus(); }, 30);
+        });
+
+        // ---------- Submenú de la sección abierta ----------
+        // Debajo del recuadro de secciones aparece la lista de partes de la sección abierta (bloques con data-seccion).
+        // Al tocar una, la página baja hasta esa parte sin salir de la sección; la parte visible queda resaltada.
+        const submenu = $('#submenu-plataforma');
+        let firmaSubmenu = null, vigiaSubmenu = null, esperaSubmenu = null;
+        const vistaAbierta = () => VISTAS.map((x) => $(`#vista-${x}`)).find((x) => x && !x.hidden);
+        function pintarSubmenu() {
+            const v = vistaAbierta();
+            const partes = v && !$('#plataforma').hidden ? [...v.querySelectorAll('[data-seccion]')].filter((x) => x.id) : [];
+            const firma = partes.map((x) => `${x.id}:${x.dataset.seccion}:${x.dataset.seccionCuenta || ''}`).join('|');
+            if (firma === firmaSubmenu) return;
+            firmaSubmenu = firma;
+            if (vigiaSubmenu) { vigiaSubmenu.disconnect(); vigiaSubmenu = null; }
+            if (partes.length < 2) { submenu.hidden = true; submenu.innerHTML = ''; return; }
+            const titulo = $(`#tab-${v.id.replace('vista-', '')} .pestana-texto`);
+            submenu.hidden = false;
+            submenu.innerHTML = `<p class="submenu-titulo">En ${esc(titulo ? titulo.textContent : 'esta sección')}</p>
+                <ul>${partes.map((x) => `<li><a href="#${x.id}" data-ir-seccion="${x.id}"><span>${esc(x.dataset.seccion)}</span>${Number(x.dataset.seccionCuenta) > 0 ? `<span class="submenu-cuenta" aria-label="${esc(x.dataset.seccionCuenta)} pendientes">${esc(x.dataset.seccionCuenta)}</span>` : ''}</a></li>`).join('')}</ul>`;
+            if ('IntersectionObserver' in window) {
+                vigiaSubmenu = new IntersectionObserver((es) => {
+                    const visible = es.filter((x) => x.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+                    if (!visible) return;
+                    submenu.querySelectorAll('a').forEach((a) => a.classList.toggle('actual', a.dataset.irSeccion === visible.target.id));
+                }, { rootMargin: '-20% 0px -65% 0px' });
+                partes.forEach((x) => vigiaSubmenu.observe(x));
+            }
+        }
+        // Se vuelve a armar cuando cambia el contenido (las secciones llegan del servidor un poco después)
+        new MutationObserver(() => { clearTimeout(esperaSubmenu); esperaSubmenu = setTimeout(pintarSubmenu, 150); })
+            .observe($('.plataforma-vistas'), { childList: true, subtree: true, attributes: true, attributeFilter: ['data-seccion-cuenta', 'hidden'] });
+        submenu.addEventListener('click', (e) => {
+            const a = e.target.closest('[data-ir-seccion]');
+            if (!a) return;
+            e.preventDefault();
+            const destino = document.getElementById(a.dataset.irSeccion);
+            if (!destino) return;
+            destino.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            submenu.querySelectorAll('a').forEach((x) => x.classList.toggle('actual', x === a));
+            const t = destino.querySelector('h2, h3');
+            if (t) { t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); }
         });
 
         // ---------- Videos (YouTube «no listado», ver GUIA_VIDEOS.md) ----------
@@ -1294,7 +1341,7 @@
             const t = proximoTaller();
             const sat = satelite(perfil.satelite);
             v.innerHTML = `
-                <div class="semana-panel">
+                <div class="semana-panel" id="sec-proximo" data-seccion="Tu próximo taller">
                     <article class="tarjeta semana-actual">
                         <p class="eyebrow">Tu próximo taller · taller ${t.n} de ${DATOS.ser.length}</p>
                         <h2>${esc(t.titulo)}</h2>
@@ -1317,19 +1364,19 @@
                     </aside>
                 </div>
                 <div id="mi-aprendizaje"></div>
-                <h3 class="vista-subtitulo">Tu avance</h3>
+                <h3 class="vista-subtitulo" id="sec-avance" data-seccion="Tu avance">Tu avance</h3>
                 <p class="vista-intro">Cada sesión y taller que haces con tu dinamizadora lo revisa la Secretaría Técnica. Aquí ves cuáles ya fueron aprobados.</p>
                 <div id="mi-avance"><p class="vista-intro" role="status">Cargando…</p></div>
-                <h3 class="vista-subtitulo">Descarga la guía de tu próximo taller</h3>
+                <h3 class="vista-subtitulo" id="sec-guia" data-seccion="Guía del próximo taller">Descarga la guía de tu próximo taller</h3>
                 <p class="vista-intro">Está en PDF: puedes guardarla en tu celular o imprimirla.</p>
                 <div class="descargas descargas-grandes">${botonesDescarga(t.descargas)}</div>
-                <h3 class="vista-subtitulo">Grabaciones de los talleres virtuales</h3>
+                <h3 class="vista-subtitulo" id="sec-grabaciones" data-seccion="Grabaciones">Grabaciones de los talleres virtuales</h3>
                 <div id="mis-grabaciones"><p class="vista-intro" role="status">Cargando…</p></div>
-                <h3 class="vista-subtitulo">Tus ${DATOS.ser.length} talleres</h3>
+                <h3 class="vista-subtitulo" id="sec-talleres" data-seccion="Talleres SER">Tus ${DATOS.ser.length} talleres</h3>
                 <div class="toda-ruta">
                     ${DATOS.ser.map((x) => `<details class="desplegable" ${x.n === t.n ? 'open' : ''}><summary>Taller ${x.n} · ${esc(x.titulo)} <span class="chip ${x.n === t.n ? 'bg-durazno' : 'bg-lavanda'}">${x.n === t.n ? 'El próximo' : x.n < t.n ? 'Hecho' : esc(x.modalidad)}</span></summary><p class="texto-suave">${esc(x.resumen)}</p><div class="descargas">${botonesDescarga(x.descargas)}</div></details>`).join('')}
                 </div>
-                <h3 class="vista-subtitulo">Guías y plantillas de la ruta HACER</h3>
+                <h3 class="vista-subtitulo" id="sec-hacer" data-seccion="Guías de la ruta HACER">Guías y plantillas de la ruta HACER</h3>
                 <p class="vista-intro">Las sesiones semanales en tu negocio las haces con tu dinamizadora. Aquí tienes la guía de cada semana en PDF y las plantillas de Excel para llenar.</p>
                 <div class="toda-ruta">
                     ${DATOS.hacer.map((x) => `<details class="desplegable" ${x.n === semanaActual() ? 'open' : ''}><summary>Semana ${x.n} · ${esc(x.titulo)} ${x.n === semanaActual() ? '<span class="chip bg-durazno">Tu semana</span>' : ''}</summary><p class="texto-suave">${esc(x.resumen)}</p><div class="descargas">${botonesDescarga(x.descargas)}</div></details>`).join('')}
@@ -1393,7 +1440,7 @@
             const campo = (q, n) => q.tipo === 'escala'
                 ? `<fieldset class="pregunta-apr"><legend class="etiqueta">${esc(q.texto)}</legend><p class="ayuda-campo">1 = nada · 5 = mucho</p><div class="escala">${[1, 2, 3, 4, 5].map((v) => `<label><input type="radio" name="${q.id}" value="${v}"><span>${v}</span></label>`).join('')}</div></fieldset>`
                 : `<div class="pregunta-apr"><label class="etiqueta" for="apr-${n}-${q.id}">${esc(q.texto)}${q.obligatoria ? '' : ' (opcional)'}</label><textarea class="campo" id="apr-${n}-${q.id}" name="${q.id}" rows="3" maxlength="1500"></textarea></div>`;
-            caja.innerHTML = `<h3 class="vista-subtitulo">Tu cuestionario de aprendizaje</h3>
+            caja.innerHTML = `<h3 class="vista-subtitulo" id="sec-cuestionario" data-seccion="Cuestionario semanal" data-seccion-cuenta="${pendientes.length}">Tu cuestionario de aprendizaje</h3>
                 ${pendientes.map((w) => `<form class="tarjeta form-aprendizaje" data-semana="${w.semana}" novalidate>
                     <p class="eyebrow">Semana ${w.semana} · te lo habilitó tu dinamizadora</p>
                     <p class="texto-suave">Cuéntanos qué aprendiste esta semana. Tus respuestas las lee tu dinamizadora para acompañarte mejor.</p>
@@ -1492,13 +1539,18 @@
                 <tbody>${lista.map((p) => filaPersona(p, conAccion)).join('')}</tbody></table></div>`;
         }
         function pintarDinamizadora(v, lista) {
+            // Cada bloque con data-seccion aparece en el submenú de la izquierda («En esta sección»)
             v.innerHTML = `
-                <div id="mis-emprendimientos" class="emp-panel"></div>
-                <h2>Emprendedoras de ${esc(perfil.departamento || 'tu departamento')}</h2>
-                <p class="vista-intro">Cuando termines una sesión, cambia su semana: así cada emprendedora ve lo que le toca y sus descargas. Si alguien olvida su contraseña, genérale un código de acceso y envíaselo por WhatsApp.</p>
-                <div class="rejilla r4 movil-2"><div class="tarjeta kpi"><b>${lista.length}</b><span>inscritas</span></div></div>
-                <div class="controles"><div><label class="etiqueta" for="buscar-d">Buscar por nombre, municipio o negocio</label><input id="buscar-d" class="campo" type="search"></div></div>
-                <div id="tabla-d">${tabla(lista, true)}</div>`;
+                <section class="bloque-seccion" id="sec-mis-emprendimientos" data-seccion="Mis emprendimientos">
+                    <div id="mis-emprendimientos" class="emp-panel"></div>
+                </section>
+                <section class="bloque-seccion" id="sec-emprendedoras" data-seccion="Semanas y códigos de acceso">
+                    <h2>Emprendedoras de ${esc(perfil.departamento || 'tu departamento')}</h2>
+                    <p class="vista-intro">Cuando termines una sesión, cambia su semana: así cada emprendedora ve lo que le toca y sus descargas. Si alguien olvida su contraseña, toca <b>Código de acceso</b> y envíaselo por WhatsApp.</p>
+                    <div class="rejilla r4 movil-2"><div class="tarjeta kpi"><b>${lista.length}</b><span>inscritas</span></div></div>
+                    <div class="controles"><div><label class="etiqueta" for="buscar-d">Buscar por nombre, municipio o negocio</label><input id="buscar-d" class="campo" type="search"></div></div>
+                    <div id="tabla-d">${tabla(lista, true)}</div>
+                </section>`;
             window.CICEmprendimientos.dinamizadora($('#mis-emprendimientos'), contextoEmprendimientos());
             $('#buscar-d').addEventListener('input', (e) => {
                 const t = e.target.value.toLowerCase();
@@ -1514,7 +1566,9 @@
             const din = lista.filter((p) => p.rol === 'dinamizadora');
             const porSat = SATELITES.map((s) => [s.nombre, emp.filter((p) => p.satelite === s.id).length]);
             const max = Math.max(1, ...porSat.map(([, n]) => n));
+            // Cada bloque con data-seccion aparece en el submenú de la izquierda («En esta sección»)
             v.innerHTML = `
+                <section class="bloque-seccion" id="sec-resumen" data-seccion="Resumen">
                 <h2>Seguimiento del centro</h2>
                 <p class="vista-intro">Cuentas activas en la plataforma. Las personas del equipo aparecen cuando ingresan por primera vez.</p>
                 <div class="rejilla r3 movil-2">
@@ -1526,14 +1580,20 @@
                     <h3 style="font-size:1.15rem;margin-bottom:1rem">Emprendedoras por satélite</h3>
                     <ul class="barras">${porSat.map(([d, n]) => `<li><span>${esc(d)}</span><span class="barra-fondo"><span style="width:${(n / max) * 100}%"></span></span><b>${n}</b></li>`).join('')}</ul>
                 </div>
-                <div id="emprendimientos" class="tarjeta emp-panel"></div>
-                <h3 class="emp-subtitulo">Todas las cuentas</h3>
+                </section>
+                <section class="bloque-seccion" id="sec-emprendimientos" data-seccion="Emprendimientos">
+                    <div id="emprendimientos" class="tarjeta emp-panel"></div>
+                </section>
+                <div id="avance-equipo" class="avance-equipo"></div>
+                <section class="bloque-seccion" id="sec-cuentas" data-seccion="Cuentas y códigos de acceso">
+                <h3 class="subtitulo-seccion">Todas las cuentas</h3>
+                <p class="vista-intro">Busca a cualquier persona, cambia la semana de una emprendedora o genera un <b>Código de acceso</b> si no puede entrar.</p>
                 <div class="controles">
                     <div><label class="etiqueta" for="buscar-s">Buscar</label><input id="buscar-s" class="campo" type="search" placeholder="Nombre, cédula, municipio…"></div>
                     <div style="flex:0 1 14rem"><label class="etiqueta" for="filtro-rol">Perfil</label><select id="filtro-rol" class="campo"><option value="">Todos</option><option value="emprendedora">Emprendedoras</option><option value="dinamizadora">Dinamizadoras</option><option value="secretaria">Secretaría Técnica</option></select></div>
                 </div>
                 <div id="tabla-s">${tabla(lista, true)}</div>
-                <div id="avance-equipo" class="avance-equipo"></div>`;
+                </section>`;
             window.CICCursos.pintarEquipo($('#avance-equipo'), contextoCursos());
             window.CICEmprendimientos.secretaria($('#emprendimientos'), contextoEmprendimientos());
             const filtrar = () => {
@@ -1556,7 +1616,7 @@
             $('#vista-cuenta').innerHTML = `
                 <h2 style="margin-bottom:1.5rem">Mi cuenta</h2>
                 <div class="rejilla r2" style="align-items:start">
-                    <div class="tarjeta">
+                    <div class="tarjeta" id="sec-datos" data-seccion="Mis datos">
                         <h3 style="font-size:1.25rem;margin-bottom:.6rem">Mis datos</h3>
                         <dl class="datos">${dato('Nombre', perfil.nombre)}${dato('Cédula', perfil.cedula)}${dato('Perfil', ROL[perfil.rol].nombre)}${dato('Cargo', perfil.cargo)}${dato('Satélite', sat && sat.nombre)}${dato('Municipio', perfil.municipio)}${dato('Negocio', perfil.negocio)}</dl>
                         <form id="form-contacto" novalidate>
@@ -1568,7 +1628,7 @@
                             <button type="submit" class="btn btn-borde" style="margin-top:1rem">Guardar datos de contacto</button>
                         </form>
                     </div>
-                    <form id="form-clave" class="tarjeta" novalidate>
+                    <form id="form-clave" class="tarjeta" novalidate data-seccion="Cambiar contraseña">
                         <h3 style="font-size:1.25rem">Cambiar contraseña</h3>
                         <p class="texto-suave" style="font-size:.95rem;margin-top:.3rem">${perfil.correo ? `Te enviaremos un correo de confirmación a <strong style="color:var(--bosque)">${esc(perfil.correo)}</strong>.` : 'Si registras un correo, te enviaremos un aviso cuando la cambies.'}</p>
                         <label class="etiqueta" for="cc-actual">Contraseña actual</label>

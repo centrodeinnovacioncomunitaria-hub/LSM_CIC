@@ -98,6 +98,9 @@
         const sec = H.rol === 'secretaria';
         const emp = filas();
         const cuenta = (f) => emp.filter((x) => { const g = H.filtro; H.filtro = f; const r = cumpleFiltro(x); H.filtro = g; return r; }).length;
+        // Número de emprendimientos con actividades por revisar: se ve junto a la sección en el submenú de la izquierda
+        const seccion = cont.closest('[data-seccion]');
+        if (seccion) seccion.dataset.seccionCuenta = cuenta('revisar');
         const sats = C.SATELITES.filter((s) => emp.some((x) => x.satelite === s.id) || (H.datos.dinamizadoras || []).some((d) => d.satelite === s.id));
         const dins = sec ? (H.datos.dinamizadoras || []).filter((d) => !H.sat || d.satelite === H.sat) : [];
         cont.innerHTML = `
