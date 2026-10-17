@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/cic.css?v=20261030">
+    <link rel="stylesheet" href="../assets/cic.css?v=20261031">
     <style>
         .admin-cab { background: var(--bosque); color: #fff; padding: 1.2rem 0; }
         .admin-cab .contenedor { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -80,9 +80,9 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="../config.js?v=20261030"></script>
-    <script src="../assets/soporte.js?v=20261030"></script>
-    <script src="../assets/datos-cic.js?v=20261030"></script>
+    <script src="../config.js?v=20261031"></script>
+    <script src="../assets/soporte.js?v=20261031"></script>
+    <script src="../assets/datos-cic.js?v=20261031"></script>
     <script>
     (() => {
         'use strict';
@@ -309,6 +309,9 @@
             pintarGrabaciones();
         }
 
+        // Duración de los videos: se escribe como en el reproductor (12:35) y se guarda en minutos (12.58)
+        const minutosAdmin = (t) => { const m = String(t || '').trim().match(/^(\d{1,3})(?:[:.,](\d{1,2}))?$/); if (!m) return 0; const seg = Number(m[2] || 0); return seg > 59 ? 0 : Math.round((Number(m[1]) + seg / 60) * 100) / 100; };
+        const minSegAdmin = (min) => { if (!min) return ''; const s = Math.round(min * 60); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
         // ---------- Videos y material de cada unidad ----------
         const lineasMaterial = (archivos) => archivos.map((a) => `${a.nombre} | ${a.url}`).join('\n');
         const leerMaterial = (txt) => txt.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => {
@@ -327,8 +330,8 @@
                         <form class="form-bienvenida" novalidate>
                             <label class="etiqueta" for="v-bv">Enlace de Google Drive (o YouTube)</label>
                             <input class="campo" id="v-bv" name="url" type="url" placeholder="https://drive.google.com/file/d/…/view" value="${esc(enlaceVideo(bv))}">
-                            <label class="etiqueta" for="d-bv">Duración (minutos)</label>
-                            <input class="campo" id="d-bv" name="duracion" type="number" min="1" max="300" value="${esc(bv ? bv.duracion_min || '' : '')}">
+                            <label class="etiqueta" for="d-bv">Duración exacta (minutos:segundos, como sale en el reproductor)</label>
+                            <input class="campo" id="d-bv" name="duracion" inputmode="numeric" placeholder="Ej.: 12:35" required value="${esc(bv ? minSegAdmin(bv.duracion_min) : '')}">
                             <div class="fila-btn"><button type="submit" class="btn btn-primario btn-pequeno">Guardar video de bienvenida</button>${bv ? '<button type="button" class="btn btn-borde btn-pequeno" data-quitar-bienvenida>Quitar</button>' : ''}</div>
                         </form>
                     </div>
@@ -345,8 +348,8 @@
                                 <b>Video ${u.video ? '<span class="estado-ok">· publicado</span>' : '<span class="estado-falta">· falta</span>'}</b>
                                 <label class="etiqueta" for="v-${esc(u.codigo)}">Enlace de Google Drive (o YouTube)</label>
                                 <input class="campo" id="v-${esc(u.codigo)}" name="url" type="url" placeholder="https://drive.google.com/file/d/…/view" value="${esc(enlaceVideo(u.video))}">
-                                <label class="etiqueta" for="d-${esc(u.codigo)}">Duración (minutos)</label>
-                                <input class="campo" id="d-${esc(u.codigo)}" name="duracion" type="number" min="1" max="300" value="${esc(u.video ? u.video.duracion_min || '' : '')}">
+                                <label class="etiqueta" for="d-${esc(u.codigo)}">Duración exacta (minutos:segundos) · se exige verlo completo</label>
+                                <input class="campo" id="d-${esc(u.codigo)}" name="duracion" inputmode="numeric" placeholder="Ej.: 26:10" required value="${esc(u.video ? minSegAdmin(u.video.duracion_min) : '')}">
                                 <div class="fila-btn"><button type="submit" class="btn btn-primario btn-pequeno">Guardar video</button>${u.video ? '<button type="button" class="btn btn-borde btn-pequeno" data-quitar-video>Quitar</button>' : ''}</div>
                             </form>
                             <form class="form-material" novalidate>
@@ -365,10 +368,10 @@
             ev.preventDefault();
             const f = ev.target, caja = f.closest('.unidad-admin');
             if (f.classList.contains('form-bienvenida')) {
-                const b = $('button[type="submit"]', f), duracion = Number(f.duracion.value);
+                const b = $('button[type="submit"]', f), duracion = minutosAdmin(f.duracion.value);
                 try {
                     if (!f.url.value.trim()) throw new Error('Pega el enlace del video de bienvenida.');
-                    if (!duracion) throw new Error('Escribe la duración del video en minutos.');
+                    if (!duracion) throw new Error('Escribe la duración exacta del video en minutos y segundos, por ejemplo 12:35.');
                     b.disabled = true;
                     await llamar('guardar-video', { video: { codigo: 'BIENVENIDA', titulo: 'Bienvenida al Centro de Innovación Comunitaria', url: f.url.value.trim(), duracion_min: duracion, audiencia: 'equipo', curso: 'bienvenida', unidad: 1 } });
                     aviso('Video de bienvenida guardado: desde ahora es obligatorio antes del curso Gestión del CIC.');
@@ -382,9 +385,9 @@
             b.disabled = true;
             try {
                 if (f.classList.contains('form-video')) {
-                    const duracion = Number(f.duracion.value);
+                    const duracion = minutosAdmin(f.duracion.value);
                     if (!f.url.value.trim()) throw new Error('Pega el enlace del video.');
-                    if (!duracion) throw new Error('Escribe la duración del video en minutos.');
+                    if (!duracion) throw new Error('Escribe la duración exacta del video en minutos y segundos, por ejemplo 12:35.');
                     await llamar('guardar-video', { video: { codigo: `${c.prefijo}${unidad}`, titulo: `${c.nombre} · ${NOMBRE_U[curso]} ${unidad}: ${(TITULOS[curso] || [])[unidad - 1] || ''}`, url: f.url.value.trim(), duracion_min: duracion, audiencia: 'equipo', curso, unidad } });
                     aviso(`Video ${c.prefijo}${unidad} guardado.`);
                 } else {

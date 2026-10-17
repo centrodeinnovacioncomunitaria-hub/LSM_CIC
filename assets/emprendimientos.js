@@ -240,73 +240,93 @@
         if (a.ejecutada === false) return '<span class="chip emp-no">No se ejecutó</span>';
         return '<span class="chip">Pendiente</span>';
     }
+    // Tarjeta de cada sesión. Dinamizadora: marca si se hizo, sube acta y herramienta y la envía a la Secretaría.
+    // Secretaría: ve lo mismo y responde «¿Se aprueban los documentos?» con Sí o No, con sus comentarios.
+    let fichaActual = null;
     function tarjetaActividad(a) {
         const clave = `${a.ruta}-${a.n}`;
         const rev = a.revision ? a.revision.estado : null;
         const esDin = C.perfil.rol === 'dinamizadora';
-        // En revisión o aprobada, la dinamizadora ya no la cambia (la Secretaría sí puede)
-        const fija = esDin && (rev === 'enviada' || rev === 'aprobada');
+        const esSec = C.perfil.rol === 'secretaria';
+        // La Secretaría solo registra la sesión cuando el emprendimiento no tiene dinamizadora asignada
+        const registra = esDin || (esSec && !(fichaActual && fichaActual.dinamizadora));
+        const fija = !registra || (esDin && (rev === 'enviada' || rev === 'aprobada'));
         const completa = a.ejecutada === true ? a.requeridos.every((d) => a.documentos[d.tipo]) : a.ejecutada === false && !!a.motivo;
         const comentarios = a.comentarios || [];
+        const devolucion = rev === 'devuelta' ? [...comentarios].reverse().find((c) => c.estado === 'devuelta') : null;
         return `<li class="emp-act ${a.ejecutada === true ? 'es-si' : a.ejecutada === false ? 'es-no' : ''} ${rev ? 'rev-' + rev : ''}" data-act="${clave}">
-            <div class="emp-act-cabeza"><h5>${esc(a.ruta === 'hacer' ? `Semana ${a.n}` : `Taller ${a.n}`)}</h5>${estadoChip(a)}${rev ? `<span class="chip ${REVISION[rev][1]}">${esc(REVISION[rev][0])}</span>` : ''}</div>
-            <p class="emp-pregunta">¿Se ejecutó la actividad?</p>
-            <div class="emp-sino" role="group" aria-label="¿Se ejecutó ${esc(a.nombre)}?">
-                <button type="button" class="emp-si" data-marcar="si" aria-pressed="${a.ejecutada === true}" ${fija ? 'disabled' : ''}>✓ Sí</button>
-                <button type="button" class="emp-no-btn" data-marcar="no" aria-pressed="${a.ejecutada === false}" ${fija ? 'disabled' : ''}>✕ No</button>
+            <div class="emp-act-cabeza">
+                <div class="emp-act-titulo"><span class="emp-act-num">${esc(a.ruta === 'hacer' ? `Semana ${a.n}` : `Taller ${a.n}`)}</span><h5>${esc(a.titulo || a.nombre)}</h5></div>
+                <div class="emp-act-chips">${rev ? `<span class="chip ${REVISION[rev][1]}">${esc(REVISION[rev][0])}</span>` : estadoChip(a)}</div>
             </div>
+            ${esSec && rev === 'enviada' ? bloqueAprobar(a, clave) : ''}
+            ${devolucion && esDin ? `<div class="emp-devuelta" role="note"><b>La Secretaría pidió corregir:</b><p>${esc(devolucion.texto)}</p><small>${esc(devolucion.autor)} · ${esc(fechaCorta(devolucion.en))}</small></div>` : ''}
+            ${registra && !fija ? `<p class="emp-pregunta">¿Se hizo la sesión?</p>
+            <div class="emp-sino" role="group" aria-label="¿Se hizo la sesión ${esc(a.titulo || a.nombre)}?">
+                <button type="button" class="emp-si" data-marcar="si" aria-pressed="${a.ejecutada === true}">✓ Sí</button>
+                <button type="button" class="emp-no-btn" data-marcar="no" aria-pressed="${a.ejecutada === false}">✕ No</button>
+            </div>` : a.ejecutada === null ? '<p class="texto-suave emp-espera">La dinamizadora todavía no ha registrado esta sesión.</p>'
+                : `<p class="emp-resumen-sesion">${a.ejecutada ? '✓ La sesión se hizo' : '✕ La sesión no se hizo'}</p>`}
             ${a.ejecutada === true ? `
                 <label class="etiqueta" for="fecha-${clave}">Fecha de la sesión</label>
                 <input type="date" id="fecha-${clave}" class="campo campo-mini" data-fecha value="${esc(a.fecha || '')}" ${fija ? 'disabled' : ''}>
-                <p class="emp-pregunta">Documentos que debes subir</p>
+                <p class="emp-pregunta">${fija ? 'Documentos' : 'Documentos que debes subir'}</p>
                 <ul class="emp-docs lista-limpia">${a.requeridos.map((d) => {
                     const m = a.documentos[d.tipo];
                     return `<li class="emp-doc ${m ? 'subido' : ''}">
                         <span class="emp-doc-icono" aria-hidden="true">${m ? '✓' : d.tipo === 'acta' ? '📝' : '🧰'}</span>
-                        <div class="emp-doc-texto"><b>${esc(d.nombre)}</b><small>${m ? `${esc(m.nombre)} · ${kb(m.bytes)}` : esc(d.detalle)}</small>${m && m.drive_url && C.perfil.rol === 'secretaria' ? `<a class="emp-drive" href="${esc(m.drive_url)}" target="_blank" rel="noopener">Abrir en Google Drive</a>` : m && m.drive_url ? '<small class="emp-drive-ok">✓ Copia guardada en Google Drive</small>' : m && m.drive_pendiente ? '<small class="emp-drive-pend">Copia en Google Drive pendiente</small>' : ''}</div>
+                        <div class="emp-doc-texto"><b>${esc(d.nombre)}</b><small>${m ? `${esc(m.nombre)} · ${kb(m.bytes)}` : fija ? 'No se subió' : esc(d.detalle)}</small>${m && m.drive_url && esSec ? `<a class="emp-drive" href="${esc(m.drive_url)}" target="_blank" rel="noopener">Abrir en Google Drive</a>` : m && m.drive_url ? '<small class="emp-drive-ok">✓ Copia guardada en Google Drive</small>' : m && m.drive_pendiente ? '<small class="emp-drive-pend">Copia en Google Drive pendiente</small>' : ''}</div>
                         <div class="emp-doc-acciones">
-                            ${m ? `<button type="button" class="boton-texto" data-ver-doc="${d.tipo}">Ver</button>` : ''}
+                            ${m ? `<button type="button" class="btn btn-borde btn-pequeno" data-ver-doc="${d.tipo}">Ver</button>` : ''}
                             ${fija ? '' : `<label class="btn ${m ? 'btn-borde' : 'btn-primario'} btn-pequeno emp-subir">${m ? 'Reemplazar' : 'Subir foto o PDF'}<input type="file" accept="image/*,application/pdf" data-subir="${d.tipo}" hidden></label>
                             ${m ? `<button type="button" class="boton-texto emp-quitar" data-quitar-doc="${d.tipo}">Quitar</button>` : ''}`}
                         </div>
                     </li>`;
                 }).join('')}</ul>` : ''}
             ${a.ejecutada === false ? `
-                <label class="etiqueta" for="motivo-${clave}">¿Por qué no se ejecutó?</label>
+                <label class="etiqueta" for="motivo-${clave}">¿Por qué no se hizo?</label>
                 <textarea id="motivo-${clave}" class="campo" rows="2" maxlength="300" data-motivo placeholder="Por ejemplo: la emprendedora no estaba disponible" ${fija ? 'disabled' : ''}>${esc(a.motivo || '')}</textarea>
                 ${fija ? '' : '<button type="button" class="btn btn-borde btn-pequeno" data-guardar-motivo>Guardar motivo</button>'}` : ''}
             ${bloqueRevision(a, rev, esDin, completa)}
-            <details class="emp-comentarios" ${comentarios.length ? 'open' : ''}>
-                <summary>Comentarios${comentarios.length ? ` (${comentarios.length})` : ''}</summary>
-                ${comentarios.length ? `<ol class="lista-limpia emp-com-lista">${comentarios.map((c) => `<li class="${c.estado ? 'com-' + c.estado : ''}"><p class="emp-com-meta"><b>${esc(c.autor)}</b> · ${esc(c.rol)} · ${esc(fechaCorta(c.en))}${c.estado ? ` · <span class="chip ${(REVISION[c.estado] || ['', ''])[1]}">${c.estado === 'enviada' ? 'Enviada a revisión' : c.estado === 'aprobada' ? 'Aprobó' : 'Devolvió'}</span>` : ''}</p><p>${esc(c.texto)}</p></li>`).join('')}</ol>` : '<p class="texto-suave">Todavía no hay comentarios.</p>'}
-                <label class="etiqueta" for="com-${clave}">${C.perfil.rol === 'secretaria' ? 'Anotación para la dinamizadora' : 'Escribe a la Secretaría Técnica'}</label>
+            ${esSec && rev === 'enviada' ? `<div class="emp-comentario-sec">
+                <label class="etiqueta" for="rev-${clave}">Comentarios de la Secretaría <small>(obligatorio si respondes No)</small></label>
+                <textarea id="rev-${clave}" class="campo" rows="3" maxlength="1000" data-comentario-revision placeholder="Escribe aquí qué está bien o qué debe corregir la dinamizadora"></textarea>
+            </div>` : ''}
+            <details class="emp-comentarios">
+                <summary>Historial de comentarios${comentarios.length ? ` (${comentarios.length})` : ''}</summary>
+                ${comentarios.length ? `<ol class="lista-limpia emp-com-lista">${comentarios.map((c) => `<li class="${c.estado ? 'com-' + c.estado : ''}"><p class="emp-com-meta"><b>${esc(c.autor)}</b> · ${esc(c.rol)} · ${esc(fechaCorta(c.en))}${c.estado ? ` · <span class="chip ${(REVISION[c.estado] || ['', ''])[1]}">${c.estado === 'enviada' ? 'Envió a revisión' : c.estado === 'aprobada' ? 'Aprobó' : 'Pidió corregir'}</span>` : ''}</p><p>${esc(c.texto)}</p></li>`).join('')}</ol>` : '<p class="texto-suave">Todavía no hay comentarios.</p>'}
+                <label class="etiqueta" for="com-${clave}">${esSec ? 'Escribe una nota a la dinamizadora' : 'Escribe a la Secretaría Técnica'}</label>
                 <textarea id="com-${clave}" class="campo" rows="2" maxlength="1000" data-comentario></textarea>
-                <button type="button" class="btn btn-borde btn-pequeno" data-comentar>Comentar</button>
+                <button type="button" class="btn btn-borde btn-pequeno" data-comentar>Guardar nota</button>
             </details>
         </li>`;
     }
-    // Envío a la Secretaría Técnica (dinamizadora) o aprobación y devolución (Secretaría)
+    // Secretaría: la pregunta va arriba de la tarjeta, como en la hoja de la sesión
+    const bloqueAprobar = (a, clave) => `<div class="emp-aprobar">
+        <p class="emp-pregunta">¿Se aprueban los documentos?</p>
+        <p class="texto-suave">La dinamizadora los envió (${esc(fechaCorta(a.revision.enviada_en))}). Revísalos abajo antes de responder.</p>
+        <div class="emp-sino" role="group" aria-label="¿Se aprueban los documentos de ${esc(a.titulo || a.nombre)}?">
+            <button type="button" class="emp-si" data-revisar-act="aprobada">✓ Sí</button>
+            <button type="button" class="emp-no-btn" data-revisar-act="devuelta">✕ No</button>
+        </div>
+    </div>`;
+    // Envío a la Secretaría Técnica (dinamizadora) y estado de la revisión
     function bloqueRevision(a, rev, esDin, completa) {
         if (a.ejecutada === null) return '';
         if (esDin) {
-            if (rev === 'enviada') return `<p class="emp-revision texto-suave">Enviada a la Secretaría Técnica (${esc(fechaCorta(a.revision.enviada_en))}). Te avisaremos aquí cuando la revise.</p>`;
-            if (rev === 'aprobada') return `<p class="emp-revision paso-ok">✓ Aprobada${a.revision.revisada_por ? ` por ${esc(a.revision.revisada_por)}` : ''} (${esc(fechaCorta(a.revision.revisada_en))})</p>`;
+            if (rev === 'enviada') return `<p class="emp-revision emp-estado-envio">📨 Enviada a la Secretaría Técnica (${esc(fechaCorta(a.revision.enviada_en))}). Le llegó un correo y te avisaremos aquí cuando la revise.</p>`;
+            if (rev === 'aprobada') return `<p class="emp-revision paso-ok">✓ Aprobada${a.revision.revisada_por_nombre ? ` por ${esc(a.revision.revisada_por_nombre)}` : ''} el ${esc(fechaCorta(a.revision.revisada_en))}</p>`;
             return `<div class="emp-revision">
                 ${completa ? '' : `<p class="ayuda-campo">${a.ejecutada ? 'Sube el acta y la herramienta para poder enviarla.' : 'Escribe y guarda el motivo para poder enviarla.'}</p>`}
-                <button type="button" class="btn btn-primario btn-pequeno" data-enviar-act ${completa ? '' : 'disabled'}>${rev === 'devuelta' ? 'Volver a enviar a la Secretaría Técnica' : 'Enviar a la Secretaría Técnica'}</button>
+                <button type="button" class="btn btn-primario emp-enviar" data-enviar-act ${completa ? '' : 'disabled'}>${rev === 'devuelta' ? 'Volver a enviar a la Secretaría Técnica' : 'Enviar a la Secretaría Técnica'}</button>
             </div>`;
         }
-        if (C.perfil.rol !== 'secretaria') return '';
-        if (rev !== 'enviada') return `<p class="emp-revision texto-suave">${rev === 'aprobada' ? `✓ Aprobada (${esc(fechaCorta(a.revision.revisada_en))})` : rev === 'devuelta' ? 'Devuelta a la dinamizadora: espera que la corrija y la vuelva a enviar.' : 'La dinamizadora todavía no la ha enviado para aprobación.'}</p>`;
-        return `<div class="emp-revision emp-revisar">
-            <p class="emp-pregunta">¿Apruebas esta actividad?</p>
-            <label class="etiqueta" for="rev-${a.ruta}-${a.n}">Comentario (obligatorio si la devuelves)</label>
-            <textarea id="rev-${a.ruta}-${a.n}" class="campo" rows="2" maxlength="1000" data-comentario-revision></textarea>
-            <div class="botones"><button type="button" class="btn btn-primario btn-pequeno" data-revisar-act="aprobada">Aprobar</button><button type="button" class="btn btn-borde btn-pequeno" data-revisar-act="devuelta">Devolver con comentario</button></div>
-        </div>`;
+        if (C.perfil.rol !== 'secretaria' || rev === 'enviada') return '';
+        return `<p class="emp-revision texto-suave">${rev === 'aprobada' ? `✓ Aprobaste estos documentos el ${esc(fechaCorta(a.revision.revisada_en))}.` : rev === 'devuelta' ? 'Le pediste correcciones a la dinamizadora: cuando las haga, te llegará un correo.' : 'La dinamizadora todavía no la ha enviado para aprobación.'}</p>`;
     }
     function pintarSeguimiento(cont, s, volver) {
         const e = s.emprendimiento;
+        fichaActual = e;
         const wa = whatsapp(e.celular);
         const grupo = (ruta, titulo) => `<section class="emp-grupo"><h4>${titulo}</h4><ol class="emp-actividades lista-limpia">${s.actividades.filter((a) => a.ruta === ruta).map(tarjetaActividad).join('')}</ol></section>`;
         cont.innerHTML = `
@@ -347,16 +367,16 @@
             const env = t.closest('[data-enviar-act]');
             if (env) {
                 env.disabled = true;
-                try { actualizar(await C.llamar('enviar-actividad', actividad(env), true)); C.aviso('Enviada a la Secretaría Técnica para aprobación.'); } catch (err) { C.aviso(err.message); env.disabled = false; }
+                try { actualizar(await C.llamar('enviar-actividad', actividad(env), true)); C.aviso('Listo: se envió a la Secretaría Técnica y le llegó un correo para que la revise.'); } catch (err) { C.aviso(err.message); env.disabled = false; }
                 return;
             }
             const rv = t.closest('[data-revisar-act]');
             if (rv) {
                 const li = rv.closest('[data-act]');
                 const comentario = $('[data-comentario-revision]', li).value.trim();
-                if (rv.dataset.revisarAct === 'devuelta' && comentario.length < 5) { C.aviso('Escribe qué debe corregir la dinamizadora antes de devolverla.'); $('[data-comentario-revision]', li).focus(); return; }
+                if (rv.dataset.revisarAct === 'devuelta' && comentario.length < 5) { C.aviso('Escribe en «Comentarios de la Secretaría» qué debe corregir la dinamizadora y vuelve a tocar «No».'); $('[data-comentario-revision]', li).focus(); return; }
                 rv.disabled = true;
-                try { actualizar(await C.llamar('revisar-actividad', { ...actividad(rv), estado: rv.dataset.revisarAct, comentario }, true)); C.aviso(rv.dataset.revisarAct === 'aprobada' ? 'Actividad aprobada.' : 'Actividad devuelta con tu comentario.'); } catch (err) { C.aviso(err.message); rv.disabled = false; }
+                try { actualizar(await C.llamar('revisar-actividad', { ...actividad(rv), estado: rv.dataset.revisarAct, comentario }, true)); C.aviso(rv.dataset.revisarAct === 'aprobada' ? 'Documentos aprobados.' : 'Se le devolvió a la dinamizadora con tus comentarios.'); } catch (err) { C.aviso(err.message); rv.disabled = false; }
                 return;
             }
             const cm = t.closest('[data-comentar]');

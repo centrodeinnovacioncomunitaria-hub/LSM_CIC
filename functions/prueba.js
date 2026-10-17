@@ -68,6 +68,8 @@ function cuentasFalsas() {
   const pedir = async (accion, datos = {}, token = null) => atender({ accion, ...datos }, token);
   // Responde un intento con n respuestas correctas (las opciones llegan en orden aleatorio)
   const responder = (q, n) => q.preguntas.map((p, i) => (i < n ? p.opciones.indexOf('bien') : p.opciones.findIndex((o) => o !== 'bien')));
+  // Ver un video: un pulso cada 15 s con la lección abierta (así lo hace el navegador)
+  const verVideo = async (token, datos, seg, accion = 'pulso-video') => { let r; for (let t = 0; t < seg; t += 15) { avanzar(0.25); r = await ok(accion, datos, token); } return r; };
   const ok = async (accion, datos, token) => { const r = await pedir(accion, datos, token); assert.equal(r.estado, 200, `${accion}: ${JSON.stringify(r.cuerpo)}`); return r.cuerpo; };
   const falla = async (accion, datos, token, estado) => { const r = await pedir(accion, datos, token); assert.equal(r.estado, estado, `${accion} debía fallar con ${estado}: ${JSON.stringify(r.cuerpo)}`); return r.cuerpo; };
   let pasos = 0;
@@ -191,14 +193,18 @@ function cuentasFalsas() {
   assert.equal((await ok('mi-progreso', {}, tDina)).cursos.gestion[0].material_visto, false);
   assert.equal((await ok('material', { curso: 'gestion', unidad: 1 }, tDina)).archivos.length, 1);
   await falla('cuestionario', { curso: 'gestion', unidad: 1 }, tDina, 403); // falta el video
-  // El video solo cuenta tras el tiempo mínimo desde que se reprodujo (sin duración cargada: 2 minutos)
+  // El video se ve completo: solo cuenta el tiempo con la lección abierta (pulsos); sin duración cargada, 10 minutos
   await falla('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tDina, 400);
   p = await ok('iniciar-video', { curso: 'gestion', unidad: 1 }, tDina);
-  assert.equal(p.cursos.gestion[0].video_faltan, 120);
-  avanzar(1);
-  const temprano = await falla('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tDina, 400);
-  assert.equal(temprano.faltan, 60);
-  avanzar(1);
+  assert.equal(p.cursos.gestion[0].video_faltan, 600);
+  avanzar(30); // dejar la página cerrada no cuenta
+  assert.equal((await falla('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tDina, 400)).faltan, 600);
+  assert.equal((await ok('pulso-video', { curso: 'gestion', unidad: 1 }, tDina)).faltan, 560, 'tras una ausencia el pulso suma como máximo 40 s');
+  assert.equal((await ok('pulso-video', { curso: 'gestion', unidad: 1, reanudar: true }, tDina)).faltan, 560, 'al reanudar no se suma el tiempo fuera');
+  const mitad = await verVideo(tDina, { curso: 'gestion', unidad: 1 }, 270);
+  assert.equal(mitad.faltan, 290);
+  assert.equal((await falla('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tDina, 400)).faltan, 290);
+  await verVideo(tDina, { curso: 'gestion', unidad: 1 }, 290);
   await ok('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tDina);
   // Pierde los dos intentos → pausa → repasa video y material → segunda ronda
   for (let i = 0; i < 2; i++) {
@@ -217,8 +223,8 @@ function cuentasFalsas() {
   p = await ok('mi-progreso', {}, tDina);
   assert.equal(p.cursos.gestion[0].video_visto, false, 'tras la pausa hay que volver a ver el video');
   await falla('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tDina, 400);
-  await ok('iniciar-video', { curso: 'gestion', unidad: 1 }, tDina);
-  avanzar(2);
+  assert.equal((await ok('iniciar-video', { curso: 'gestion', unidad: 1 }, tDina)).cursos.gestion[0].video_faltan, 600, 'tras la pausa el conteo empieza de cero');
+  await verVideo(tDina, { curso: 'gestion', unidad: 1 }, 600);
   await ok('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tDina);
   p = await ok('marcar', { curso: 'gestion', unidad: 1, que: 'material' }, tDina);
   assert.equal(p.cursos.gestion[0].estado, 'en-curso');
@@ -265,13 +271,9 @@ function cuentasFalsas() {
   paso('Constancia al terminar Gestión, verificable en público solo con iniciales');
 
   p = await ok('mi-progreso', {}, tDina);
-  assert.match(p.cursos['acompanar-hacer'][0].motivo, /transferencia/);
-  await falla('hito', { hito: 'transferencia-hacer', cedula: '22222222' }, tDina, 403);
-  await ok('hito', { hito: 'transferencia-hacer', cedula: '22222222' }, tSara);
-  p = await ok('mi-progreso', {}, tDina);
   assert.equal(p.cursos['acompanar-hacer'][0].estado, 'disponible');
-  assert.equal(p.cursos['facilitar-ser'][0].estado, 'bloqueada');
-  paso('Dinamizadora: HACER se abre solo con la transferencia que registra la Secretaría');
+  assert.equal(p.cursos['facilitar-ser'][0].estado, 'disponible');
+  paso('Dinamizadora: al aprobar Gestión se abren solas las rutas HACER y SER');
 
   // ---------- Secretaría: su formación sin cuestionario y luego las rutas ----------
   await ok('hito', { hito: 'compromiso' }, tSara);
@@ -279,7 +281,7 @@ function cuentasFalsas() {
   assert.deepEqual(Object.keys(p.cursos), ['gestion', 'acompanar-hacer', 'facilitar-ser'], 'ya no existe el curso de Formación de la Secretaría');
   for (let u = 1; u <= 4; u++) {
     await ok('material', { curso: 'gestion', unidad: u }, tSara);
-    if (u === 1) { await ok('iniciar-video', { curso: 'gestion', unidad: 1 }, tSara); avanzar(2); await ok('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tSara); }
+    if (u === 1) { await ok('iniciar-video', { curso: 'gestion', unidad: 1 }, tSara); await verVideo(tSara, { curso: 'gestion', unidad: 1 }, 600); await ok('marcar', { curso: 'gestion', unidad: 1, que: 'video' }, tSara); }
     else await falla('marcar', { curso: 'gestion', unidad: u, que: 'video' }, tSara, 400); // sin video
     const c = await ok('cuestionario', { curso: 'gestion', unidad: u }, tSara);
     await ok('responder', { id: c.id, respuestas: responder(c, 10) }, tSara);
@@ -319,6 +321,7 @@ function cuentasFalsas() {
   await db.collection('perfiles').doc(tAdmin).set({ cedula: 'admin', nombre: 'Administración', rol: 'administradora', cuenta_email: 'admin@correo.co' });
   await falla('guardar-video', { video: { codigo: 'GES-M2', youtube_id: 'abcdefghijk' } }, tDina, 403);
   await falla('guardar-video', { video: { codigo: 'GES-M2', youtube_id: 'abcdefghijk' } }, tSara, 403);
+  await falla('guardar-video', { video: { codigo: 'GES-M2', youtube_id: 'abcdefghijk' } }, tAdmin, 400); // sin duración no se publica
   await falla('admin-contenido', {}, tSara, 403);
   const gv = await ok('guardar-video', { video: { codigo: 'GES-M2', titulo: 'Módulo 2', url: 'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view?usp=sharing', duracion_min: 20, audiencia: 'equipo', curso: 'gestion', unidad: 2 } }, tAdmin);
   assert.equal(gv.video.drive_id, '1AbCdEfGhIjKlMnOpQrStUvWxYz012345');
@@ -330,7 +333,7 @@ function cuentasFalsas() {
   assert.equal(ac.cursos.gestion.unidades[1].material[0].nombre, 'Guía del módulo 2');
   assert.equal(ac.cursos.gestion.unidades[0].preguntas, 10);
   assert.equal(ac.grabaciones.length, 1);
-  assert.equal((await ok('mi-progreso', {}, tDina)).cursos.gestion[1].video_segundos, 1080, 'el 90 % de 20 minutos');
+  assert.equal((await ok('mi-progreso', {}, tDina)).cursos.gestion[1].video_segundos, 1200, 'el video completo: 20 minutos');
   assert.equal((await ok('videos', {}, tDina)).videos.length, 3);
   assert.deepEqual((await ok('videos', {}, tRosa)).videos.map((v) => v.codigo), ['GRAB-SER2-MAG-20261015']);
   await falla('quitar-video', { codigo: 'GES-M2' }, tSara, 403);
@@ -384,9 +387,11 @@ function cuentasFalsas() {
   assert.match(p.cursos.gestion[0].motivo, /bienvenida/);
   await falla('bienvenida', { paso: 'completar' }, tTres0, 400);
   await ok('bienvenida', { paso: 'iniciar' }, tTres0);
-  avanzar(2);
+  avanzar(5);
+  await falla('bienvenida', { paso: 'completar' }, tTres0, 400); // pasó el tiempo pero sin ver el video
+  await verVideo(tTres0, { paso: 'pulso' }, 240, 'bienvenida');
   await falla('bienvenida', { paso: 'completar' }, tTres0, 400); // 5 min de video: aún falta
-  avanzar(3);
+  await verVideo(tTres0, { paso: 'pulso' }, 60, 'bienvenida');
   p = await ok('bienvenida', { paso: 'completar' }, tTres0);
   assert.equal(p.bienvenida.hecha, true);
   assert.equal(p.cursos.gestion[0].estado, 'disponible');
@@ -446,6 +451,10 @@ function cuentasFalsas() {
   sg = await ok('enviar-actividad', { ...act, nota: 'Lista para revisar.' }, tDina);
   assert.equal(sg.actividades[0].revision.estado, 'enviada');
   assert.equal(sg.actividades[0].comentarios[0].texto, 'Lista para revisar.');
+  const avisoEnvio = enDrive.filter((c) => c.accion === 'correo' && /envió documentos/.test(c.asunto)).pop();
+  assert.ok(avisoEnvio, 'al enviar, le llega un correo a la Secretaría');
+  assert.equal(avisoEnvio.para, 'sara@correo.co', 'a la secretaria que asignó el emprendimiento');
+  assert.match(avisoEnvio.texto, /envió documentos para tu aprobación/);
   await falla('quitar-documento', { ...act, tipo: 'acta' }, tDina, 409); // en revisión no se cambia
   assert.equal((await ok('emprendimientos', {}, tSara)).emprendimientos.find((x) => x.cedula === '44444444').avance.por_revisar, 1);
   assert.equal((await ok('mi-avance', {}, tRosa)).actividades[0].estado, 'en_revision');
@@ -522,7 +531,7 @@ function cuentasFalsas() {
   await falla('tickets', {}, tSara, 403); // la Secretaría ya no atiende el soporte
   const bandeja = await ok('tickets', {}, tAdmin);
   assert.equal(bandeja.tickets.length, 1);
-  const avisos = () => enDrive.filter((c) => c.accion === 'correo');
+  const avisos = () => enDrive.filter((c) => c.accion === 'correo' && !/envió documentos/.test(c.asunto));
   assert.equal(avisos().length, 1, 'la solicitud nueva llega por correo a soporte');
   assert.match(avisos()[0].asunto, /Nueva solicitud T-/);
   assert.match(avisos()[0].texto, /El video de la semana 2/);

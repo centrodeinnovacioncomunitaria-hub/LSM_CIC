@@ -42,6 +42,8 @@ const NOMBRE_CURSO_RETIRADO = { 'formacion-secretaria': 'Formación de la Secret
 // En admin/ el material de transferencia se carga como un curso más (videos STF-UN y enlaces adicionales)
 const CURSOS_ADMIN = { ...CURSOS, 'formacion-secretaria': { unidades: 6, prefijo: 'STF-U', nombre: 'Material de transferencia · Secretaría Técnica', cuestionario: false } };
 const TRANSFERENCIA = ['Método Insight', 'Oportunidad significativa emergente', 'Modelo de negocio Canvas', 'Producto mínimo viable y Lean Startup', 'Gestión financiera estratégica', 'Guía metodológica del facilitador'];
+const SEGUNDOS_SIN_DURACION = 600; // si un video no tiene duración en admin/, se exigen 10 minutos
+const PULSO_MAX_SEG = 40; // el navegador manda un pulso cada 15 s mientras el video está en pantalla
 const PREGUNTAS_POR_INTENTO = 10; // el banco oficial (octubre 2026) tiene 10 preguntas por evaluación
 const NOTA_MINIMA = 7;            // 70 %: 7 de 10
 const INTENTOS_POR_RONDA = 2;    // si pierde los dos, repasa video y material para volver a intentar
@@ -469,9 +471,10 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const youtube_id = /^[\w-]{11}$/.test(v.youtube_id || '') ? v.youtube_id : idYoutube(v.url);
     const drive_id = youtube_id ? null : (/^[\w-]{20,}$/.test(v.drive_id || '') ? v.drive_id : idDrive(v.url));
     if (!youtube_id && !drive_id) throw new Falla(400, 'video', 'Pega el enlace del video de YouTube o de Google Drive.');
+    if (!codigo.startsWith('GRAB-') && !(Number(v.duracion_min) > 0)) throw new Falla(400, 'duracion', 'Escribe la duración exacta del video (minutos y segundos): la persona debe verlo completo para seguir.');
     const fila = {
       codigo, titulo: texto(v.titulo, 140) || codigo, youtube_id, drive_id,
-      duracion_min: Number(v.duracion_min) > 0 ? Math.min(300, Math.round(Number(v.duracion_min))) : null,
+      duracion_min: Number(v.duracion_min) > 0 ? Math.min(300, Math.round(Number(v.duracion_min) * 100) / 100) : null,
       audiencia: v.audiencia === 'emprendedoras' ? 'emprendedoras' : 'equipo',
       curso: texto(v.curso, 40), unidad: Number(v.unidad) || 1,
       satelite: SATELITES[v.satelite] ? v.satelite : null, fecha: /^\d{4}-\d{2}-\d{2}$/.test(v.fecha || '') ? v.fecha : null,
@@ -874,9 +877,12 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   // La Secretaría asigna cada emprendimiento a una dinamizadora de su mismo satélite. La dinamizadora chulea si cada
   // actividad (6 sesiones de la ruta HACER y 4 talleres de la ruta SER) se ejecutó; si se ejecutó, sube el acta de
   // la sesión y la herramienta diligenciada. Los archivos se guardan en Firestore por partes (colección «documentos»).
+  // Títulos de las sesiones: los mismos de las páginas de las rutas (herramientas/Datos.pm)
+  const TITULOS_HACER = ['Cuéntame tu negocio', 'Mi negocio puede ganar de otra forma', 'Mirar más allá de mi cuadra', 'El bolsillo separado', 'Cómo vender más', 'Crecer con orden'];
+  const TITULOS_SER = ['De la subsistencia a la gerencia', 'De la visión de túnel a la visión panorámica', 'Mi liderazgo, mis derechos, mi protección', 'La confianza que sostiene'];
   const ACTIVIDADES = [
-    ...[['A1', 'A2', 'A3'], ['A4', 'A5'], ['A6'], ['A7', 'A8', 'A9'], ['A10', 'A11'], ['A12', 'A13']].map((h, i) => ({ ruta: 'hacer', n: i + 1, nombre: `Ruta HACER · Semana ${i + 1}`, herramientas: h })),
-    ...[['A14'], ['A15'], ['A16'], ['A17']].map((h, i) => ({ ruta: 'ser', n: i + 1, nombre: `Ruta SER · Taller ${i + 1}`, herramientas: h })),
+    ...[['A1', 'A2', 'A3'], ['A4', 'A5'], ['A6'], ['A7', 'A8', 'A9'], ['A10', 'A11'], ['A12', 'A13']].map((h, i) => ({ ruta: 'hacer', n: i + 1, nombre: `Ruta HACER · Semana ${i + 1}`, titulo: TITULOS_HACER[i], herramientas: h })),
+    ...[['A14'], ['A15'], ['A16'], ['A17']].map((h, i) => ({ ruta: 'ser', n: i + 1, nombre: `Ruta SER · Taller ${i + 1}`, titulo: TITULOS_SER[i], herramientas: h })),
   ];
   const TIPOS_DOCUMENTO = ['acta', 'herramienta'];
   const TIPOS_ARCHIVO = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
@@ -1047,11 +1053,11 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const filas = Object.fromEntries((await lista(col('seguimiento').where('emprendedora', '==', e.id))).map((x) => [`${x.ruta}_${x.n}`, x]));
     const din = e.dinamizadora_cedula ? await datos(col('directorio').doc(e.dinamizadora_cedula)) : null;
     return {
-      emprendimiento: { cedula: e.cedula, nombre: e.nombre, negocio: e.negocio || null, municipio: e.municipio || null, satelite: e.satelite || null, celular: e.celular || null, dinamizadora_nombre: din ? din.nombre : null },
+      emprendimiento: { cedula: e.cedula, nombre: e.nombre, negocio: e.negocio || null, municipio: e.municipio || null, satelite: e.satelite || null, celular: e.celular || null, dinamizadora: e.dinamizadora_cedula || null, dinamizadora_nombre: din ? din.nombre : null },
       actividades: ACTIVIDADES.map((a) => {
         const x = filas[`${a.ruta}_${a.n}`];
         return {
-          ruta: a.ruta, n: a.n, nombre: a.nombre, herramientas: a.herramientas, requeridos: requeridos(a),
+          ruta: a.ruta, n: a.n, nombre: a.nombre, titulo: a.titulo, herramientas: a.herramientas, requeridos: requeridos(a),
           ejecutada: x ? x.ejecutada : null, fecha: x ? x.fecha || null : null, motivo: x ? x.motivo || null : null,
           documentos: Object.fromEntries(TIPOS_DOCUMENTO.map((t) => [t, metaDocumento(x && x.documentos && x.documentos[t])])),
           revision: vistaRevision(x), comentarios: vistaComentarios(x),
@@ -1159,7 +1165,28 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const nota = texto(b.nota, 1000);
     const comentarios = [...(fila.comentarios || []), ...(nota ? [comentario(p, nota, 'enviada')] : [])];
     await col('seguimiento').doc(id).set({ ...fila, comentarios, revision: { estado: 'enviada', enviada_en: hoy(), enviada_por: p.id } });
+    await avisarEnvioActividad(p, e, a, fila);
     return verSeguimiento(token, b);
+  }
+  // Correo a la Secretaría: «tal dinamizadora envió documentos para su aprobación». Si falla, el envío igual queda hecho.
+  async function avisarEnvioActividad(p, e, a, fila) {
+    if (!driveActivo()) return;
+    try {
+      const asignadora = e.asignada_por ? await perfilPorId(e.asignada_por) : null;
+      const s = asignadora && asignadora.rol === 'secretaria' && correoValido(asignadora.correo) ? asignadora : await secretariaEncargada(p.cargo);
+      if (!s) { console.warn(`Envío de ${p.nombre}: no hay secretaria con correo para avisar.`); return; }
+      const actividad = `${a.ruta === 'hacer' ? `Semana ${a.n}` : `Taller ${a.n}`} · ${a.titulo}`;
+      const cuerpo = [
+        `Hola, ${String(s.nombre).split(' ')[0]}:`, '',
+        `La dinamizadora ${p.nombre} envió documentos para tu aprobación.`, '',
+        `Emprendimiento: ${e.nombre}${e.negocio ? ` (${e.negocio})` : ''}`,
+        `Actividad: ${actividad}`,
+        fila.ejecutada ? `Sesión del ${fila.fecha || 'día sin indicar'} · acta y herramienta adjuntas en la plataforma.` : `No se ejecutó. Motivo: ${fila.motivo}`, '',
+        `Para revisarla: entra a ${PANEL_SOPORTE.replace(/admin\/$/, '')} con tu cédula, elige «Secretaria», abre «Seguimiento» y toca la casilla de esa actividad.`,
+        'Ahí respondes «¿Se aprueban los documentos?» con Sí o No y le dejas tus comentarios.',
+      ].join('\n');
+      await drive({ accion: 'correo', para: s.correo, asunto: `[CIC] ${p.nombre} envió documentos para aprobar · ${e.nombre}`, texto: cuerpo });
+    } catch (err) { console.error(`No se pudo avisar el envío de ${p.nombre}:`, err.message); }
   }
   // Secretaría: aprueba o devuelve (con comentario obligatorio) una actividad enviada.
   async function revisarActividad(token, b) {
@@ -1287,12 +1314,21 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   const aprobada = (ctx, curso, u) => !!(filaDe(ctx, curso, u) || {}).aprobado_en;
   // El video cuenta como visto cuando pasó al menos el 90 % de su duración desde que se abrió en la lección.
   // Si la unidad entró en pausa, hay que volver a verlo: cuenta desde una apertura posterior a la pausa.
-  const segundosVideo = (ctx, curso, u) => { const v = ctx.videos.get(`${CURSOS[curso].prefijo}${u}`); return v && v.duracion_min ? Math.round(v.duracion_min * 60 * 0.9) : 120; };
+  // El video se debe ver completo: su duración entera (la que se escribe en admin/), no una parte.
+  const segundosDe = (v) => (v && v.duracion_min ? Math.ceil(v.duracion_min * 60) : SEGUNDOS_SIN_DURACION);
+  const segundosVideo = (ctx, curso, u) => segundosDe(ctx.videos.get(`${CURSOS[curso].prefijo}${u}`));
   const inicioValido = (f) => (f.video_inicio && (!f.bloqueado_en || f.video_inicio > f.bloqueado_en) ? f.video_inicio : null);
-  const faltaVideo = (ctx, curso, u, f) => {
-    const i = inicioValido(f);
-    return i ? Math.max(0, segundosVideo(ctx, curso, u) - Math.floor((ahora() - new Date(i)) / 1000)) : segundosVideo(ctx, curso, u);
-  };
+  // Solo suma el tiempo que el navegador reporta con pulsos: la página abierta y el video en pantalla.
+  const vistoSeg = (f) => (inicioValido(f) ? f.video_seg || 0 : 0);
+  const faltaVideo = (ctx, curso, u, f) => Math.max(0, segundosVideo(ctx, curso, u) - vistoSeg(f));
+  // Cada pulso suma lo transcurrido desde el anterior, con tope: si la persona se fue y vuelve, no se le cuenta el tiempo fuera.
+  function pulsoVideo(f, reanudar) {
+    const t = ahora();
+    if (!inicioValido(f)) return { video_inicio: t.toISOString(), video_seg: 0, video_pulso: t.toISOString() };
+    const previo = f.video_pulso ? new Date(f.video_pulso) : null;
+    const delta = previo && !reanudar ? Math.max(0, Math.min(PULSO_MAX_SEG, Math.floor((t - previo) / 1000))) : 0;
+    return { video_seg: (f.video_seg || 0) + delta, video_pulso: t.toISOString() };
+  }
 
   // Qué falta para abrir una unidad (null = abierta)
   function requisito(perfil, ctx, curso, u) {
@@ -1309,10 +1345,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
       return ctx.hitos.has('compromiso') ? null : 'Se abre cuando confirmes tu compromiso como parte del equipo.';
     }
     if (!ctx.constancias.some((c) => c.curso === 'gestion')) return 'Se abre cuando apruebes el curso Gestión del CIC.';
-    // La Secretaría abre las rutas al aprobar Gestión; las dinamizadoras, con la transferencia que registra la Secretaría.
-    if (perfil.rol === 'secretaria') return null;
-    const t = curso === 'acompanar-hacer' ? 'transferencia-hacer' : 'transferencia-ser';
-    return ctx.hitos.has(t) ? null : 'Se abre cuando la Secretaría Técnica registre tu transferencia de la ruta.';
+    // Al aprobar Gestión se abren solas las dos rutas (secretarías y dinamizadoras): nadie tiene que habilitarlas.
+    return null;
   }
 
   function estadoUnidad(perfil, ctx, curso, u) {
@@ -1367,12 +1401,21 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     await col('progreso').doc(idProgreso(persona, curso, unidad)).set({ persona, curso, unidad, ...cambios, actualizado_en: hoy() }, { merge: true });
   }
 
-  // La persona reprodujo el video en la lección: empieza a contar el tiempo mínimo.
+  // La persona reprodujo el video en la lección: empieza a contar. Luego, un pulso cada 15 s mientras lo tiene en pantalla.
   async function iniciarVideo(token, b) {
     const { perfil, ctx, curso, unidad } = await equipoAbierto(token, b);
     if (!tieneVideo(ctx, curso, unidad)) throw new Falla(400, 'sin_video', 'Esta unidad todavía no tiene video.');
-    if (!inicioValido(filaDe(ctx, curso, unidad) || {})) await guardarProgreso(perfil.id, curso, unidad, { video_inicio: hoy() });
+    await guardarProgreso(perfil.id, curso, unidad, pulsoVideo(filaDe(ctx, curso, unidad) || {}, true));
     return resumen(perfil, await contexto(perfil.id));
+  }
+  async function pulsoVideoUnidad(token, b) {
+    const { perfil, ctx, curso, unidad } = await equipoAbierto(token, b);
+    if (!tieneVideo(ctx, curso, unidad)) throw new Falla(400, 'sin_video', 'Esta unidad todavía no tiene video.');
+    const f = filaDe(ctx, curso, unidad) || {};
+    const cambios = pulsoVideo(f, b.reanudar === true);
+    await guardarProgreso(perfil.id, curso, unidad, cambios);
+    const total = segundosVideo(ctx, curso, unidad);
+    return { faltan: Math.max(0, total - vistoSeg({ ...f, ...cambios })), total };
   }
 
   // Marca el video o el material como vistos. Si la unidad estaba en pausa y ya repasó ambos, se reabre.
@@ -1477,8 +1520,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   const estadoBienvenida = (ctx) => {
     const v = ctx.videos.get(VIDEO_BIENVENIDA);
     const f = filaDe(ctx, 'bienvenida', 1) || {};
-    const segundos = v && v.duracion_min ? Math.round(v.duracion_min * 60 * 0.9) : 120;
-    const faltan = f.video_inicio ? Math.max(0, segundos - Math.floor((ahora() - new Date(f.video_inicio)) / 1000)) : segundos;
+    const segundos = segundosDe(v);
+    const faltan = Math.max(0, segundos - vistoSeg(f));
     return { requerida: !!v, hecha: ctx.hitos.has('bienvenida'), iniciada: !!f.video_inicio, segundos, faltan };
   };
   async function bienvenida(token, b) {
@@ -1487,8 +1530,11 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const ctx = await contexto(perfil.id);
     const e = estadoBienvenida(ctx);
     if (!e.requerida) throw new Falla(400, 'sin_video', 'El video de bienvenida todavía no está publicado.');
-    if (b.paso === 'iniciar') {
-      if (!e.iniciada) await guardarProgreso(perfil.id, 'bienvenida', 1, { video_inicio: hoy() });
+    if (b.paso === 'iniciar' || b.paso === 'pulso') {
+      const f = filaDe(ctx, 'bienvenida', 1) || {};
+      const cambios = pulsoVideo(f, b.paso === 'iniciar' || b.reanudar === true);
+      await guardarProgreso(perfil.id, 'bienvenida', 1, cambios);
+      if (b.paso === 'pulso') return { faltan: Math.max(0, e.segundos - vistoSeg({ ...f, ...cambios })), total: e.segundos };
     } else if (!e.hecha) {
       if (!e.iniciada) throw new Falla(400, 'video_tiempo', 'Primero reproduce el video de bienvenida.');
       if (e.faltan > 0) throw new Falla(400, 'video_tiempo', `Termina de ver el video: faltan ${Math.floor(e.faltan / 60)} min ${String(e.faltan % 60).padStart(2, '0')} s.`, { faltan: e.faltan });
@@ -1719,6 +1765,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
         case 'mi-progreso': r = await miProgreso(token); break;
         case 'marcar': r = await marcar(token, b); break;
         case 'iniciar-video': r = await iniciarVideo(token, b); break;
+        case 'pulso-video': r = await pulsoVideoUnidad(token, b); break;
         case 'bienvenida': r = await bienvenida(token, b); break;
         case 'archivo-material': r = await archivoMaterial(token, b); break;
         case 'guia': r = await guia(token, b); break;

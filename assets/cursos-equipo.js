@@ -43,8 +43,7 @@
             }
             if (c === 'gestion') return d.hitos.includes('compromiso') ? null : 'Se abre cuando confirmes tu compromiso como parte del equipo.';
             if (!d.constancias.some((x) => x.curso === 'gestion')) return 'Se abre cuando apruebes el curso Gestión del CIC.';
-            if (perfil.rol === 'secretaria') return null;
-            return d.hitos.includes(c === 'acompanar-hacer' ? 'transferencia-hacer' : 'transferencia-ser') ? null : 'Se abre cuando la Secretaría Técnica registre tu transferencia de la ruta.';
+            return null; // al aprobar Gestión se abren solas las dos rutas
         }
         function estado(perfil, d, c, u, videos) {
             const f = d.progreso[k(c, u)] || {};
@@ -98,6 +97,10 @@
                     const e = estado(perfil, d, c, u, videos);
                     if (!e.video_iniciado) fila().video_inicio = ahora();
                     r = resumen(perfil, d, videos); break;
+                }
+                case 'pulso-video': {
+                    const e = estado(perfil, d, c, u, videos);
+                    r = { faltan: e.video_faltan, total: e.video_segundos }; break;
                 }
                 case 'marcar': {
                     exigirAbierta();
@@ -205,8 +208,6 @@
             ...(bv.requerida ? [['Video de bienvenida', !!bv.hecha, bv.hecha ? 'Visto' : 'Obligatorio']] : []),
             ['Compromiso', h.has('compromiso'), h.has('compromiso') ? 'Confirmado' : 'Pendiente'],
             ['Gestión del CIC', cons.has('gestion'), `${hechos('gestion')} de ${UNIDADES.gestion} módulos`],
-            ...(C.perfil.rol === 'secretaria' ? []
-                : [['Transferencia de la ruta', h.has('transferencia-hacer') || h.has('transferencia-ser'), h.has('transferencia-hacer') || h.has('transferencia-ser') ? 'Registrada' : 'La registra la Secretaría']]),
             rutas,
         ];
         const actual = pasos.findIndex(([, ok]) => !ok);
@@ -248,10 +249,59 @@
             obs = new IntersectionObserver((es) => {
                 const visible = es.some((x) => x.isIntersecting && x.intersectionRatio >= 0.6);
                 clearTimeout(espera);
-                if (visible) espera = setTimeout(iniciar, 4000);
+                if (visible) espera = setTimeout(iniciar, 8000);
             }, { threshold: [0, 0.6, 1] });
             obs.observe(caja);
         }
+    }
+    // Cuenta del video: avanza solo mientras la página está abierta y el video se ve en pantalla. Cada 15 s le avisa
+    // al servidor (que es quien lleva la cuenta). Si la persona sale de la página o baja, el conteo se pausa.
+    const PULSO_MS = 15000;
+    let controlActivo = null;
+    function detenerControl() { if (controlActivo) { controlActivo(); controlActivo = null; } }
+    function controlVideo(caja, estadoEl, o) {
+        detenerControl();
+        let faltan = o.faltan, total = o.total || o.faltan || 1, enPantalla = false, pausado = true, ultimoPulso = Date.now(), enviando = false, cerrado = false;
+        const visible = () => document.visibilityState === 'visible' && enPantalla;
+        const pintar = () => {
+            if (!estadoEl.isConnected) return;
+            const pct = Math.min(100, Math.round((1 - faltan / total) * 100));
+            estadoEl.innerHTML = `<div class="reloj-video ${visible() ? '' : 'en-pausa'}">
+                <span class="reloj-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="Avance del video"><span style="width:${pct}%"></span></span>
+                <p><b>${visible() ? '▶ Viendo el video' : '⏸ Conteo en pausa'}</b> · te faltan <b>${minSeg(faltan)}</b> de ${minSeg(total)}</p>
+                <p class="ayuda-campo">${visible() ? `Al terminar se habilita ${esc(o.que)}.` : 'El conteo sigue cuando vuelvas a esta página con el video en pantalla. Míralo completo, sin salirte.'}</p>
+            </div>`;
+        };
+        const pulso = async () => {
+            if (enviando || cerrado) return;
+            enviando = true;
+            const reanudar = pausado;
+            pausado = false;
+            ultimoPulso = Date.now();
+            try { const r = await o.pulso(reanudar); faltan = r.faltan; total = r.total || total; }
+            catch (e) { /* sin conexión: se intenta en el siguiente pulso */ }
+            enviando = false;
+            if (faltan <= 0 && !cerrado) { cerrar(); o.terminar(); }
+        };
+        const tic = setInterval(() => {
+            if (!caja.isConnected) { cerrar(); return; }
+            if (!visible()) { if (!pausado) { pausado = true; pintar(); } return; }
+            if (pausado) { pintar(); pulso(); return; }
+            if (faltan > 0) faltan = Math.max(0, faltan - 1);
+            pintar();
+            if (Date.now() - ultimoPulso >= PULSO_MS || faltan <= 0) pulso();
+        }, 1000);
+        let obs = null;
+        if ('IntersectionObserver' in window) {
+            obs = new IntersectionObserver((es) => { enPantalla = es.some((x) => x.isIntersecting && x.intersectionRatio >= 0.5); }, { threshold: [0, 0.5, 1] });
+            obs.observe(caja);
+        } else enPantalla = true;
+        const alCambiar = () => pintar();
+        document.addEventListener('visibilitychange', alCambiar);
+        function cerrar() { cerrado = true; clearInterval(tic); if (obs) obs.disconnect(); document.removeEventListener('visibilitychange', alCambiar); }
+        controlActivo = cerrar;
+        pausado = false; // el inicio ya contó como primer pulso
+        pintar();
     }
     // Repinta la vista sin recargar el video que ya está sonando: se reemplaza todo alrededor del reproductor
     function pintarConservandoVideo(html) {
@@ -291,7 +341,7 @@
             </div>
             <div class="video-grande" data-fuente="${esc(fuenteVideo(v))}">${marcoVideo(v, v.titulo || 'Bienvenida al CIC')}</div>
             ${ayudaVideo}
-            <div class="video-estado" id="bienvenida-estado" aria-live="polite">${bv.iniciada ? estadoReloj(bv.faltan, bv.segundos, 'tu compromiso') : '<p class="texto-suave">Dale play al video para empezar.</p>'}</div>
+            <div class="video-estado" id="bienvenida-estado" aria-live="polite">${bv.iniciada ? estadoReloj(bv.faltan, bv.segundos, 'tu compromiso') : '<p class="aviso-video"><b>▶ Dale play al video para empezar.</b> Debes verlo completo, con esta página abierta.</p>'}</div>
         </section>`;
     }
     // Volver a ver la bienvenida cuando ya se vio (el reproductor se carga solo al abrirlo)
@@ -301,33 +351,25 @@
         return `<details class="tarjeta repaso-video"><summary><span class="repaso-icono" aria-hidden="true">▶</span> Volver a ver el video de bienvenida al CIC <span class="paso-ok">✓ Visto</span></summary>
             <div class="video-grande" data-fuente="${esc(fuenteVideo(porCodigo.BIENVENIDA))}"></div>${ayudaVideo}</details>`;
     }
-    const estadoReloj = (faltan, total, que) => `<p class="reloj-video"><span class="reloj-barra"><span style="width:${100 - Math.round(faltan / total * 100)}%"></span></span> Mira el video completo: ${esc(que)} se habilita en <b data-faltan="${faltan}">${minSeg(faltan)}</b>.</p>`;
+    const estadoReloj = (faltan, total, que) => `<div class="reloj-video en-pausa"><span class="reloj-barra"><span style="width:${100 - Math.round(faltan / total * 100)}%"></span></span><p><b>Te faltan ${minSeg(faltan)}</b> de ${minSeg(total)} para habilitar ${esc(que)}.</p><p class="ayuda-campo">Dale play: el conteo avanza mientras ves el video con esta página abierta.</p></div>`;
     function enlazarBienvenida() {
         if (!bienvenidaPendiente()) return;
         const v = C.vista;
-        const correr = (faltan, total) => {
-            detenerReloj();
-            const b = v.querySelector('[data-faltan]');
-            const barra = v.querySelector('#bienvenida-estado .reloj-barra span');
-            const fin = Date.now() + faltan * 1000;
-            reloj = setInterval(async () => {
-                const f = Math.max(0, Math.ceil((fin - Date.now()) / 1000));
-                if (b) b.textContent = minSeg(f);
-                if (barra) barra.style.width = `${100 - Math.round(f / total * 100)}%`;
-                if (f > 0) return;
-                detenerReloj();
+        const caja = v.querySelector('.bienvenida .video-grande');
+        if (!caja) return;
+        const seguir = (faltan, total) => controlVideo(caja, v.querySelector('#bienvenida-estado'), {
+            faltan, total, que: 'tu compromiso',
+            pulso: (reanudar) => api('bienvenida', { paso: 'pulso', reanudar }),
+            terminar: async () => {
                 try { estado = await api('bienvenida', { paso: 'completar' }); C.aviso('¡Listo! Ya viste la bienvenida. Ahora confirma tu compromiso para abrir el módulo 1.'); }
                 catch (e) { try { estado = await api('mi-progreso'); } catch (x) { /* nada */ } }
                 pintarResumen();
-            }, 1000);
-        };
-        const caja = v.querySelector('.bienvenida .video-grande');
-        if (estado.bienvenida.iniciada) correr(estado.bienvenida.faltan, estado.bienvenida.segundos);
-        else if (caja) vigilarInicio(caja, async () => {
+            },
+        });
+        // Ya lo había empezado: el conteo sigue cuando vuelva a darle play
+        vigilarInicio(caja, async () => {
             try { estado = await api('bienvenida', { paso: 'iniciar' }); } catch (e) { C.aviso(e.message); return; }
-            const bv = estado.bienvenida;
-            v.querySelector('#bienvenida-estado').innerHTML = estadoReloj(bv.faltan, bv.segundos, 'tu compromiso');
-            correr(bv.faltan, bv.segundos);
+            seguir(estado.bienvenida.faltan, estado.bienvenida.segundos);
         });
     }
 
@@ -543,8 +585,8 @@
         return `<div class="video-grande" data-fuente="${esc(fuenteVideo(v))}">${marcoVideo(v)}</div>
             ${ayudaVideo}
             <div class="video-estado" aria-live="polite">${visto ? '<p class="paso-ok">✓ Video visto</p>'
-                : e.video_iniciado ? `<p class="reloj-video"><span class="reloj-barra"><span style="width:${100 - Math.round(e.video_faltan / e.video_segundos * 100)}%"></span></span> Mira el video completo: la evaluación se habilita en <b data-faltan="${e.video_faltan}">${minSeg(e.video_faltan)}</b>.</p>`
-                : `<p class="texto-suave">Dale play al video. La evaluación se habilita cuando lo hayas visto completo${v.duracion_min ? ` (unos ${esc(v.duracion_min)} minutos)` : ''}.</p>`}</div>`;
+                : e.video_iniciado ? estadoReloj(e.video_faltan, e.video_segundos, 'la evaluación')
+                : `<p class="aviso-video"><b>▶ Dale play al video para empezar.</b> La evaluación se habilita cuando lo veas completo (${minSeg(e.video_segundos)}), con esta página abierta.</p>`}</div>`;
     }
 
     function bloqueEvaluacion(e, conVideo) {
@@ -619,26 +661,7 @@
         } catch (e) { caja.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; }
     }
 
-    function detenerReloj() { if (reloj) { clearInterval(reloj); reloj = null; } }
-    function arrancarReloj() {
-        detenerReloj();
-        const b = C.vista.querySelector('[data-faltan]');
-        if (!b) return;
-        let faltan = Number(b.dataset.faltan);
-        const total = estado.cursos[leccion.curso][leccion.unidad - 1].video_segundos;
-        const barra = C.vista.querySelector('.reloj-barra span');
-        const fin = Date.now() + faltan * 1000;
-        reloj = setInterval(async () => {
-            faltan = Math.max(0, Math.ceil((fin - Date.now()) / 1000));
-            b.textContent = minSeg(faltan);
-            if (barra) barra.style.width = `${100 - Math.round(faltan / total * 100)}%`;
-            if (faltan > 0) return;
-            detenerReloj();
-            try { estado = await api('marcar', { ...leccion, que: 'video' }); C.aviso('Video completado: ya puedes presentar la evaluación cuando repases el material.'); }
-            catch (e) { try { estado = await api('mi-progreso'); } catch (x) { /* nada */ } }
-            if (leccion) pintarLeccion();
-        }, 1000);
-    }
+    function detenerReloj() { detenerControl(); if (reloj) { clearInterval(reloj); reloj = null; } }
 
     function enlazarLeccion(e, vid) {
         const v = C.vista;
@@ -650,13 +673,19 @@
             if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }));
         const cajaVideo = v.querySelector('#paso-video .video-grande');
-        if (cajaVideo && !e.video_iniciado && !(e.video_visto && e.estado !== 'pausada')) vigilarInicio(cajaVideo, async () => {
+        if (cajaVideo && !(e.video_visto && e.estado !== 'pausada')) vigilarInicio(cajaVideo, async () => {
             try { estado = await api('iniciar-video', datos); } catch (x) { C.aviso(x.message); return; }
             const est = estado.cursos[datos.curso][datos.unidad - 1];
-            v.querySelector('.video-estado').innerHTML = `<p class="reloj-video"><span class="reloj-barra"><span style="width:${100 - Math.round(est.video_faltan / est.video_segundos * 100)}%"></span></span> Mira el video completo: la evaluación se habilita en <b data-faltan="${est.video_faltan}">${minSeg(est.video_faltan)}</b>.</p>`;
-            arrancarReloj();
+            controlVideo(cajaVideo, v.querySelector('.video-estado'), {
+                faltan: est.video_faltan, total: est.video_segundos, que: 'la evaluación',
+                pulso: (reanudar) => api('pulso-video', { ...datos, reanudar }),
+                terminar: async () => {
+                    try { estado = await api('marcar', { ...datos, que: 'video' }); C.aviso('Video completado: ya puedes presentar la evaluación cuando repases el material.'); }
+                    catch (x) { try { estado = await api('mi-progreso'); } catch (y) { /* nada */ } }
+                    if (leccion) pintarLeccion();
+                },
+            });
         });
-        if (e.video_iniciado && !(e.video_visto && e.estado !== 'pausada')) arrancarReloj();
         v.querySelectorAll('[data-marcar]').forEach((b) => b.addEventListener('click', async () => {
             b.disabled = true;
             try { estado = await api('marcar', { ...datos, que: b.dataset.marcar }); pintarLeccion(); }
@@ -796,14 +825,12 @@
         const hace = (f) => { if (!f) return 'Sin actividad'; const dias = Math.floor((Date.now() - new Date(f)) / 864e5); return dias <= 0 ? 'Hoy' : dias === 1 ? 'Ayer' : `Hace ${dias} días`; };
         const filas = d.personas.map((p) => {
             const g = p.avance.gestion, gestionOk = p.constancias.some((x) => x.curso === 'gestion');
-            const tr = (hito, txt) => `<label class="casilla casilla-mini"><input type="checkbox" data-hito="${hito}" data-cedula="${esc(p.cedula)}" ${p.hitos.includes(hito) ? 'checked' : ''} ${p.activa && gestionOk ? '' : 'disabled'}><span>${txt}</span></label>`;
             const quieto = p.activa && (!p.ultima_actividad || Date.now() - new Date(p.ultima_actividad) > 7 * 864e5) && !gestionOk;
             return `<tr class="${quieto || p.pausas ? 'fila-alerta' : ''}">
                 <td><b>${esc(p.nombre)}</b><small>${esc(p.cargo || '')}${sat(p.satelite) ? ' · ' + esc(sat(p.satelite)) : ''}</small></td>
                 <td>${p.activa ? '<span class="chip bg-menta">Activa</span>' : `<button type="button" class="boton-texto" data-codigo="${esc(p.cedula)}" data-nombre="${esc(p.nombre)}" data-celular="${esc(p.celular || '')}">Generar código</button>`}</td>
                 <td><span class="mini-barra" title="${g} de ${UNIDADES.gestion}"><span style="width:${g / UNIDADES.gestion * 100}%"></span></span> ${g}/${UNIDADES.gestion}${gestionOk ? ' ✓' : ''}</td>
                 <td>${p.avance['acompanar-hacer'] || 0}/6 · ${p.avance['facilitar-ser'] || 0}/4</td>
-                <td>${p.rol === 'dinamizadora' ? tr('transferencia-hacer', 'HACER') + tr('transferencia-ser', 'SER') : '—'}</td>
                 <td><small>${esc(hace(p.ultima_actividad))}${p.pausas ? ` · ${p.pausas} en pausa` : ''}${quieto ? ' · sin avanzar' : ''}</small></td>
             </tr>`;
         }).join('');
@@ -816,9 +843,9 @@
                 <div class="tarjeta kpi"><b>${d.personas.filter((p) => p.pausas).length}</b><span>${d.personas.filter((p) => p.pausas).length === 1 ? 'persona' : 'personas'} con un módulo en pausa</span></div>
             </div>
             <div class="tabla-caja"><table class="tabla-equipo">
-                <thead><tr><th scope="col">Persona</th><th scope="col">Cuenta</th><th scope="col">Gestión</th><th scope="col">HACER · SER</th><th scope="col">Transferencia</th><th scope="col">Actividad</th></tr></thead>
+                <thead><tr><th scope="col">Persona</th><th scope="col">Cuenta</th><th scope="col">Gestión</th><th scope="col">HACER · SER</th><th scope="col">Actividad</th></tr></thead>
                 <tbody>${filas}</tbody></table></div>
-            <p class="ayuda-campo">La transferencia se marca después de la sesión de transferencia con la Secretaría y abre el curso de esa ruta. En rojo: personas con un módulo en pausa o más de 7 días sin avanzar.</p>
+            <p class="ayuda-campo">Las rutas HACER y SER se abren solas cuando cada persona aprueba Gestión del CIC. En rojo: personas con un módulo en pausa o más de 7 días sin avanzar.</p>
             <h3 class="subtitulo-seccion" id="bandeja">Aportes del foro por revisar</h3>
             ${d.pendientes.length ? d.pendientes.filter((e) => C.CURSOS[e.curso]).map((e, n) => `<article class="tarjeta evidencia" data-id="${esc(e.id)}">
                 <p class="eyebrow">${esc(C.CURSOS[e.curso].titulo)} · ${esc(C.codigoModulo(e.curso, e.unidad - 1))} · ${e.tipo === 'foro' ? 'Aporte en el foro' : e.tipo === 'actividad' ? 'Actividad' : 'Verificación de la sesión'}</p>
@@ -831,12 +858,6 @@
                 <div class="botones"><button type="button" class="btn btn-primario" data-revisar="aprobada">Aprobar</button><button type="button" class="btn btn-borde" data-revisar="devuelta">Devolver con comentario</button></div>
             </article>`).join('') : '<p class="tarjeta vacio">No hay evidencias pendientes. ¡Todo al día!</p>'}`;
 
-        cont.addEventListener('change', async (ev) => {
-            const ch = ev.target.closest('[data-hito]');
-            if (!ch) return;
-            try { await api('hito', { hito: ch.dataset.hito, cedula: ch.dataset.cedula, quitar: !ch.checked }); C.aviso(ch.checked ? 'Transferencia registrada: se abrió el curso de esa ruta.' : 'Transferencia quitada.'); }
-            catch (e) { ch.checked = !ch.checked; C.aviso(e.message); }
-        });
         cont.addEventListener('click', async (ev) => {
             const b = ev.target.closest('[data-revisar]');
             if (b) {
