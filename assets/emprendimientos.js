@@ -78,7 +78,7 @@
     }
     const dinDe = (sat) => (H.datos.dinamizadoras || []).filter((d) => d.satelite === sat);
     function opcionesDin(sat, actual) {
-        return `<option value="">Sin asignar</option>${dinDe(sat).map((d) => `<option value="${esc(d.cedula)}" ${d.cedula === actual ? 'selected' : ''}>${esc(d.nombre)}</option>`).join('')}`;
+        return `<option value="">Sin asignar</option>${dinDe(sat).map((d) => `<option value="${esc(d.cedula)}" ${d.cedula === actual ? 'selected' : ''}>${esc(d.nombre)} · CC ${esc(d.cedula)}</option>`).join('')}`;
     }
 
     async function secretaria(cont, ctx) { C = ctx; await cargarHoja(cont, 'secretaria'); }
@@ -109,7 +109,7 @@
             ${sec && H.datos.drive && H.datos.drive.activo ? `<p class="emp-drive-barra">📁 Los documentos se guardan también en Google Drive, en la carpeta «CIC · Documentos de seguimiento».${H.datos.drive.pendientes ? ` <button type="button" class="btn btn-borde btn-pequeno" data-sincronizar>Enviar a Drive ${H.datos.drive.pendientes} pendiente${H.datos.drive.pendientes > 1 ? 's' : ''}</button>` : ''}</p>` : ''}
             <div class="hoja-controles">
                 ${sec ? `<div><label class="etiqueta" for="h-sat">Satélite</label><select id="h-sat" class="campo"><option value="">Todos</option>${sats.map((s) => `<option value="${esc(s.id)}" ${H.sat === s.id ? 'selected' : ''}>${esc(s.nombre)}</option>`).join('')}</select></div>
-                <div><label class="etiqueta" for="h-din">Dinamizadora</label><select id="h-din" class="campo"><option value="">Todas</option>${dins.map((d) => `<option value="${esc(d.cedula)}" ${H.din === d.cedula ? 'selected' : ''}>${esc(d.nombre)}</option>`).join('')}</select></div>` : ''}
+                <div><label class="etiqueta" for="h-din">Dinamizadora</label><select id="h-din" class="campo"><option value="">Todas</option>${dins.map((d) => `<option value="${esc(d.cedula)}" ${H.din === d.cedula ? 'selected' : ''}>${esc(d.nombre)} · CC ${esc(d.cedula)}</option>`).join('')}</select></div>` : ''}
                 <div><label class="etiqueta" for="h-filtro">Mostrar</label><select id="h-filtro" class="campo">${Object.entries(FILTROS).filter(([k]) => sec || k !== 'sin').map(([k, t]) => `<option value="${k}" ${H.filtro === k ? 'selected' : ''}>${esc(t)}${k ? ` (${cuenta(k)})` : ''}</option>`).join('')}</select></div>
                 <div class="hoja-buscar"><label class="etiqueta" for="h-buscar">Buscar</label><input id="h-buscar" class="campo" type="search" placeholder="Nombre, cédula, negocio, municipio…" value="${esc(H.texto)}"></div>
                 <div><button type="button" class="btn btn-borde btn-pequeno" data-excel>⬇ Descargar en Excel</button></div>
@@ -180,7 +180,7 @@
             ? `<span><b>${elegidos.length}</b> seleccionados de ${sats.length} satélites distintos. Para asignar en grupo, filtra por un solo satélite.</span>`
             : `<span><b>${elegidos.length}</b> seleccionado${elegidos.length > 1 ? 's' : ''} de ${esc(nombreSat(sats[0]))}</span>
                <label class="sr-only" for="emp-lote-din">Dinamizadora</label>
-               <select id="emp-lote-din" class="campo campo-mini"><option value="" disabled selected>Elige una dinamizadora</option>${dinDe(sats[0]).map((d) => `<option value="${esc(d.cedula)}">${esc(d.nombre)}</option>`).join('')}<option value="quitar">Quitar asignación</option></select>
+               <select id="emp-lote-din" class="campo campo-mini"><option value="" disabled selected>Elige una dinamizadora</option>${dinDe(sats[0]).map((d) => `<option value="${esc(d.cedula)}">${esc(d.nombre)} · CC ${esc(d.cedula)}</option>`).join('')}<option value="quitar">Quitar asignación</option></select>
                <button type="button" class="btn btn-primario btn-pequeno" id="emp-lote-btn">Asignar</button>`;
         const b = $('#emp-lote-btn', lote);
         if (b) b.addEventListener('click', () => {
