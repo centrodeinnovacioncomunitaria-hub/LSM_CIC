@@ -456,6 +456,49 @@ function cuentasFalsas() {
   assert.equal(avisoEnvio.para, 'sara@correo.co', 'a la secretaria que asignó el emprendimiento');
   assert.match(avisoEnvio.texto, /envió documentos para tu aprobación/);
   assert.match(avisoEnvio.texto, /Lista para revisar/, 'el mensaje de la dinamizadora va en el correo');
+  // A fondo: nunca le llega a una persona real algo que no le corresponde
+  const ultimoAviso = () => enDrive.filter((c) => c.accion === 'correo' && /envió documentos/.test(c.asunto)).pop();
+  const refDe = async (ced) => { const d = (await db.collection('perfiles').where('cedula', '==', ced).get()).docs[0]; return { id: d.id, ref: db.collection('perfiles').doc(d.id) }; };
+  const perfilEmp = await refDe(act.cedula);
+  const perfilSara = await refDe('11111111');
+  const perfilDina = await refDe('22222222');
+  const volverAEnviar = async () => {
+    await ok('revisar-actividad', { ...act, estado: 'devuelta', comentario: 'Prueba de devolución para reenviar.' }, tSara);
+    await ok('enviar-actividad', act, tDina);
+    return ultimoAviso();
+  };
+  // a) La secretaria que asignó entró con su perfil de dinamizadora: igual le llega a ella
+  await ok('revisar-actividad', { ...act, estado: 'devuelta', comentario: 'Prueba de devolución para reenviar.' }, tSara);
+  await perfilSara.ref.update({ rol: 'dinamizadora', otros_roles: { secretaria: { cargo: 'Dirección técnica' } } });
+  await ok('enviar-actividad', act, tDina);
+  assert.equal(ultimoAviso().para, 'sara@correo.co', 'la secretaria que asignó recibe el aviso aunque esté con su perfil de dinamizadora');
+  await perfilSara.ref.update({ rol: 'secretaria', otros_roles: null });
+  // b) Sin secretaria responsable: solo a soporte, nunca a otra secretaria adivinada
+  await perfilEmp.ref.update({ asignada_por: null });
+  let avs = await volverAEnviar();
+  assert.equal(avs.para, undefined, 'sin secretaria que asignó, el aviso va solo a soporte');
+  assert.match(avs.texto, /no se envió a ninguna secretaria/);
+  // c) Dinamizadora de prueba: solo a soporte aunque haya secretaria que asignó
+  await perfilEmp.ref.update({ asignada_por: perfilSara.id });
+  await perfilDina.ref.update({ cargo: 'Cuenta de prueba · Dinamizadora' });
+  avs = await volverAEnviar();
+  assert.equal(avs.para, undefined, 'si la dinamizadora es de prueba, a ninguna persona real');
+  await perfilDina.ref.update({ cargo: 'Acompañamiento - Magdalena' });
+  // d) Secretaria real que asignó: le llega solo a ella
+  avs = await volverAEnviar();
+  assert.equal(avs.para, 'sara@correo.co');
+  // f) Prueba con prueba: si la secretaria que asignó también es de prueba, sí le llega (nunca a una persona real)
+  await perfilSara.ref.update({ prueba: true }); await perfilDina.ref.update({ prueba: true });
+  avs = await volverAEnviar();
+  assert.equal(avs.para, 'sara@correo.co', 'entre cuentas de prueba el aviso sí llega');
+  await perfilDina.ref.update({ prueba: false });
+  avs = await volverAEnviar();
+  assert.equal(avs.para, undefined, 'secretaria de prueba y dinamizadora real: solo a soporte');
+  await perfilSara.ref.update({ prueba: false });
+  await volverAEnviar();
+  // e) Cada aviso queda en el registro de admin/ con a quién se envió y por qué
+  const regAvisos = (await db.collection('envios_correo').get()).docs.map((d) => d.data()).filter((x) => x.tipo === 'aviso_envio_documentos');
+  assert.ok(regAvisos.length >= 4 && regAvisos.some((x) => /solo a soporte/.test(x.motivo)), 'los avisos quedan registrados con el motivo');
   await falla('quitar-documento', { ...act, tipo: 'acta' }, tDina, 409); // en revisión no se cambia
   assert.equal((await ok('emprendimientos', {}, tSara)).emprendimientos.find((x) => x.cedula === '44444444').avance.por_revisar, 1);
   assert.equal((await ok('mi-avance', {}, tRosa)).actividades[0].estado, 'en_revision');
@@ -468,14 +511,14 @@ function cuentasFalsas() {
   await ok('enviar-actividad', act, tDina);
   sg = await ok('revisar-actividad', { ...act, estado: 'aprobada' }, tSara);
   assert.equal(sg.actividades[0].revision.estado, 'aprobada');
-  assert.deepEqual(sg.actividades[0].comentarios.map((c) => c.estado), ['enviada', 'devuelta', null, 'aprobada']);
+  assert.deepEqual(sg.actividades[0].comentarios.map((c) => c.estado).filter((x, i, l) => i < 1 || i >= l.length - 3), ['enviada', 'devuelta', null, 'aprobada']);
   await falla('marcar-actividad', { ...act, ejecutada: false }, tDina, 409); // aprobada: ya no se cambia
   const av = await ok('mi-avance', {}, tRosa);
   assert.equal(av.actividades[0].estado, 'aprobada'); assert.equal(av.aprobadas, 1);
   await falla('mi-avance', {}, tDina, 403);
   // Tabla de seguimiento: cada actividad viene como celda
   const filaTabla = (await ok('emprendimientos', {}, tSara)).emprendimientos.find((x) => x.cedula === '44444444');
-  assert.deepEqual(filaTabla.celdas.hacer_1, { e: true, d: true, r: 'aprobada', f: '2026-10-08', c: 4 });
+  assert.deepEqual(filaTabla.celdas.hacer_1, { e: true, d: true, r: 'aprobada', f: '2026-10-08', c: 11 }); // 11 comentarios: incluye las devoluciones de la prueba de avisos
   // Cuestionario de aprendizaje semanal
   await falla('responder-aprendizaje', { semana: 1, respuestas: {} }, tRosa, 403); // aún no habilitado
   await falla('habilitar-aprendizaje', { cedula: '44444444', semana: 7 }, tDina, 400);

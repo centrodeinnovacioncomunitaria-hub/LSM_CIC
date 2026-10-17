@@ -104,6 +104,16 @@ const comoDinamizadora = (d) => {
   return o ? { ...d, ...datosRol(o), rol: 'dinamizadora' } : null;
 };
 
+// ---------- Avisos a secretarias: reglas comunes ----------
+// El perfil activo cambia según con qué rol entró la persona (Secretaría o Dinamizadora): para saber si alguien
+// ES secretaria se miran los dos perfiles, nunca solo el activo.
+const tieneRol = (x, rol) => !!x && (x.rol === rol || !!(x.otros_roles && x.otros_roles[rol]));
+// Cuentas de prueba: se reconocen por la marca «prueba» (campo prueba: true, o «prueba» en el nombre o en algún cargo).
+// Un aviso que tenga que ver con una cuenta de prueba nunca le llega a una persona real: va solo a soporte.
+const esCuentaPrueba = (x) => !!x && (x.prueba === true || /prueba/i.test([x.nombre, x.cargo, ...Object.values(x.otros_roles || {}).map((o) => o && o.cargo)].filter(Boolean).join(' ')));
+// Cargo con el que trabaja como secretaria (el principal o el del segundo perfil)
+const cargoSecretaria = (x) => (x.rol === 'secretaria' ? x.cargo : (x.otros_roles && x.otros_roles.secretaria && x.otros_roles.secretaria.cargo)) || '';
+
 function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archivos: {}, material: {} }, leerArchivo = () => null, drive = null }) {
   const CATALOGO = catalogo;
   const hoy = () => ahora().toISOString();
@@ -295,6 +305,32 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     }
     const puente = await sincronizarSecretarias();
     return { ok: true, nuevo: !anterior, activada: !!existente, puente };
+  }
+
+  // Todos los avisos a secretarias pasan por aquí. Solo se le escribe a una persona si de verdad es secretaria
+  // (en cualquiera de sus dos perfiles), tiene correo válido, no es cuenta de prueba cuando el aviso es de una persona
+  // real, y un aviso de una cuenta de prueba solo le llega a otra cuenta de prueba. En cualquier otro caso va solo a soporte.
+  // Cada aviso queda en «envios_correo» (pestaña «Correos enviados» de admin/) con a quién se envió y por qué.
+  async function enviarAvisoSecretaria({ tipo, cedula, secretaria, involucradas = [], asunto, texto, razon }) {
+    let para = null, motivo = razon;
+    const hayPrueba = involucradas.some(esCuentaPrueba);
+    if (!secretaria) motivo = `${razon} · sin secretaria responsable: solo a soporte`;
+    else if (!tieneRol(secretaria, 'secretaria')) motivo = `${razon} · ${secretaria.nombre} ya no es secretaria: solo a soporte`;
+    else if (!correoValido(secretaria.correo)) motivo = `${razon} · ${secretaria.nombre} no tiene correo válido: solo a soporte`;
+    // Prueba solo con prueba: una cuenta de prueba nunca le escribe a una persona real, ni al revés
+    else if (hayPrueba && !esCuentaPrueba(secretaria)) motivo = `${razon} · es de una cuenta de prueba y la secretaria es real: solo a soporte`;
+    else if (!hayPrueba && esCuentaPrueba(secretaria)) motivo = `${razon} · la secretaria es cuenta de prueba y el aviso es de una persona real: solo a soporte`;
+    else para = String(secretaria.correo).trim().toLowerCase();
+    const cuerpo = para ? texto : `[Aviso que no se envió a ninguna secretaria — ${motivo}]\n\n${texto}`;
+    let estado = 'enviado', error = null, destino = para || CORREO_SOPORTE;
+    try {
+      const r = await drive({ accion: 'correo', ...(para ? { para } : {}), asunto, texto: cuerpo });
+      if (r && r.para) destino = r.para;
+      if (para && r && r.para && r.para !== para) motivo = `${motivo} · el puente no tenía su correo en la lista: llegó solo a soporte`;
+    } catch (err) { estado = 'fallido'; error = String(err.message || err).slice(0, 300); console.error(`Aviso «${tipo}» no enviado:`, error); }
+    try { await col('envios_correo').add({ cedula: cedula || null, tipo, estado, correo: mascaraCorreo(destino), motivo: `Aviso: ${motivo}`, error, rol: 'secretaria', creado_en: hoy() }); }
+    catch (err) { console.error('No se pudo guardar el registro del aviso:', err.message); }
+    return { estado, a: destino === CORREO_SOPORTE ? 'soporte' : secretaria.nombre };
   }
 
   async function verEnviosCorreo(token) {
@@ -710,6 +746,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   const ESTADOS_TICKET = ['abierto', 'en_proceso', 'resuelto', 'cerrado'];
   const esSoporte = (p) => esAdmin(p);
   const PANEL_SOPORTE = 'https://cicredmujeresdelcaribe.org/admin/';
+  const CORREO_SOPORTE = '2horas.online01@gmail.com';
   async function avisarSoporte(t, tipo, texto) {
     if (!driveActivo()) return;
     const quien = `${t.nombre}${t.rol ? ` (${t.rol})` : ''} · CC ${t.cedula}`;
@@ -733,16 +770,17 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     { area: 'Acceso a Financiamiento', clave: /financ|capitaliz/i },
   ];
   async function secretariaEncargada(cargoDinamizadora) {
-    const secretarias = (await lista(col('directorio').where('rol', '==', 'secretaria'))).filter((s) => correoValido(s.correo));
+    const secretarias = (await lista(col('directorio'))).filter((s) => tieneRol(s, 'secretaria') && correoValido(s.correo) && !esCuentaPrueba(s));
     const pilar = PILARES_SECRETARIA.find((x) => x.clave.test(String(cargoDinamizadora || '')));
-    return (pilar && secretarias.find((s) => pilar.clave.test(String(s.cargo || ''))))
-      || secretarias.find((s) => /direcci[oó]n t[eé]cnica/i.test(String(s.cargo || '')))
+    return (pilar && secretarias.find((s) => pilar.clave.test(cargoSecretaria(s))))
+      || secretarias.find((s) => /direcci[oó]n t[eé]cnica/i.test(cargoSecretaria(s)))
       || null;
   }
   async function avisarSecretaria(t, texto) {
     if (t.categoria !== 'acceso' || !driveActivo()) return null;
-    const d = await datos(col('directorio').doc(t.cedula));
-    if (!d || d.rol !== 'dinamizadora') return null;
+    const d = comoDinamizadora(await datos(col('directorio').doc(t.cedula)));
+    if (!d) return null;
+    if (esCuentaPrueba(d)) return null; // cuenta de prueba: la solicitud ya le llega a soporte, a nadie más
     const s = await secretariaEncargada(d.cargo);
     if (!s) { console.warn(`Solicitud ${t.numero}: no se encontró secretaria encargada con correo.`); return null; }
     const asunto = `[CIC] ${d.nombre} necesita un código de acceso (${t.numero})`;
@@ -758,13 +796,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
       `Lo que escribió: ${texto}`, '',
       `Solicitud ${t.numero}. Si ya la ayudaste, no tienes que hacer nada más: la administración la cierra.`,
     ].join('\n');
-    try {
-      await drive({ accion: 'correo', para: s.correo, asunto, texto: cuerpo });
-      return { nombre: s.nombre, cargo: s.cargo || null, avisada_en: hoy() };
-    } catch (err) {
-      console.error(`No se pudo avisar a la secretaria encargada de la solicitud ${t.numero}:`, err.message);
-      return null;
-    }
+    const r = await enviarAvisoSecretaria({ tipo: 'aviso_codigo_acceso', cedula: t.cedula, secretaria: s, involucradas: [d], asunto, texto: cuerpo, razon: `código de acceso para ${d.nombre}, a la secretaria de su pilar (${s.nombre})` });
+    return r.estado === 'enviado' && r.a !== 'soporte' ? { nombre: s.nombre, cargo: cargoSecretaria(s) || null, avisada_en: hoy() } : null;
   }
   const numeroTicket = () => `T-${hoy().slice(2, 10).replace(/-/g, '')}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
   const vistaTicket = (x, conMensajes) => ({
@@ -1183,30 +1216,28 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     await avisarEnvioActividad(p, e, a, fila, nota);
     return verSeguimiento(token, b);
   }
-  // Correo a la Secretaría: «tal dinamizadora envió documentos para su aprobación». Si falla, el envío igual queda hecho.
+  // Correo a la Secretaría: «tal dinamizadora envió documentos para su aprobación». Le llega SOLO a la secretaria que
+  // asignó ese emprendimiento (aunque ella haya entrado con su otro perfil). Si no hay una secretaria responsable, el
+  // aviso va solo a soporte: nunca se adivina a otra persona. Si falla el correo, el envío igual queda hecho.
   async function avisarEnvioActividad(p, e, a, fila, nota) {
     if (!driveActivo()) return;
-    try {
-      // La secretaria que asignó el emprendimiento (aunque en ese momento haya entrado con otro perfil);
-      // si no la hay, la encargada del pilar. Las cuentas de prueba solo avisan a soporte.
-      const asignadora = e.asignada_por ? await perfilPorId(e.asignada_por) : null;
-      const esSecretaria = (x) => x && (x.rol === 'secretaria' || (x.otros_roles && x.otros_roles.secretaria));
-      const prueba = /prueba/i.test(`${p.cargo || ''} ${p.nombre || ''}`);
-      const s = esSecretaria(asignadora) && correoValido(asignadora.correo) ? asignadora : prueba ? null : await secretariaEncargada(p.cargo);
-      if (!s) { await drive({ accion: 'correo', asunto: `[CIC] ${p.nombre} envió documentos para aprobar · ${e.nombre}`, texto: `La dinamizadora ${p.nombre} envió documentos de ${e.nombre} (${a.ruta === 'hacer' ? `Semana ${a.n}` : `Taller ${a.n}`}), pero no se encontró una secretaria con correo para avisarle. Revísalo en la plataforma.${nota ? `\n\nMensaje de la dinamizadora: ${nota}` : ''}` }); return; }
-      const actividad = `${a.ruta === 'hacer' ? `Semana ${a.n}` : `Taller ${a.n}`} · ${a.titulo}`;
-      const cuerpo = [
-        `Hola, ${String(s.nombre).split(' ')[0]}:`, '',
-        `La dinamizadora ${p.nombre} envió documentos para tu aprobación.`, '',
-        `Emprendimiento: ${e.nombre}${e.negocio ? ` (${e.negocio})` : ''}`,
-        `Actividad: ${actividad}`,
-        fila.ejecutada ? `Sesión del ${fila.fecha || 'día sin indicar'} · acta y herramienta adjuntas en la plataforma.` : `No se ejecutó. Motivo: ${fila.motivo}`,
-        nota ? `\nMensaje de la dinamizadora: «${nota}»` : '', '',
-        `Para revisarla: entra a ${PANEL_SOPORTE.replace(/admin\/$/, '')} con tu cédula, elige «Secretaria», abre «Seguimiento» y toca la casilla de esa actividad.`,
-        'Ahí respondes «¿Se aprueban los documentos?» con Sí o No y le dejas tus comentarios.',
-      ].join('\n');
-      await drive({ accion: 'correo', para: s.correo, asunto: `[CIC] ${p.nombre} envió documentos para aprobar · ${e.nombre}`, texto: cuerpo });
-    } catch (err) { console.error(`No se pudo avisar el envío de ${p.nombre}:`, err.message); }
+    const asignadora = e.asignada_por ? await perfilPorId(e.asignada_por) : null;
+    const actividad = `${a.ruta === 'hacer' ? `Semana ${a.n}` : `Taller ${a.n}`} · ${a.titulo}`;
+    const texto = [
+      `Hola${asignadora ? `, ${String(asignadora.nombre).split(' ')[0]}` : ''}:`, '',
+      `La dinamizadora ${p.nombre} envió documentos para tu aprobación.`, '',
+      `Emprendimiento: ${e.nombre}${e.negocio ? ` (${e.negocio})` : ''}`,
+      `Actividad: ${actividad}`,
+      fila.ejecutada ? `Sesión del ${fila.fecha || 'día sin indicar'} · acta y herramienta adjuntas en la plataforma.` : `No se ejecutó. Motivo: ${fila.motivo}`,
+      nota ? `\nMensaje de la dinamizadora: «${nota}»` : '', '',
+      `Para revisarla: entra a ${PANEL_SOPORTE.replace(/admin\/$/, '')} con tu cédula, elige «Secretaria», abre «Seguimiento» y toca «Abrir tarjetas» en ese emprendimiento.`,
+      'Ahí respondes «¿Se aprueban los documentos?» con Sí o No y le dejas tus comentarios.',
+    ].join('\n');
+    await enviarAvisoSecretaria({
+      tipo: 'aviso_envio_documentos', cedula: p.cedula, secretaria: asignadora, involucradas: [p, e],
+      asunto: `[CIC] ${p.nombre} envió documentos para aprobar · ${e.nombre}`, texto,
+      razon: `documentos de ${e.nombre} (${actividad}) enviados por ${p.nombre}${asignadora ? `, a la secretaria que asignó (${asignadora.nombre})` : ''}`,
+    });
   }
   // Secretaría: aprueba o devuelve (con comentario obligatorio) una actividad enviada.
   async function revisarActividad(token, b) {
