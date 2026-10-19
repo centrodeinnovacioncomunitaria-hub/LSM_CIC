@@ -836,7 +836,7 @@
         }).join('');
         // Dos secciones (cada una aparece en el submenú de la izquierda): primero lo que hay que revisar, luego el avance
         cont.innerHTML = `
-            <section class="bloque-seccion" id="sec-aportes" data-seccion="Aportes por revisar" data-seccion-cuenta="${d.pendientes.length}">
+            <section class="bloque-seccion" id="sec-aportes" data-seccion="Revisar aportes del foro" data-seccion-cuenta="${d.pendientes.length}">
             <h3 class="subtitulo-seccion" id="bandeja">Aportes del foro por revisar</h3>
             <p class="vista-intro">Lo que escribieron las dinamizadoras en el foro de cada módulo. Léelo y toca <b>Aprobar</b>, o <b>Devolver</b> con un comentario que diga qué ajustar.</p>
             ${d.pendientes.length ? d.pendientes.filter((e) => C.CURSOS[e.curso]).map((e, n) => `<article class="tarjeta evidencia" data-id="${esc(e.id)}">
@@ -850,7 +850,7 @@
                 <div class="botones"><button type="button" class="btn btn-primario" data-revisar="aprobada">Aprobar</button><button type="button" class="btn btn-borde" data-revisar="devuelta">Devolver con comentario</button></div>
             </article>`).join('') : '<p class="tarjeta vacio">No hay evidencias pendientes. ¡Todo al día!</p>'}
             </section>
-            <section class="bloque-seccion" id="sec-equipo" data-seccion="Avance del equipo">
+            <section class="bloque-seccion" id="sec-equipo" data-seccion="Avance del equipo en los cursos">
             <h3 class="subtitulo-seccion">Avance del equipo en los cursos</h3>
             <p class="vista-intro">Cómo va cada secretaria y dinamizadora en sus cursos.</p>
             <div class="rejilla r4 movil-2">

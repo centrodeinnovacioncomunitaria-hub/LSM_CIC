@@ -1762,3 +1762,87 @@ dialog { overflow-x: hidden; }
 /* La columna lateral nunca ensancha la página en celulares: sus filas se desplazan de lado */
 .plataforma-lateral, .plataforma-lateral > * { min-width: 0; }
 @media (max-width: 860px) { .plataforma-lateral .pestanas, .submenu-lateral ul { scrollbar-width: none; } .plataforma-lateral .pestanas::-webkit-scrollbar, .submenu-lateral ul::-webkit-scrollbar { display: none; } }
+
+/* ================= Seguimiento por tareas (pensado para quien no se siente cómoda con la tecnología) ================= */
+.tareas { display: grid; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.tarea { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 1rem; width: 100%; text-align: left; padding: 1.3rem 1.2rem; background: #fff; border: 2px solid var(--linea); border-radius: 1.4rem; cursor: pointer; font: inherit; color: var(--bosque); box-shadow: 0 14px 30px -26px rgba(46, 74, 62, .6); transition: border-color .15s, transform .15s; }
+.tarea:hover { border-color: var(--bosque); transform: translateY(-2px); }
+.tarea:focus-visible { outline: 3px solid var(--coralp); outline-offset: 3px; }
+.tarea-icono { display: grid; place-items: center; width: 3.2rem; height: 3.2rem; border-radius: 1rem; background: var(--crema-2); font-size: 1.6rem; }
+.tarea-texto b { display: block; font-size: 1.1rem; line-height: 1.25; }
+.tarea-texto small { display: block; margin-top: .25rem; color: #4F6B5E; font-size: .92rem; line-height: 1.35; }
+.tarea-cuenta { min-width: 2rem; height: 2rem; padding: 0 .55rem; border-radius: 999px; background: var(--coralp); color: #fff; font-weight: 700; display: inline-grid; place-items: center; }
+.tarea-flecha { font-size: 1.8rem; color: var(--coralp); line-height: 1; }
+.volver-partes { margin-bottom: 1.2rem; }
+.bloque-seccion:has([data-ficha]) > .volver-partes { display: none; }
+.resumen-plegable > summary { cursor: pointer; font-weight: 700; }
+.resumen-plegable[open] > summary { margin-bottom: 1rem; }
+.otra-tarea { margin-top: 2rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .8rem; }
+.otra-tarea p { margin: 0; }
+
+/* Listas de tareas pendientes (sesiones por revisar, correcciones) */
+.tarea-lista { display: grid; gap: .7rem; margin-top: 1rem; }
+.tarea-fila { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; background: #fff; border: 1px solid var(--linea); border-radius: 1.1rem; padding: 1rem 1.1rem; }
+.tarea-fila-icono { font-size: 1.4rem; width: 2.6rem; height: 2.6rem; border-radius: .8rem; display: grid; place-items: center; }
+.tarea-fila-texto { flex: 1 1 14rem; }
+.tarea-fila-texto b { display: block; font-size: 1.05rem; }
+.tarea-fila-texto small { color: #4F6B5E; }
+.vacio-feliz { text-align: center; }
+.vacio-icono { font-size: 2rem; width: 3.5rem; height: 3.5rem; margin: 0 auto .5rem; border-radius: 50%; display: grid; place-items: center; background: #9ED0B7; color: #1E4D35; }
+
+/* Asignar */
+.asignar-controles { display: flex; flex-wrap: wrap; gap: .8rem 2rem; align-items: end; margin: 1rem 0 1.5rem; }
+.asignar-resumen { margin: 0; font-size: 1.05rem; }
+.asignar-grupo { margin-top: 1.2rem; }
+.asignar-grupo h3 { font-size: 1.2rem; margin-bottom: .8rem; }
+.asignar-grupo h3 small { font-size: .9rem; color: #4F6B5E; font-weight: 600; margin-left: .4rem; }
+.asignar-todas { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; background: var(--crema-2); border-radius: 1rem; padding: .8rem 1rem; margin-bottom: .8rem; }
+.asignar-todas select { flex: 1 1 14rem; width: auto; }
+.asignar-lista { display: grid; }
+.asignar-fila { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; justify-content: space-between; padding: .8rem 0; border-top: 1px solid var(--linea); }
+.asignar-fila > div:first-child { flex: 1 1 14rem; }
+.asignar-fila > div:last-child { flex: 0 1 20rem; }
+.asignar-fila b, .asignar-fila small { display: block; }
+.asignar-fila small { color: #4F6B5E; }
+.asignar-ok { color: #1E4D35 !important; font-weight: 700; margin-top: .2rem; }
+
+/* Dinamizadora: tarjetas de sus emprendedoras */
+.aviso-correcciones { background: #FDE7E1; border: 2px solid #EE9884; border-radius: 1.2rem; padding: 1rem 1.2rem; margin: 1rem 0 1.5rem; }
+.aviso-correcciones p { margin: 0 0 .6rem; }
+.aviso-correcciones li { display: flex; justify-content: space-between; align-items: center; gap: .8rem; padding: .45rem 0; border-top: 1px solid rgba(176, 74, 54, .2); }
+.emp-tarjetas-mias { display: grid; grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); gap: 1rem; margin-top: 1rem; }
+.emp-mia { display: flex; flex-direction: column; gap: .7rem; }
+.emp-mia-cab h3 { font-size: 1.25rem; margin: 0; }
+.emp-mia-cab p { margin: .15rem 0 0; }
+.emp-mia-puntos { display: grid; grid-template-columns: repeat(10, 1fr); gap: .3rem; }
+.emp-mia-puntos li { height: .7rem; border-radius: 999px; }
+.emp-mia-avance { margin: 0; }
+.emp-mia-siguiente { margin: 0; background: var(--crema-2); border-radius: .8rem; padding: .6rem .8rem; }
+.emp-mia-botones { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: auto; }
+
+/* Página de una emprendedora: lista de sesiones, una abierta */
+.act-fila { list-style: none; border: 1px solid var(--linea); border-radius: 1.1rem; background: #fff; overflow: hidden; }
+.act-fila + .act-fila { margin-top: .6rem; }
+.act-fila.abierta { border: 2px solid var(--bosque); }
+.act-resumen { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: .9rem; width: 100%; padding: .9rem 1rem; background: none; border: 0; cursor: pointer; text-align: left; font: inherit; color: var(--bosque); }
+.act-resumen:hover { background: #FFFBF6; }
+.act-nombre b { display: block; font-size: 1.05rem; }
+.act-nombre small { color: #4F6B5E; }
+.act-estado { font-size: .85rem; font-weight: 700; padding: .3rem .7rem; border-radius: 999px; white-space: nowrap; }
+.act-flecha { font-size: 1.1rem; color: #4F6B5E; }
+.act-fila.abierta > .emp-act { border: 0; border-top: 1px solid var(--linea); border-radius: 0; margin: 0; }
+.emp-cuestionario-plegable > summary { cursor: pointer; font-weight: 700; font-size: 1.1rem; padding: .8rem 0; }
+.emp-volver { margin-bottom: 1rem; }
+@media (max-width: 560px) {
+    .tarea { grid-template-columns: auto 1fr auto; padding: 1rem; }
+    .tarea-flecha { display: none; }
+    .act-resumen { grid-template-columns: auto 1fr; }
+    .act-estado { grid-column: 2; justify-self: start; }
+    .act-flecha { display: none; }
+}
+
+/* Sesiones en una sola columna: cada fila ocupa todo el ancho; el título ya está en la fila, no se repite al abrirla */
+.emp-actividades:has(.act-fila) { display: grid; grid-template-columns: minmax(0, 1fr); gap: .6rem; }
+.emp-actividades .act-fila + .act-fila { margin-top: 0; }
+.act-fila .emp-act-cabeza { display: none; }
+.act-fila > .emp-act { padding: 1rem 1.2rem 1.2rem; }

@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261035">
+    <link rel="stylesheet" href="assets/cic.css?v=20261036">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -743,13 +743,13 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261035"></script>
-    <script src="assets/datos-cic.js?v=20261035"></script>
-    <script src="assets/sitio.js?v=20261035"></script>
-    <script src="assets/cursos-equipo.js?v=20261035"></script>
-    <script src="assets/soporte.js?v=20261035"></script>
-    <script src="assets/soporte-flotante.js?v=20261035"></script>
-    <script src="assets/emprendimientos.js?v=20261035"></script>
+    <script src="./config.js?v=20261036"></script>
+    <script src="assets/datos-cic.js?v=20261036"></script>
+    <script src="assets/sitio.js?v=20261036"></script>
+    <script src="assets/cursos-equipo.js?v=20261036"></script>
+    <script src="assets/soporte.js?v=20261036"></script>
+    <script src="assets/soporte-flotante.js?v=20261036"></script>
+    <script src="assets/emprendimientos.js?v=20261036"></script>
     <script>
     (() => {
         'use strict';
@@ -1204,6 +1204,8 @@
                 t.tabIndex = activa ? 0 : -1;
             });
             if (enfocar) $(`#tab-${vista}`).focus();
+            const cpv = contenedorPartes($(`#vista-${vista}`));
+            if (cpv && enfocar) { delete cpv.dataset.parteActual; aplicarPartes(); }
             firmaSubmenu = null; setTimeout(pintarSubmenu, 0);
             // En celulares la barra queda arriba: al cambiar de sección se vuelve al comienzo de la sección
             const cuerpo = $('.plataforma-cuerpo');
@@ -1231,10 +1233,46 @@
         const submenu = $('#submenu-plataforma');
         let firmaSubmenu = null, vigiaSubmenu = null, esperaSubmenu = null;
         const vistaAbierta = () => VISTAS.map((x) => $(`#vista-${x}`)).find((x) => x && !x.hidden);
+        // Secciones «por partes» (Seguimiento): se ve una parte a la vez; la primera es el inicio con las opciones
+        const contenedorPartes = (v) => (v ? v.querySelector('[data-partes]') : null);
+        const partesDe = (c) => [...c.querySelectorAll('[data-seccion]')].filter((x) => x.id && x.closest('[data-partes]') === c);
+        function aplicarPartes() {
+            document.querySelectorAll('[data-partes]').forEach((c) => {
+                const partes = partesDe(c);
+                if (!partes.length) return;
+                const actual = partes.some((p) => p.id === c.dataset.parteActual) ? c.dataset.parteActual : partes[0].id;
+                partes.forEach((p, i) => {
+                    const oculta = p.id !== actual;
+                    if (p.hidden !== oculta) p.hidden = oculta;
+                    if (i > 0 && !p.querySelector(':scope > .volver-partes')) p.insertAdjacentHTML('afterbegin', `<button type="button" class="btn btn-borde volver-partes" data-ir-parte="${partes[0].id}">← Volver a ${esc(partes[0].dataset.volverTexto || 'Seguimiento')}</button>`);
+                });
+                c.querySelectorAll('[data-cuenta-de]').forEach((el) => {
+                    const sec = document.getElementById(el.dataset.cuentaDe);
+                    const n = sec ? Number(sec.dataset.seccionCuenta || 0) : 0;
+                    if (el.textContent !== String(n)) el.textContent = n;
+                    if (el.hidden !== !(n > 0)) el.hidden = !(n > 0);
+                });
+            });
+        }
+        function mostrarParte(id) {
+            const sec = document.getElementById(id);
+            const c = sec && sec.closest('[data-partes]');
+            if (!c) return false;
+            c.dataset.parteActual = id;
+            aplicarPartes();
+            firmaSubmenu = null; pintarSubmenu();
+            const cuerpo = $('.plataforma-cuerpo');
+            window.scrollTo({ top: Math.max(0, cuerpo.getBoundingClientRect().top + window.scrollY - 90) });
+            const t = sec.querySelector('h2, h3');
+            if (t) { t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); }
+            return true;
+        }
+        document.addEventListener('click', (e) => { const b = e.target.closest('[data-ir-parte]'); if (b && mostrarParte(b.dataset.irParte)) e.preventDefault(); });
         function pintarSubmenu() {
             const v = vistaAbierta();
             const partes = v && !$('#plataforma').hidden ? [...v.querySelectorAll('[data-seccion]')].filter((x) => x.id) : [];
-            const firma = partes.map((x) => `${x.id}:${x.dataset.seccion}:${x.dataset.seccionCuenta || ''}`).join('|');
+            const cp = contenedorPartes(v);
+            const firma = (cp ? `partes:${cp.dataset.parteActual || ''}|` : '') + partes.map((x) => `${x.id}:${x.dataset.seccion}:${x.dataset.seccionCuenta || ''}`).join('|');
             if (firma === firmaSubmenu) return;
             firmaSubmenu = firma;
             if (vigiaSubmenu) { vigiaSubmenu.disconnect(); vigiaSubmenu = null; }
@@ -1243,6 +1281,7 @@
             submenu.hidden = false;
             submenu.innerHTML = `<p class="submenu-titulo">En ${esc(titulo ? titulo.textContent : 'esta sección')}</p>
                 <ul>${partes.map((x) => `<li><a href="#${x.id}" data-ir-seccion="${x.id}"><span>${esc(x.dataset.seccion)}</span>${Number(x.dataset.seccionCuenta) > 0 ? `<span class="submenu-cuenta" aria-label="${esc(x.dataset.seccionCuenta)} pendientes">${esc(x.dataset.seccionCuenta)}</span>` : ''}</a></li>`).join('')}</ul>`;
+            if (cp) { const actual = partes.find((x) => !x.hidden); submenu.querySelectorAll('a').forEach((a) => a.classList.toggle('actual', !!actual && a.dataset.irSeccion === actual.id)); return; }
             if ('IntersectionObserver' in window) {
                 vigiaSubmenu = new IntersectionObserver((es) => {
                     const visible = es.filter((x) => x.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
@@ -1253,12 +1292,13 @@
             }
         }
         // Se vuelve a armar cuando cambia el contenido (las secciones llegan del servidor un poco después)
-        new MutationObserver(() => { clearTimeout(esperaSubmenu); esperaSubmenu = setTimeout(pintarSubmenu, 150); })
+        new MutationObserver(() => { aplicarPartes(); clearTimeout(esperaSubmenu); esperaSubmenu = setTimeout(pintarSubmenu, 150); })
             .observe($('.plataforma-vistas'), { childList: true, subtree: true, attributes: true, attributeFilter: ['data-seccion-cuenta', 'hidden'] });
         submenu.addEventListener('click', (e) => {
             const a = e.target.closest('[data-ir-seccion]');
             if (!a) return;
             e.preventDefault();
+            if (mostrarParte(a.dataset.irSeccion)) return;
             const destino = document.getElementById(a.dataset.irSeccion);
             if (!destino) return;
             destino.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1538,19 +1578,29 @@
                 <thead><tr><th scope="col">Nombre</th><th scope="col">Perfil</th><th scope="col">Satélite</th><th scope="col">Semana</th><th scope="col">Contacto</th>${conAccion ? '<th scope="col"><span class="sr-only">Acciones</span></th>' : ''}</tr></thead>
                 <tbody>${lista.map((p) => filaPersona(p, conAccion)).join('')}</tbody></table></div>`;
         }
+        // Seguimiento por tareas: cada parte (data-seccion) se ve sola; el submenú de la izquierda y los botones
+        // grandes del inicio llevan a cada una, y cada parte tiene «← Volver» al inicio.
+        const tarea = (id, icono, titulo, texto) => `<button type="button" class="tarea" data-ir-parte="${id}">
+            <span class="tarea-icono" aria-hidden="true">${icono}</span>
+            <span class="tarea-texto"><b>${titulo}</b><small>${texto}</small></span>
+            <span class="tarea-cuenta" data-cuenta-de="${id}" hidden></span>
+            <span class="tarea-flecha" aria-hidden="true">›</span></button>`;
         function pintarDinamizadora(v, lista) {
-            // Cada bloque con data-seccion aparece en el submenú de la izquierda («En esta sección»)
-            v.innerHTML = `
-                <section class="bloque-seccion" id="sec-mis-emprendimientos" data-seccion="Mis emprendimientos">
+            v.innerHTML = `<div class="partes" data-partes>
+                <section class="bloque-seccion" id="sec-mis-emprendimientos" data-seccion="Mis emprendedoras" data-volver-texto="mis emprendedoras">
                     <div id="mis-emprendimientos" class="emp-panel"></div>
+                    <div class="tarjeta otra-tarea">
+                        <p><b>¿Una emprendedora no puede entrar a la plataforma o debe cambiar de semana?</b></p>
+                        <button type="button" class="btn btn-borde" data-ir-parte="sec-emprendedoras">Códigos de acceso y semanas ›</button>
+                    </div>
                 </section>
-                <section class="bloque-seccion" id="sec-emprendedoras" data-seccion="Semanas y códigos de acceso">
-                    <h2>Emprendedoras de ${esc(perfil.departamento || 'tu departamento')}</h2>
-                    <p class="vista-intro">Cuando termines una sesión, cambia su semana: así cada emprendedora ve lo que le toca y sus descargas. Si alguien olvida su contraseña, toca <b>Código de acceso</b> y envíaselo por WhatsApp.</p>
-                    <div class="rejilla r4 movil-2"><div class="tarjeta kpi"><b>${lista.length}</b><span>inscritas</span></div></div>
+                <section class="bloque-seccion" id="sec-emprendedoras" data-seccion="Códigos de acceso y semanas">
+                    <h2>Códigos de acceso y semanas</h2>
+                    <p class="vista-intro">Busca a la emprendedora. Si olvidó su contraseña, toca <b>Código de acceso</b> y envíaselo por WhatsApp. Cuando termines una sesión, cambia su <b>semana</b>: así ve lo que le toca.</p>
                     <div class="controles"><div><label class="etiqueta" for="buscar-d">Buscar por nombre, municipio o negocio</label><input id="buscar-d" class="campo" type="search"></div></div>
                     <div id="tabla-d">${tabla(lista, true)}</div>
-                </section>`;
+                </section>
+            </div>`;
             window.CICEmprendimientos.dinamizadora($('#mis-emprendimientos'), contextoEmprendimientos());
             $('#buscar-d').addEventListener('input', (e) => {
                 const t = e.target.value.toLowerCase();
@@ -1566,36 +1616,48 @@
             const din = lista.filter((p) => p.rol === 'dinamizadora');
             const porSat = SATELITES.map((s) => [s.nombre, emp.filter((p) => p.satelite === s.id).length]);
             const max = Math.max(1, ...porSat.map(([, n]) => n));
-            // Cada bloque con data-seccion aparece en el submenú de la izquierda («En esta sección»)
-            v.innerHTML = `
-                <section class="bloque-seccion" id="sec-resumen" data-seccion="Resumen">
-                <h2>Seguimiento del centro</h2>
-                <p class="vista-intro">Cuentas activas en la plataforma. Las personas del equipo aparecen cuando ingresan por primera vez.</p>
-                <div class="rejilla r3 movil-2">
-                    <div class="tarjeta kpi"><b>${emp.length}</b><span>emprendedoras inscritas</span></div>
-                    <div class="tarjeta kpi"><b>${din.length}<small style="font-size:1rem" class="texto-suave">/24</small></b><span>dinamizadoras que ya ingresaron</span></div>
-                    <div class="tarjeta kpi"><b>${porSat.filter(([, n]) => n).length}<small style="font-size:1rem" class="texto-suave">/8</small></b><span>satélites con emprendedoras</span></div>
-                </div>
-                <div class="tarjeta" style="margin-top:1.5rem">
-                    <h3 style="font-size:1.15rem;margin-bottom:1rem">Emprendedoras por satélite</h3>
-                    <ul class="barras">${porSat.map(([d, n]) => `<li><span>${esc(d)}</span><span class="barra-fondo"><span style="width:${(n / max) * 100}%"></span></span><b>${n}</b></li>`).join('')}</ul>
-                </div>
+            v.innerHTML = `<div class="partes" data-partes>
+                <section class="bloque-seccion" id="sec-inicio" data-seccion="Inicio" data-volver-texto="las opciones de Seguimiento">
+                    <h2>Seguimiento</h2>
+                    <p class="vista-intro">¿Qué quieres hacer? Toca una opción. Los números rojos son cosas que te están esperando.</p>
+                    <div class="tareas">
+                        ${tarea('sec-revisar', '📄', 'Revisar sesiones', 'Aprueba o devuelve las sesiones que enviaron las dinamizadoras.')}
+                        ${tarea('sec-aportes', '💬', 'Revisar aportes del foro', 'Lee lo que escribieron en el foro de cada módulo.')}
+                        ${tarea('sec-asignar', '👥', 'Asignar emprendedoras', 'Elige la dinamizadora de cada emprendedora.')}
+                        ${tarea('sec-tabla', '📊', 'Ver el avance de todas', 'Una tabla con todas las sesiones. Se puede descargar para Excel.')}
+                        ${tarea('sec-equipo', '🎓', 'Avance del equipo en los cursos', 'Cómo van las secretarias y dinamizadoras en sus cursos.')}
+                        ${tarea('sec-cuentas', '🔑', 'Ayudar a alguien a entrar', 'Busca a una persona y genera su código de acceso.')}
+                    </div>
+                    <details class="tarjeta resumen-plegable">
+                        <summary>Ver los números generales</summary>
+                        <div class="rejilla r3 movil-2">
+                            <div class="tarjeta kpi"><b>${emp.length}</b><span>emprendedoras inscritas</span></div>
+                            <div class="tarjeta kpi"><b>${din.length}<small style="font-size:1rem" class="texto-suave">/24</small></b><span>dinamizadoras que ya ingresaron</span></div>
+                            <div class="tarjeta kpi"><b>${porSat.filter(([, n]) => n).length}<small style="font-size:1rem" class="texto-suave">/8</small></b><span>satélites con emprendedoras</span></div>
+                        </div>
+                        <h3 style="font-size:1.1rem;margin:1.5rem 0 1rem">Emprendedoras por satélite</h3>
+                        <ul class="barras">${porSat.map(([d, n]) => `<li><span>${esc(d)}</span><span class="barra-fondo"><span style="width:${(n / max) * 100}%"></span></span><b>${n}</b></li>`).join('')}</ul>
+                    </details>
                 </section>
-                <section class="bloque-seccion" id="sec-emprendimientos" data-seccion="Emprendimientos">
-                    <div id="emprendimientos" class="tarjeta emp-panel"></div>
-                </section>
+                <section class="bloque-seccion" id="sec-revisar" data-seccion="Revisar sesiones"><div id="emp-revisar" class="emp-panel"></div></section>
                 <div id="avance-equipo" class="avance-equipo"></div>
-                <section class="bloque-seccion" id="sec-cuentas" data-seccion="Cuentas y códigos de acceso">
-                <h3 class="subtitulo-seccion">Todas las cuentas</h3>
-                <p class="vista-intro">Busca a cualquier persona, cambia la semana de una emprendedora o genera un <b>Código de acceso</b> si no puede entrar.</p>
-                <div class="controles">
-                    <div><label class="etiqueta" for="buscar-s">Buscar</label><input id="buscar-s" class="campo" type="search" placeholder="Nombre, cédula, municipio…"></div>
-                    <div style="flex:0 1 14rem"><label class="etiqueta" for="filtro-rol">Perfil</label><select id="filtro-rol" class="campo"><option value="">Todos</option><option value="emprendedora">Emprendedoras</option><option value="dinamizadora">Dinamizadoras</option><option value="secretaria">Secretaría Técnica</option></select></div>
-                </div>
-                <div id="tabla-s">${tabla(lista, true)}</div>
-                </section>`;
+                <section class="bloque-seccion" id="sec-asignar" data-seccion="Asignar emprendedoras"><div id="emp-asignar" class="emp-panel"></div></section>
+                <section class="bloque-seccion" id="sec-tabla" data-seccion="Ver el avance de todas"><div id="emp-tabla-todas" class="emp-panel"></div></section>
+                <section class="bloque-seccion" id="sec-cuentas" data-seccion="Ayudar a alguien a entrar">
+                    <h2>Ayudar a alguien a entrar</h2>
+                    <p class="vista-intro">Busca a la persona por su nombre o cédula y toca <b>Código de acceso</b>: envíaselo por WhatsApp para que cree su contraseña. Aquí también puedes cambiar la semana de una emprendedora.</p>
+                    <div class="controles">
+                        <div><label class="etiqueta" for="buscar-s">Buscar</label><input id="buscar-s" class="campo" type="search" placeholder="Nombre, cédula, municipio…"></div>
+                        <div style="flex:0 1 14rem"><label class="etiqueta" for="filtro-rol">Perfil</label><select id="filtro-rol" class="campo"><option value="">Todos</option><option value="emprendedora">Emprendedoras</option><option value="dinamizadora">Dinamizadoras</option><option value="secretaria">Secretaría Técnica</option></select></div>
+                    </div>
+                    <div id="tabla-s">${tabla(lista, true)}</div>
+                </section>
+            </div>`;
             window.CICCursos.pintarEquipo($('#avance-equipo'), contextoCursos());
-            window.CICEmprendimientos.secretaria($('#emprendimientos'), contextoEmprendimientos());
+            const ctx = contextoEmprendimientos();
+            window.CICEmprendimientos.secretaria($('#emp-revisar'), ctx, 'revisar');
+            window.CICEmprendimientos.secretaria($('#emp-asignar'), ctx, 'asignar');
+            window.CICEmprendimientos.secretaria($('#emp-tabla-todas'), ctx, 'tabla');
             const filtrar = () => {
                 const t = $('#buscar-s').value.toLowerCase();
                 const r = $('#filtro-rol').value;

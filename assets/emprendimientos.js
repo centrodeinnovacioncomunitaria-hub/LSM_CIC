@@ -11,14 +11,6 @@
     const nombreSat = (id) => { const s = C.satelite(id); return s ? s.nombre : ''; };
     const whatsapp = (cel) => { const d = String(cel || '').replace(/\D/g, ''); return d.length >= 10 ? `https://wa.me/57${d.slice(-10)}` : null; };
 
-    function barraAvance(a) {
-        const pct = Math.round((a.ejecutadas / a.total) * 100);
-        return `<div class="emp-avance" title="${a.ejecutadas} de ${a.total} actividades ejecutadas">
-            <span class="emp-barra"><span style="width:${pct}%"></span></span>
-            <small>${a.ejecutadas}/${a.total} ejecutadas · ${a.con_documentos} con documentos${a.no_ejecutadas ? ` · ${a.no_ejecutadas} no ejecutada${a.no_ejecutadas > 1 ? 's' : ''}` : ''}</small>
-            <small>${a.aprobadas || 0} aprobada${a.aprobadas === 1 ? '' : 's'} por la Secretaría${a.por_revisar ? ` · <b class="emp-alerta">${a.por_revisar} por revisar</b>` : ''}${a.devueltas ? ` · ${a.devueltas} devuelta${a.devueltas > 1 ? 's' : ''}` : ''}</small>
-        </div>`;
-    }
     const REVISION = {
         enviada: ['En revisión de la Secretaría Técnica', 'emp-pend'],
         aprobada: ['✓ Aprobada por la Secretaría Técnica', 'emp-ok'],
@@ -27,21 +19,23 @@
     const fechaCorta = (f) => new Date(f).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
     const enDemo = (cont) => { cont.innerHTML = '<p class="tarjeta vacio">En la demostración no hay emprendimientos reales: en la plataforma aquí se asignan y se les hace seguimiento.</p>'; };
 
-    // ================================================================ Tabla de seguimiento (tipo hoja de cálculo)
-    // Una fila por emprendimiento y una celda por actividad (6 semanas HACER y 4 talleres SER), con filtros.
-    // La Secretaría ve todos y asigna dinamizadora; la dinamizadora ve los suyos. Tocar una celda abre esa actividad.
+    // ================================================================ Seguimiento por tareas
+    // Pensado para personas a las que no se les da bien la tecnología: una tarea por pantalla, palabras sencillas
+    // y siempre un botón claro con el siguiente paso. Las partes (revisar, asignar, tabla, mis emprendedoras) se
+    // montan en sus propios recuadros y comparten los mismos datos.
     const COLUMNAS = [...[1, 2, 3, 4, 5, 6].map((n) => ['hacer', n, `S${n}`]), ...[1, 2, 3, 4].map((n) => ['ser', n, `T${n}`])];
+    const nombreAct = (r, n) => (r === 'hacer' ? `Semana ${n}` : `Taller ${n}`);
     const ESTADO_CELDA = {
-        pendiente: ['·', 'c-pendiente', 'Pendiente'],
-        sin_docs: ['◐', 'c-sin-docs', 'Ejecutada · faltan documentos'],
-        lista: ['E', 'c-lista', 'Ejecutada · lista para enviar'],
+        pendiente: ['·', 'c-pendiente', 'Falta registrar'],
+        sin_docs: ['◐', 'c-sin-docs', 'Faltan documentos'],
+        lista: ['↑', 'c-lista', 'Lista para enviar'],
         revision: ['…', 'c-revision', 'En revisión de la Secretaría'],
         aprobada: ['✓', 'c-aprobada', 'Aprobada'],
         devuelta: ['!', 'c-devuelta', 'Devuelta para corregir'],
-        no: ['✕', 'c-no', 'No se ejecutó'],
+        no: ['✕', 'c-no', 'No se hizo'],
     };
     function estadoCelda(c) {
-        if (!c || c.e === null) return 'pendiente';
+        if (!c || c.e === null || c.e === undefined) return 'pendiente';
         if (c.r === 'aprobada') return 'aprobada';
         if (c.r === 'devuelta') return 'devuelta';
         if (c.r === 'enviada') return 'revision';
@@ -49,19 +43,22 @@
         return c.d ? 'lista' : 'sin_docs';
     }
     const FILTROS = {
-        '': 'Todos',
-        sin: 'Sin dinamizadora asignada',
-        revisar: 'Con actividades por revisar',
-        devueltas: 'Con actividades devueltas',
-        pendientes_envio: 'Con actividades sin enviar',
-        sin_avance: 'Sin ninguna actividad registrada',
-        cuestionario: 'Cuestionario habilitado sin responder',
+        '': 'Todas',
+        revisar: 'Con sesiones por revisar',
+        devueltas: 'Con sesiones devueltas',
+        pendientes_envio: 'Con sesiones sin enviar',
+        sin_avance: 'Sin ninguna sesión registrada',
+        sin: 'Sin dinamizadora',
+        cuestionario: 'Con cuestionario sin responder',
     };
-    let H = { datos: null, rol: '', sat: '', din: '', filtro: '', texto: '', sel: new Set() };
+    let H = { datos: null, rol: '', sat: '', din: '', filtro: '', texto: '', verAsignadas: false, buscarDin: '' };
+    let promesa = null;
+    const montajes = {}; // modo → recuadro donde está pintado
     const filas = () => H.datos.emprendimientos;
-    function cumpleFiltro(x) {
-        const estados = COLUMNAS.map(([r, n]) => estadoCelda(x.celdas[`${r}_${n}`]));
-        switch (H.filtro) {
+    const celdasDe = (x) => COLUMNAS.map(([r, n]) => ({ r, n, estado: estadoCelda(x.celdas[`${r}_${n}`]) }));
+    function cumpleFiltro(x, filtro = H.filtro) {
+        const estados = celdasDe(x).map((c) => c.estado);
+        switch (filtro) {
             case 'sin': return !x.dinamizadora;
             case 'revisar': return estados.includes('revision');
             case 'devueltas': return estados.includes('devuelta');
@@ -71,140 +68,181 @@
             default: return true;
         }
     }
-    function filtrados() {
-        const t = H.texto.toLowerCase();
-        return filas().filter((x) => (!H.sat || x.satelite === H.sat) && (!H.din || x.dinamizadora === H.din) && cumpleFiltro(x)
-            && [x.nombre, x.cedula, x.negocio, x.municipio, x.dinamizadora_nombre].join(' ').toLowerCase().includes(t));
-    }
     const dinDe = (sat) => (H.datos.dinamizadoras || []).filter((d) => d.satelite === sat);
-    function opcionesDin(sat, actual) {
-        return `<option value="">Sin asignar</option>${dinDe(sat).map((d) => `<option value="${esc(d.cedula)}" ${d.cedula === actual ? 'selected' : ''}>${esc(d.nombre)} · CC ${esc(d.cedula)}</option>`).join('')}`;
+    function opcionesDin(sat, actual, vacio = 'Elige la dinamizadora…') {
+        return `<option value="">${esc(vacio)}</option>${dinDe(sat).map((d) => `<option value="${esc(d.cedula)}" ${d.cedula === actual ? 'selected' : ''}>${esc(d.nombre)} · CC ${esc(d.cedula)}</option>`).join('')}`;
     }
+    // El número de pendientes de cada parte se muestra en el submenú y en los botones de inicio
+    const cuentaSeccion = (cont, n) => { const s = cont.closest('[data-seccion]'); if (s) s.dataset.seccionCuenta = n; };
 
-    async function secretaria(cont, ctx) { C = ctx; await cargarHoja(cont, 'secretaria'); }
-    async function dinamizadora(cont, ctx) { C = ctx; await cargarHoja(cont, 'dinamizadora'); }
-    async function cargarHoja(cont, rol) {
-        cont.onclick = null; cont.onchange = null;
+    function traer(rol, forzar) {
+        if (forzar || !promesa || H.rol !== rol) {
+            if (H.rol !== rol) H = { datos: null, rol, sat: '', din: '', filtro: '', texto: '', verAsignadas: false, buscarDin: '' };
+            promesa = C.llamar(rol === 'secretaria' ? 'emprendimientos' : 'mis-emprendimientos', {}, true).then((d) => (H.datos = d));
+            promesa.catch(() => { promesa = null; });
+        }
+        return promesa;
+    }
+    const PINTAR = { revisar: pintarRevisar, asignar: pintarAsignar, tabla: pintarHoja, mias: pintarMias };
+    async function montar(cont, ctx, rol, modo) {
+        C = ctx;
+        montajes[modo] = cont;
+        cont.onclick = null; cont.onchange = null; cont.oninput = null;
+        delete cont.dataset.ficha;
         if (C.DEMO) return enDemo(cont);
-        cont.innerHTML = '<p class="vista-intro" role="status">Cargando el seguimiento…</p>';
-        try { H.datos = await C.llamar(rol === 'secretaria' ? 'emprendimientos' : 'mis-emprendimientos', {}, true); } catch (e) { cont.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; return; }
-        if (H.rol !== rol) H = { datos: H.datos, rol, sat: '', din: '', filtro: '', texto: '', sel: new Set() };
-        H.sel = new Set();
-        pintarHoja(cont);
+        cont.innerHTML = '<p class="vista-intro" role="status">Cargando…</p>';
+        try { await traer(rol); } catch (e) { cont.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; return; }
+        PINTAR[modo](cont);
     }
-    const recargarHoja = (cont) => cargarHoja(cont, H.rol);
+    // Después de un cambio (asignar, revisar, enviar) se vuelven a pintar todas las partes con datos frescos
+    async function refrescarTodo() {
+        try { await traer(H.rol, true); } catch (e) { C.aviso(e.message); return; }
+        for (const [modo, cont] of Object.entries(montajes)) if (cont.isConnected && !cont.dataset.ficha) PINTAR[modo](cont);
+    }
+    const volverA = (cont) => () => { delete cont.dataset.ficha; refrescarTodo(); };
+    const irA = (cont) => { const s = cont.closest('[data-seccion]') || cont; const y = s.getBoundingClientRect().top + window.scrollY - 150; if (s.getBoundingClientRect().top < 120) window.scrollTo({ top: Math.max(0, y) }); };
 
-    function pintarHoja(cont) {
-        const sec = H.rol === 'secretaria';
-        const emp = filas();
-        const cuenta = (f) => emp.filter((x) => { const g = H.filtro; H.filtro = f; const r = cumpleFiltro(x); H.filtro = g; return r; }).length;
-        // Número de emprendimientos con actividades por revisar: se ve junto a la sección en el submenú de la izquierda
-        const seccion = cont.closest('[data-seccion]');
-        if (seccion) seccion.dataset.seccionCuenta = cuenta('revisar');
-        const sats = C.SATELITES.filter((s) => emp.some((x) => x.satelite === s.id) || (H.datos.dinamizadoras || []).some((d) => d.satelite === s.id));
-        const dins = sec ? (H.datos.dinamizadoras || []).filter((d) => !H.sat || d.satelite === H.sat) : [];
+    // Secretaría: modo 'revisar' (sesiones enviadas), 'asignar' o 'tabla'. Dinamizadora: sus emprendedoras.
+    async function secretaria(cont, ctx, modo = 'tabla') { await montar(cont, ctx, 'secretaria', modo); }
+    async function dinamizadora(cont, ctx) { await montar(cont, ctx, 'dinamizadora', 'mias'); }
+
+    // ---------- Secretaría · Revisar sesiones enviadas ----------
+    function pintarRevisar(cont) {
+        const items = [];
+        let devueltas = 0;
+        for (const x of filas()) for (const c of celdasDe(x)) {
+            if (c.estado === 'revision') items.push({ x, ...c, f: x.celdas[`${c.r}_${c.n}`].f });
+            if (c.estado === 'devuelta') devueltas++;
+        }
+        cuentaSeccion(cont, items.length);
         cont.innerHTML = `
-            <div class="emp-cabeza">
-                <div><h3>${sec ? 'Seguimiento de los emprendimientos' : 'Mis emprendimientos'}</h3>
-                <p class="vista-intro">${sec ? 'Cada fila es un emprendimiento y cada casilla una actividad. Asigna la dinamizadora en la columna «Dinamizadora» y toca una casilla para revisar esa actividad.' : 'Cada fila es un emprendimiento que te asignó la Secretaría Técnica. Toca una casilla para marcar la actividad, subir el acta y la herramienta y enviarla a la Secretaría.'}</p></div>
-                <div class="emp-kpis"><span><b>${emp.length}</b> emprendimientos</span>${sec ? `<span class="${cuenta('sin') ? 'emp-alerta' : ''}"><b>${cuenta('sin')}</b> sin asignar</span>` : ''}<span class="${cuenta('revisar') ? 'emp-alerta' : ''}"><b>${cuenta('revisar')}</b> con actividades por revisar</span></div>
+            <h2>Revisar sesiones enviadas</h2>
+            <p class="vista-intro">Las dinamizadoras enviaron estas sesiones con el acta y la herramienta. Toca <b>Revisar</b>, mira los documentos y responde si se aprueban.</p>
+            ${items.length ? `<ul class="lista-limpia tarea-lista">${items.map(({ x, r, n, f }) => `<li class="tarea-fila">
+                <span class="tarea-fila-icono c-revision" aria-hidden="true">📄</span>
+                <div class="tarea-fila-texto"><b>${esc(nombreAct(r, n))} de ${esc(x.nombre)}</b><small>${esc(x.negocio || 'Sin nombre de negocio')} · enviada por ${esc(x.dinamizadora_nombre || 'la dinamizadora')}${f ? ` · sesión del ${esc(f)}` : ''}</small></div>
+                <button type="button" class="btn btn-primario" data-ver="${esc(x.cedula)}" data-foco="${r}-${n}">Revisar ›</button>
+            </li>`).join('')}</ul>`
+            : '<div class="tarjeta vacio vacio-feliz"><p class="vacio-icono" aria-hidden="true">✓</p><p><b>¡Todo al día!</b></p><p class="texto-suave">No hay sesiones esperando tu revisión. Cuando una dinamizadora envíe una, aparecerá aquí y te llegará un correo.</p></div>'}
+            ${devueltas ? `<p class="texto-suave" style="margin-top:1rem">${devueltas === 1 ? 'Una sesión está' : `${devueltas} sesiones están`} esperando que la dinamizadora haga las correcciones que pediste.</p>` : ''}`;
+        cont.onclick = (e) => { const b = e.target.closest('[data-ver]'); if (b) abrirSeguimiento(cont, b.dataset.ver, volverA(cont), b.dataset.foco, 'Volver a las sesiones por revisar'); };
+    }
+
+    // ---------- Secretaría · Asignar emprendedoras a dinamizadoras ----------
+    function pintarAsignar(cont) {
+        const sin = filas().filter((x) => !x.dinamizadora);
+        cuentaSeccion(cont, sin.length);
+        const t = H.buscarDin.toLowerCase();
+        const lista = filas().filter((x) => (H.verAsignadas || !x.dinamizadora) && (!t || [x.nombre, x.cedula, x.negocio, x.municipio].join(' ').toLowerCase().includes(t)));
+        const grupos = C.SATELITES.map((s) => [s.id, lista.filter((x) => x.satelite === s.id)]).filter(([, xs]) => xs.length);
+        cont.innerHTML = `
+            <h2>Asignar emprendedoras a dinamizadoras</h2>
+            <p class="vista-intro">Cada emprendedora necesita una dinamizadora de su mismo satélite. Elige el nombre en la lista: <b>se guarda solo</b>.</p>
+            <div class="asignar-controles">
+                <p class="asignar-resumen"><b>${sin.length}</b> ${sin.length === 1 ? 'emprendedora sin dinamizadora' : 'emprendedoras sin dinamizadora'}</p>
+                <label class="casilla"><input type="checkbox" data-ver-asignadas ${H.verAsignadas ? 'checked' : ''}><span>Mostrar también las que ya tienen dinamizadora (para cambiarla)</span></label>
+                ${filas().length > 8 ? `<div><label class="etiqueta" for="asig-buscar">Buscar</label><input id="asig-buscar" class="campo" type="search" placeholder="Nombre, cédula o municipio" value="${esc(H.buscarDin)}"></div>` : ''}
             </div>
-            ${sec && H.datos.drive && H.datos.drive.activo ? `<p class="emp-drive-barra">📁 Los documentos se guardan también en Google Drive, en la carpeta «CIC · Documentos de seguimiento».${H.datos.drive.pendientes ? ` <button type="button" class="btn btn-borde btn-pequeno" data-sincronizar>Enviar a Drive ${H.datos.drive.pendientes} pendiente${H.datos.drive.pendientes > 1 ? 's' : ''}</button>` : ''}</p>` : ''}
+            ${grupos.length ? grupos.map(([sat, xs]) => {
+                const pendientes = xs.filter((x) => !x.dinamizadora);
+                return `<section class="tarjeta asignar-grupo">
+                <h3>Satélite ${esc(nombreSat(sat))} <small>${xs.length} ${xs.length === 1 ? 'emprendedora' : 'emprendedoras'}</small></h3>
+                ${!dinDe(sat).length ? '<p class="emp-alerta">Este satélite todavía no tiene dinamizadoras registradas. Pídele a la administración que las registre.</p>'
+                    : pendientes.length > 1 ? `<div class="asignar-todas"><label for="lote-${esc(sat)}">Asignar las ${pendientes.length} sin dinamizadora a:</label>
+                        <select id="lote-${esc(sat)}" class="campo" data-lote-sat="${esc(sat)}">${opcionesDin(sat, null)}</select>
+                        <button type="button" class="btn btn-borde" data-lote-btn="${esc(sat)}">Asignar a todas</button></div>` : ''}
+                <ul class="lista-limpia asignar-lista">${xs.map((x) => `<li class="asignar-fila ${x.dinamizadora ? 'ya-asignada' : ''}">
+                    <div><b>${esc(x.nombre)}</b><small>${esc(x.negocio || 'Sin nombre de negocio')} · ${esc(x.municipio || '')} · CC ${esc(x.cedula)}</small></div>
+                    <div><label class="sr-only" for="asig-${esc(x.cedula)}">Dinamizadora de ${esc(x.nombre)}</label>
+                    <select id="asig-${esc(x.cedula)}" class="campo" data-asignar="${esc(x.cedula)}" ${dinDe(sat).length ? '' : 'disabled'}>${opcionesDin(sat, x.dinamizadora, x.dinamizadora ? 'Quitar la dinamizadora' : 'Elige la dinamizadora…')}</select>
+                    ${x.dinamizadora ? '<small class="asignar-ok">✓ Asignada</small>' : ''}</div>
+                </li>`).join('')}</ul></section>`;
+            }).join('')
+            : `<div class="tarjeta vacio vacio-feliz"><p class="vacio-icono" aria-hidden="true">✓</p><p><b>${filas().length ? '¡Listo! Todas las emprendedoras tienen dinamizadora.' : 'Todavía no hay emprendedoras inscritas.'}</b></p>${filas().length ? '<p class="texto-suave">Marca «Mostrar también las que ya tienen dinamizadora» si necesitas cambiar alguna.</p>' : ''}</div>`}`;
+        cont.onchange = async (e) => {
+            if (e.target.matches('[data-ver-asignadas]')) { H.verAsignadas = e.target.checked; pintarAsignar(cont); return; }
+            const a = e.target.closest('[data-asignar]');
+            if (a) { a.disabled = true; await asignar([a.dataset.asignar], a.value); }
+        };
+        cont.oninput = (e) => { if (e.target.id === 'asig-buscar') { H.buscarDin = e.target.value; pintarAsignar(cont); const b = $('#asig-buscar', cont); b.focus(); b.setSelectionRange(b.value.length, b.value.length); } };
+        cont.onclick = async (e) => {
+            const b = e.target.closest('[data-lote-btn]');
+            if (!b) return;
+            const sat = b.dataset.loteBtn;
+            const din = $(`[data-lote-sat="${sat}"]`, cont).value;
+            if (!din) { C.aviso('Primero elige la dinamizadora en la lista.'); return; }
+            b.disabled = true;
+            await asignar(filas().filter((x) => x.satelite === sat && !x.dinamizadora).map((x) => x.cedula), din);
+        };
+    }
+    async function asignar(cedulas, din) {
+        try {
+            const r = await C.llamar('asignar', { cedulas, dinamizadora: din || null }, true);
+            C.aviso(r.dinamizadora ? `Listo: ${r.asignados === 1 ? 'quedó asignada' : `${r.asignados} quedaron asignadas`} a ${r.dinamizadora}.` : 'Listo: se quitó la dinamizadora.');
+        } catch (e) { C.aviso(e.message); }
+        await refrescarTodo();
+    }
+
+    // ---------- Secretaría · Ver el avance de todas (tabla con filtros, descargable) ----------
+    function pintarHoja(cont) {
+        const emp = filas();
+        const sats = C.SATELITES.filter((s) => emp.some((x) => x.satelite === s.id));
+        const dins = (H.datos.dinamizadoras || []).filter((d) => (!H.sat || d.satelite === H.sat) && emp.some((x) => x.dinamizadora === d.cedula));
+        cont.innerHTML = `
+            <h2>Avance de todas las emprendedoras</h2>
+            <p class="vista-intro">Una fila por emprendedora y un cuadrito por sesión. Toca un cuadrito para abrir esa sesión. Puedes descargar la tabla para Excel.</p>
+            ${H.datos.drive && H.datos.drive.activo && H.datos.drive.pendientes ? `<p class="emp-drive-barra">📁 Hay ${H.datos.drive.pendientes} documento${H.datos.drive.pendientes > 1 ? 's' : ''} sin copia en Google Drive. <button type="button" class="btn btn-borde btn-pequeno" data-sincronizar>Copiar a Drive</button></p>` : ''}
             <div class="hoja-controles">
-                ${sec ? `<div><label class="etiqueta" for="h-sat">Satélite</label><select id="h-sat" class="campo"><option value="">Todos</option>${sats.map((s) => `<option value="${esc(s.id)}" ${H.sat === s.id ? 'selected' : ''}>${esc(s.nombre)}</option>`).join('')}</select></div>
-                <div><label class="etiqueta" for="h-din">Dinamizadora</label><select id="h-din" class="campo"><option value="">Todas</option>${dins.map((d) => `<option value="${esc(d.cedula)}" ${H.din === d.cedula ? 'selected' : ''}>${esc(d.nombre)} · CC ${esc(d.cedula)}</option>`).join('')}</select></div>` : ''}
-                <div><label class="etiqueta" for="h-filtro">Mostrar</label><select id="h-filtro" class="campo">${Object.entries(FILTROS).filter(([k]) => sec || k !== 'sin').map(([k, t]) => `<option value="${k}" ${H.filtro === k ? 'selected' : ''}>${esc(t)}${k ? ` (${cuenta(k)})` : ''}</option>`).join('')}</select></div>
-                <div class="hoja-buscar"><label class="etiqueta" for="h-buscar">Buscar</label><input id="h-buscar" class="campo" type="search" placeholder="Nombre, cédula, negocio, municipio…" value="${esc(H.texto)}"></div>
-                <div><button type="button" class="btn btn-borde btn-pequeno" data-excel>⬇ Descargar en Excel</button></div>
+                <div><label class="etiqueta" for="h-sat">Satélite</label><select id="h-sat" class="campo"><option value="">Todos</option>${sats.map((s) => `<option value="${esc(s.id)}" ${H.sat === s.id ? 'selected' : ''}>${esc(s.nombre)}</option>`).join('')}</select></div>
+                <div><label class="etiqueta" for="h-din">Dinamizadora</label><select id="h-din" class="campo"><option value="">Todas</option>${dins.map((d) => `<option value="${esc(d.cedula)}" ${H.din === d.cedula ? 'selected' : ''}>${esc(d.nombre)}</option>`).join('')}</select></div>
+                <div><label class="etiqueta" for="h-filtro">Mostrar</label><select id="h-filtro" class="campo">${Object.entries(FILTROS).map(([k, t]) => `<option value="${k}" ${H.filtro === k ? 'selected' : ''}>${esc(t)}${k ? ` (${emp.filter((x) => cumpleFiltro(x, k)).length})` : ''}</option>`).join('')}</select></div>
+                <div class="hoja-buscar"><label class="etiqueta" for="h-buscar">Buscar</label><input id="h-buscar" class="campo" type="search" placeholder="Nombre, cédula, negocio…" value="${esc(H.texto)}"></div>
+                <div><button type="button" class="btn btn-borde" data-excel>⬇ Descargar para Excel</button></div>
             </div>
-            <div class="hoja-leyenda" aria-label="Convenciones">
-                <p class="hoja-leyenda-titulo"><b>S1 a S6:</b> semanas de la ruta HACER · <b>T1 a T4:</b> talleres de la ruta SER. Toca cualquier casilla o el botón «Abrir tarjetas» para ver y registrar cada sesión.</p>
-                <ul class="lista-limpia hoja-leyenda-lista">${Object.values(ESTADO_CELDA).map(([s, c, t]) => `<li><span class="celda celda-muestra ${c}" aria-hidden="true">${s}</span><span>${esc(t)}</span></li>`).join('')}</ul>
-            </div>
-            ${sec ? '<div id="emp-lote" class="emp-lote" hidden></div>' : ''}
+            <ul class="lista-limpia hoja-leyenda-lista" aria-label="Qué significa cada color">${Object.values(ESTADO_CELDA).map(([s, c, t]) => `<li><span class="celda celda-muestra ${c}" aria-hidden="true">${s}</span><span>${esc(t)}</span></li>`).join('')}</ul>
             <div id="emp-tabla"></div>`;
         pintarFilas(cont);
-        const cambiar = (id, k) => { const el = $(id, cont); if (el) el.addEventListener('change', (e) => { H[k] = e.target.value; if (k === 'sat') { H.din = ''; H.sel.clear(); pintarHoja(cont); } else pintarFilas(cont); }); };
+        const cambiar = (id, k) => $(id, cont).addEventListener('change', (e) => { H[k] = e.target.value; if (k === 'sat') { H.din = ''; pintarHoja(cont); } else pintarFilas(cont); });
         cambiar('#h-sat', 'sat'); cambiar('#h-din', 'din'); cambiar('#h-filtro', 'filtro');
         $('#h-buscar', cont).addEventListener('input', (e) => { H.texto = e.target.value; pintarFilas(cont); });
         $('[data-excel]', cont).addEventListener('click', descargarExcel);
         const sinc = $('[data-sincronizar]', cont);
         if (sinc) sinc.addEventListener('click', async () => {
-            sinc.disabled = true; sinc.textContent = 'Enviando…';
+            sinc.disabled = true; sinc.textContent = 'Copiando…';
             try {
                 const r = await C.llamar('sincronizar-drive', {}, true);
-                C.aviso(r.pendientes ? `Se enviaron ${r.enviados}. Quedan ${r.pendientes}: vuelve a tocar el botón.` : `Listo: se enviaron ${r.enviados} documentos a Google Drive.`);
-                recargarHoja(cont);
-            } catch (e) { C.aviso(e.message); sinc.disabled = false; sinc.textContent = 'Enviar a Drive'; }
+                C.aviso(r.pendientes ? `Se copiaron ${r.enviados}. Quedan ${r.pendientes}: vuelve a tocar el botón.` : `Listo: se copiaron ${r.enviados} documentos a Google Drive.`);
+                refrescarTodo();
+            } catch (e) { C.aviso(e.message); sinc.disabled = false; sinc.textContent = 'Copiar a Drive'; }
         });
+    }
+    function filtrados() {
+        const t = H.texto.toLowerCase();
+        return filas().filter((x) => (!H.sat || x.satelite === H.sat) && (!H.din || x.dinamizadora === H.din) && cumpleFiltro(x)
+            && [x.nombre, x.cedula, x.negocio, x.municipio, x.dinamizadora_nombre].join(' ').toLowerCase().includes(t));
     }
     function pintarFilas(cont) {
-        const sec = H.rol === 'secretaria';
         const lista = filtrados();
         const caja = $('#emp-tabla', cont);
-        if (!lista.length) { caja.innerHTML = `<p class="tarjeta vacio">${filas().length ? 'No hay emprendimientos con ese filtro.' : sec ? 'Todavía no hay emprendimientos inscritos.' : 'Todavía no tienes emprendimientos asignados. Cuando la Secretaría Técnica te los asigne, aparecerán aquí.'}</p>`; if (sec) pintarLote(cont); return; }
-        const todos = lista.every((x) => H.sel.has(x.cedula));
+        if (!lista.length) { caja.innerHTML = `<p class="tarjeta vacio">${filas().length ? 'Ninguna emprendedora cumple ese filtro.' : 'Todavía no hay emprendedoras inscritas.'}</p>`; return; }
         caja.innerHTML = `<div class="hoja-caja"><table class="hoja-calculo">
-            <thead><tr>${sec ? '<th class="td-sel"><input type="checkbox" id="emp-todos" aria-label="Seleccionar todos" ' + (todos ? 'checked' : '') + '></th>' : ''}
-                <th class="col-fija" scope="col">Emprendimiento</th>${sec ? '<th scope="col" class="td-din">Dinamizadora</th>' : ''}
-                ${COLUMNAS.map(([r, n, t]) => `<th scope="col" class="td-act" title="${r === 'hacer' ? 'Ruta HACER · semana ' : 'Ruta SER · taller '}${n}">${t}</th>`).join('')}
-                <th scope="col" class="td-avance">Avance</th></tr>
-            </thead>
+            <thead><tr><th class="col-fija" scope="col">Emprendedora</th><th scope="col" class="td-din">Dinamizadora</th>
+                ${COLUMNAS.map(([r, n, t]) => `<th scope="col" class="td-act" title="${esc(nombreAct(r, n))}">${esc(nombreAct(r, n).replace('Semana', 'Sem.').replace('Taller', 'Tall.'))}</th>`).join('')}
+                <th scope="col" class="td-avance">Aprobadas</th></tr></thead>
             <tbody>${lista.map((x) => `<tr>
-                ${sec ? `<td class="td-sel"><input type="checkbox" data-sel="${esc(x.cedula)}" aria-label="Seleccionar ${esc(x.nombre)}" ${H.sel.has(x.cedula) ? 'checked' : ''}></td>` : ''}
                 <td class="col-fija"><button type="button" class="boton-texto hoja-nombre" data-ver="${esc(x.cedula)}"><b>${esc(x.nombre)}</b></button>
-                    <small>${esc(x.negocio || 'Sin nombre de negocio')} · CC ${esc(x.cedula)}</small>
-                    <small>${esc(nombreSat(x.satelite))}${x.municipio ? ` · ${esc(x.municipio)}` : ''} · va en la semana ${esc(x.semana_actual || 1)}</small>
-                    <button type="button" class="btn btn-borde btn-pequeno hoja-abrir" data-ver="${esc(x.cedula)}">Abrir tarjetas ›</button></td>
-                ${sec ? `<td class="td-din"><label class="sr-only" for="din-${esc(x.cedula)}">Dinamizadora de ${esc(x.nombre)}</label><select id="din-${esc(x.cedula)}" class="campo campo-mini" data-asignar="${esc(x.cedula)}">${opcionesDin(x.satelite, x.dinamizadora)}</select></td>` : ''}
-                ${COLUMNAS.map(([r, n, t]) => { const c = x.celdas[`${r}_${n}`]; const [s, cl, txt] = ESTADO_CELDA[estadoCelda(c)]; return `<td class="td-act" data-col="${t}"><button type="button" class="celda ${cl}" data-ver="${esc(x.cedula)}" data-foco="${r}-${n}" title="${esc(`${t} · ${txt}${c && c.f ? ` · ${c.f}` : ''}${c && c.c ? ` · ${c.c} comentario(s)` : ''}`)}" aria-label="${esc(`${x.nombre}, ${r === 'hacer' ? 'semana' : 'taller'} ${n}: ${txt}`)}">${s}</button></td>`; }).join('')}
-                <td class="td-avance"><b>${x.avance.aprobadas || 0} de ${x.avance.total}</b> aprobadas<small>Cuestionario: ${x.aprendizaje.respondidas.length} de ${x.aprendizaje.habilitadas.length || 0} respondidos${x.aprendizaje.habilitadas.some((s) => !x.aprendizaje.respondidas.includes(s)) ? ' · <span class="emp-alerta">pendiente</span>' : ''}</small></td>
+                    <small>${esc(x.negocio || 'Sin nombre de negocio')} · ${esc(nombreSat(x.satelite))}</small></td>
+                <td class="td-din">${x.dinamizadora_nombre ? esc(x.dinamizadora_nombre) : '<span class="emp-alerta">Sin asignar</span>'}</td>
+                ${COLUMNAS.map(([r, n]) => { const c = x.celdas[`${r}_${n}`]; const [s, cl, txt] = ESTADO_CELDA[estadoCelda(c)]; return `<td class="td-act"><button type="button" class="celda ${cl}" data-ver="${esc(x.cedula)}" data-foco="${r}-${n}" title="${esc(`${nombreAct(r, n)} · ${txt}`)}" aria-label="${esc(`${x.nombre}, ${nombreAct(r, n)}: ${txt}`)}">${s}</button></td>`; }).join('')}
+                <td class="td-avance"><b>${x.avance.aprobadas || 0} de ${x.avance.total}</b></td>
             </tr>`).join('')}</tbody></table></div>
-            <div class="hoja-pie"><span>${lista.length} de ${filas().length} emprendimientos</span><span class="texto-suave">Toca una casilla o «Abrir tarjetas» para ver cada sesión.</span></div>`;
-        const todosChk = $('#emp-todos', caja);
-        if (todosChk) todosChk.addEventListener('change', (e) => { lista.forEach((x) => (e.target.checked ? H.sel.add(x.cedula) : H.sel.delete(x.cedula))); pintarFilas(cont); });
-        caja.onchange = async (e) => {
-            const s = e.target.closest('[data-sel]');
-            if (s) { s.checked ? H.sel.add(s.dataset.sel) : H.sel.delete(s.dataset.sel); pintarLote(cont); return; }
-            const a = e.target.closest('[data-asignar]');
-            if (a) await asignar(cont, [a.dataset.asignar], a.value);
-        };
-        caja.onclick = (e) => { const b = e.target.closest('[data-ver]'); if (b) abrirSeguimiento(cont, b.dataset.ver, () => recargarHoja(cont), b.dataset.foco); };
-        if (sec) pintarLote(cont);
-    }
-    function pintarLote(cont) {
-        const lote = $('#emp-lote', cont);
-        if (!lote) return;
-        const elegidos = filas().filter((x) => H.sel.has(x.cedula));
-        if (!elegidos.length) { lote.hidden = true; return; }
-        const sats = [...new Set(elegidos.map((x) => x.satelite))];
-        lote.hidden = false;
-        lote.innerHTML = sats.length > 1
-            ? `<span><b>${elegidos.length}</b> seleccionados de ${sats.length} satélites distintos. Para asignar en grupo, filtra por un solo satélite.</span>`
-            : `<span><b>${elegidos.length}</b> seleccionado${elegidos.length > 1 ? 's' : ''} de ${esc(nombreSat(sats[0]))}</span>
-               <label class="sr-only" for="emp-lote-din">Dinamizadora</label>
-               <select id="emp-lote-din" class="campo campo-mini"><option value="" disabled selected>Elige una dinamizadora</option>${dinDe(sats[0]).map((d) => `<option value="${esc(d.cedula)}">${esc(d.nombre)} · CC ${esc(d.cedula)}</option>`).join('')}<option value="quitar">Quitar asignación</option></select>
-               <button type="button" class="btn btn-primario btn-pequeno" id="emp-lote-btn">Asignar</button>`;
-        const b = $('#emp-lote-btn', lote);
-        if (b) b.addEventListener('click', () => {
-            const v = $('#emp-lote-din', lote).value;
-            if (!v) { C.aviso('Elige primero la dinamizadora.'); return; }
-            asignar(cont, elegidos.map((x) => x.cedula), v === 'quitar' ? null : v);
-        });
-    }
-    async function asignar(cont, cedulas, din) {
-        try {
-            const r = await C.llamar('asignar', { cedulas, dinamizadora: din || null }, true);
-            C.aviso(r.dinamizadora ? `Listo: ${r.asignados} emprendimiento${r.asignados > 1 ? 's' : ''} asignado${r.asignados > 1 ? 's' : ''} a ${r.dinamizadora}.` : 'Listo: se quitó la asignación.');
-            H.datos = await C.llamar('emprendimientos', {}, true);
-            H.sel.clear();
-            pintarHoja(cont);
-        } catch (e) { C.aviso(e.message); pintarFilas(cont); }
+            <p class="hoja-pie">${lista.length} de ${filas().length} emprendedoras · desliza la tabla hacia los lados para ver todas las sesiones.</p>`;
+        caja.onclick = (e) => { const b = e.target.closest('[data-ver]'); if (b) abrirSeguimiento(cont, b.dataset.ver, volverA(cont), b.dataset.foco, 'Volver a la tabla'); };
     }
     // Descarga lo que se ve (con los filtros) en un archivo que abre Excel (CSV separado por punto y coma)
     function descargarExcel() {
         const celda = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-        const cab = ['Emprendimiento', 'Cédula', 'Negocio', 'Municipio', 'Satélite', 'Dinamizadora', 'Semana actual', ...COLUMNAS.map(([r, n]) => (r === 'hacer' ? `HACER semana ${n}` : `SER taller ${n}`)), 'Aprobadas', 'Cuestionarios respondidos', 'Cuestionarios habilitados'];
+        const cab = ['Emprendedora', 'Cédula', 'Negocio', 'Municipio', 'Satélite', 'Dinamizadora', 'Semana actual', ...COLUMNAS.map(([r, n]) => (r === 'hacer' ? `HACER semana ${n}` : `SER taller ${n}`)), 'Aprobadas', 'Cuestionarios respondidos', 'Cuestionarios habilitados'];
         const filasCsv = filtrados().map((x) => [x.nombre, x.cedula, x.negocio, x.municipio, nombreSat(x.satelite), x.dinamizadora_nombre, x.semana_actual || 1,
             ...COLUMNAS.map(([r, n]) => ESTADO_CELDA[estadoCelda(x.celdas[`${r}_${n}`])][2]), x.avance.aprobadas || 0, x.aprendizaje.respondidas.length, x.aprendizaje.habilitadas.length]);
         const csv = '﻿' + [cab, ...filasCsv].map((f) => f.map(celda).join(';')).join('\r\n');
@@ -215,17 +253,84 @@
         setTimeout(() => URL.revokeObjectURL(a.href), 30000);
     }
 
+    // ---------- Dinamizadora · Mis emprendedoras (una tarjeta por emprendedora con su siguiente paso) ----------
+    // 'no' = marcó que no se hizo pero aún no la envía (si ya la envió, el estado es «en revisión» o «aprobada»)
+    const PRIORIDAD = ['devuelta', 'lista', 'no', 'sin_docs', 'pendiente'];
+    const VERBO = { devuelta: 'Corregir', lista: 'Enviar', sin_docs: 'Subir documentos de', pendiente: 'Registrar', no: 'Enviar' };
+    function siguientePaso(x) {
+        const cs = celdasDe(x);
+        for (const p of PRIORIDAD) { const c = cs.find((y) => y.estado === p); if (c) return c; }
+        return null;
+    }
+    function pintarMias(cont) {
+        const lista = filas();
+        const devueltas = [];
+        for (const x of lista) for (const c of celdasDe(x)) if (c.estado === 'devuelta') devueltas.push({ x, ...c });
+        cuentaSeccion(cont, devueltas.length);
+        const t = (H.texto || '').toLowerCase();
+        const visibles = lista.filter((x) => !t || [x.nombre, x.negocio, x.municipio].join(' ').toLowerCase().includes(t));
+        cont.innerHTML = `
+            <h2>Mis emprendedoras</h2>
+            <p class="vista-intro">Después de cada sesión, toca el botón rojo de la emprendedora y sigue los pasos: <b>¿se hizo?</b> → <b>sube el acta y la herramienta</b> → <b>envía a la Secretaría</b>.</p>
+            ${devueltas.length ? `<div class="aviso-correcciones" role="alert"><p><b>⚠ La Secretaría te pidió corregir ${devueltas.length === 1 ? 'una sesión' : `${devueltas.length} sesiones`}</b></p>
+                <ul class="lista-limpia">${devueltas.map(({ x, r, n }) => `<li><span>${esc(nombreAct(r, n))} de ${esc(x.nombre)}</span><button type="button" class="btn btn-primario btn-pequeno" data-ver="${esc(x.cedula)}" data-foco="${r}-${n}">Corregir ›</button></li>`).join('')}</ul></div>` : ''}
+            ${lista.length > 6 ? `<div class="controles" style="margin-top:0"><div><label class="etiqueta" for="mias-buscar">Buscar emprendedora</label><input id="mias-buscar" class="campo" type="search" value="${esc(H.texto || '')}"></div></div>` : ''}
+            ${visibles.length ? `<ul class="lista-limpia emp-tarjetas-mias">${visibles.map((x) => {
+                const sig = siguientePaso(x);
+                const cs = celdasDe(x);
+                const wa = whatsapp(x.celular);
+                return `<li class="tarjeta emp-mia">
+                    <div class="emp-mia-cab"><h3>${esc(x.nombre)}</h3><p class="texto-suave">${esc(x.negocio || 'Sin nombre de negocio')}${x.municipio ? ` · ${esc(x.municipio)}` : ''}</p></div>
+                    <ol class="lista-limpia emp-mia-puntos" aria-label="Sesiones de ${esc(x.nombre)}">${cs.map((c) => `<li class="${ESTADO_CELDA[c.estado][1]}" title="${esc(`${nombreAct(c.r, c.n)}: ${ESTADO_CELDA[c.estado][2]}`)}"><span class="sr-only">${esc(`${nombreAct(c.r, c.n)}: ${ESTADO_CELDA[c.estado][2]}`)}</span></li>`).join('')}</ol>
+                    <p class="emp-mia-avance"><b>${x.avance.aprobadas || 0} de ${x.avance.total}</b> sesiones aprobadas</p>
+                    <p class="emp-mia-siguiente">${sig ? (sig.estado === 'devuelta' ? `Corrige la <b>${esc(nombreAct(sig.r, sig.n))}</b>: la Secretaría te dejó un comentario.` : sig.estado === 'no' ? `La <b>${esc(nombreAct(sig.r, sig.n))}</b> no se hizo: envíala a la Secretaría con el motivo.` : sig.estado === 'lista' ? `La <b>${esc(nombreAct(sig.r, sig.n))}</b> está lista: solo falta enviarla.` : sig.estado === 'sin_docs' ? `A la <b>${esc(nombreAct(sig.r, sig.n))}</b> le faltan documentos.` : `Siguiente: <b>${esc(nombreAct(sig.r, sig.n))}</b>.`) : '✓ No tiene nada pendiente por ahora.'}</p>
+                    <div class="emp-mia-botones">
+                        ${sig ? `<button type="button" class="btn btn-primario" data-ver="${esc(x.cedula)}" data-foco="${sig.r}-${sig.n}">${esc(VERBO[sig.estado])} ${esc(nombreAct(sig.r, sig.n))}</button>` : ''}
+                        <button type="button" class="btn btn-borde" data-ver="${esc(x.cedula)}">Ver todas sus sesiones</button>
+                        ${wa ? `<a class="enlace" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
+                    </div>
+                </li>`;
+            }).join('')}</ul>` : `<div class="tarjeta vacio"><p><b>${lista.length ? 'Ninguna emprendedora coincide con la búsqueda.' : 'Todavía no tienes emprendedoras asignadas.'}</b></p>${lista.length ? '' : '<p class="texto-suave">Cuando la Secretaría Técnica te las asigne, aparecerán aquí.</p>'}</div>`}`;
+        cont.onclick = (e) => { const b = e.target.closest('[data-ver]'); if (b) abrirSeguimiento(cont, b.dataset.ver, volverA(cont), b.dataset.foco, 'Volver a mis emprendedoras'); };
+        cont.oninput = (e) => { if (e.target.id === 'mias-buscar') { H.texto = e.target.value; pintarMias(cont); const b = $('#mias-buscar', cont); b.focus(); b.setSelectionRange(b.value.length, b.value.length); } };
+    }
+
     // ================================================================ Seguimiento de un emprendimiento
-    async function abrirSeguimiento(cont, cedula, volver, foco) {
-        cont.onclick = null; cont.onchange = null;
-        cont.innerHTML = '<p class="vista-intro" role="status">Cargando el seguimiento…</p>';
+    // Página de una emprendedora: sus 10 sesiones como una lista; solo la sesión en la que se trabaja está abierta.
+    let abierta = null;      // sesión abierta («hacer-2»)
+    let textoVolver = '';    // a dónde lleva el botón «Volver»
+    async function abrirSeguimiento(cont, cedula, volver, foco, etiquetaVolver) {
+        cont.onclick = null; cont.onchange = null; cont.oninput = null;
+        cont.dataset.ficha = '1';
+        textoVolver = etiquetaVolver || 'Volver';
+        cont.innerHTML = '<p class="vista-intro" role="status">Cargando las sesiones…</p>';
+        irA(cont);
         let s;
         try { s = await C.llamar('seguimiento', { cedula }, true); } catch (e) { C.aviso(e.message); volver(); return; }
+        abierta = foco || sesionPorDefecto(s);
         pintarSeguimiento(cont, s, volver);
-        // Si se tocó una casilla de la tabla, se va directo a esa actividad
-        const destino = foco && cont.querySelector(`[data-act="${foco}"]`);
+        const destino = abierta && cont.querySelector(`.act-fila[data-fila="${abierta}"]`);
         (destino || cont).scrollIntoView({ behavior: 'smooth', block: 'start' });
-        if (destino) { destino.classList.add('resaltada'); setTimeout(() => destino.classList.remove('resaltada'), 2500); }
+    }
+    // Estado de una sesión en palabras, según quién mira
+    function estadoSesion(a) {
+        const rev = a.revision ? a.revision.estado : null;
+        const docs = a.requeridos.every((d) => a.documentos[d.tipo]);
+        const din = C.perfil.rol === 'dinamizadora';
+        if (rev === 'aprobada') return ['aprobada', 'Aprobada'];
+        if (rev === 'enviada') return ['revision', din ? 'Enviada · esperando a la Secretaría' : 'Por revisar'];
+        if (rev === 'devuelta') return ['devuelta', din ? 'Hay que corregirla' : 'Devuelta · esperando la corrección'];
+        if (a.ejecutada === false) return ['no', a.motivo ? 'No se hizo · falta enviarla' : 'No se hizo · falta el motivo'];
+        if (a.ejecutada === true) return docs ? ['lista', 'Lista para enviar'] : ['sin_docs', 'Faltan documentos'];
+        return ['pendiente', 'Falta registrar'];
+    }
+    // La sesión que se abre sola: la Secretaría, la primera por revisar; la dinamizadora, la primera con algo por hacer
+    function sesionPorDefecto(s) {
+        const clave = (a) => `${a.ruta}-${a.n}`;
+        const est = (a) => estadoSesion(a)[0];
+        const orden = C.perfil.rol === 'secretaria' ? ['revision'] : ['devuelta', 'lista', 'no', 'sin_docs', 'pendiente'];
+        for (const o of orden) { const a = s.actividades.find((x) => est(x) === o); if (a) return clave(a); }
+        return null;
     }
     // Cuestionario de aprendizaje semanal: la Secretaría o la dinamizadora habilitan cada semana y ven las respuestas
     function bloqueAprendizaje(s) {
@@ -337,21 +442,47 @@
         const e = s.emprendimiento;
         fichaActual = e;
         const wa = whatsapp(e.celular);
-        const grupo = (ruta, titulo) => `<section class="emp-grupo"><h4>${titulo}</h4><ol class="emp-actividades lista-limpia">${s.actividades.filter((a) => a.ruta === ruta).map(tarjetaActividad).join('')}</ol></section>`;
+        // Cada sesión es una fila; al tocarla se abre debajo con sus pasos (solo una abierta a la vez)
+        const fila = (a) => {
+            const clave = `${a.ruta}-${a.n}`;
+            const [est, txt] = estadoSesion(a);
+            const [simbolo, clase] = ESTADO_CELDA[est];
+            const esta = abierta === clave;
+            return `<li class="act-fila ${esta ? 'abierta' : ''}" data-fila="${clave}">
+                <button type="button" class="act-resumen" data-abrir-act="${clave}" aria-expanded="${esta}">
+                    <span class="celda ${clase}" aria-hidden="true">${simbolo}</span>
+                    <span class="act-nombre"><b>${esc(nombreAct(a.ruta, a.n))}</b><small>${esc(a.titulo || a.nombre)}</small></span>
+                    <span class="act-estado ${clase}">${esc(txt)}</span>
+                    <span class="act-flecha" aria-hidden="true">${esta ? '▴' : '▾'}</span>
+                </button>
+                ${esta ? tarjetaActividad(a).replace(/^\s*<li/, '<div').replace(/<\/li>\s*$/, '</div>') : ''}
+            </li>`;
+        };
+        const grupo = (ruta, titulo) => `<section class="emp-grupo"><h4>${titulo}</h4><ol class="emp-actividades lista-limpia">${s.actividades.filter((a) => a.ruta === ruta).map(fila).join('')}</ol></section>`;
+        const aprobadas = s.actividades.filter((a) => a.revision && a.revision.estado === 'aprobada').length;
         cont.innerHTML = `
-            <button type="button" class="boton-texto emp-volver" data-volver>← Volver a la tabla</button>
+            <button type="button" class="btn btn-borde emp-volver" data-volver>← ${esc(textoVolver)}</button>
             <div class="emp-ficha">
                 <div><h3>${esc(e.nombre)}</h3><p class="texto-suave">${esc(e.negocio || 'Sin nombre de negocio')} · ${esc(e.municipio || '')} · ${esc(nombreSat(e.satelite))}${e.dinamizadora_nombre ? ` · Dinamizadora: ${esc(e.dinamizadora_nombre)}` : ''}</p></div>
-                <div class="emp-ficha-lado">${barraAvance(s.avance)}${wa ? `<a class="enlace" href="${wa}" target="_blank" rel="noopener">Escribir por WhatsApp</a>` : ''}</div>
+                <div class="emp-ficha-lado"><p class="emp-mia-avance"><b>${aprobadas} de ${s.actividades.length}</b> sesiones aprobadas</p>${wa ? `<a class="enlace" href="${wa}" target="_blank" rel="noopener">Escribir por WhatsApp</a>` : ''}</div>
             </div>
+            <p class="vista-intro">Toca una sesión para abrirla.${C.perfil.rol === 'dinamizadora' ? ' Sigue los pasos en orden: ¿se hizo? → documentos → enviar a la Secretaría.' : ''}</p>
             ${grupo('hacer', 'Ruta HACER · sesiones semanales en el negocio')}
             ${grupo('ser', 'Ruta SER · talleres en grupo')}
-            ${bloqueAprendizaje(s)}`;
+            <details class="emp-grupo emp-cuestionario-plegable"><summary>Cuestionario de aprendizaje semanal</summary>${bloqueAprendizaje(s)}</details>`;
         const actividad = (el) => { const [ruta, n] = el.closest('[data-act]').dataset.act.split('-'); return { cedula: e.cedula, ruta, n: Number(n) }; };
         const actualizar = (nuevo) => { const y = scrollY; pintarSeguimiento(cont, nuevo, volver); scrollTo(0, y); };
         cont.onclick = async (ev) => {
             const t = ev.target;
             if (t.closest('[data-volver]')) { volver(); return; }
+            const ab = t.closest('[data-abrir-act]');
+            if (ab) {
+                abierta = abierta === ab.dataset.abrirAct ? null : ab.dataset.abrirAct;
+                pintarSeguimiento(cont, s, volver);
+                const f2 = abierta && cont.querySelector(`.act-fila[data-fila="${abierta}"]`);
+                if (f2 && f2.getBoundingClientRect().top < 120) f2.scrollIntoView({ block: 'start' });
+                return;
+            }
             const ap = t.closest('[data-apr]');
             if (ap) {
                 const semana = Number(ap.closest('[data-semana]').dataset.semana);
