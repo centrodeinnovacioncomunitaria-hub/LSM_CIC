@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/cic.css?v=20261037">
+    <link rel="stylesheet" href="../assets/cic.css?v=20261038">
     <style>
         .admin-cab { background: var(--bosque); color: #fff; padding: 1.2rem 0; }
         .admin-cab .contenedor { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -82,9 +82,9 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="../config.js?v=20261037"></script>
-    <script src="../assets/soporte.js?v=20261037"></script>
-    <script src="../assets/datos-cic.js?v=20261037"></script>
+    <script src="../config.js?v=20261038"></script>
+    <script src="../assets/soporte.js?v=20261038"></script>
+    <script src="../assets/datos-cic.js?v=20261038"></script>
     <script>
     (() => {
         'use strict';
@@ -226,6 +226,10 @@
             const opcionesSat = (sel) => '<option value="">Sin satélite</option>' + equipoDatos.satelites.map((s) => `<option value="${s.id}" ${s.id === sel ? 'selected' : ''}>${esc(s.departamento)} · ${esc(s.municipios.join(', '))}</option>`).join('');
             const opcionesRol = (sel, vacio) => (vacio ? '<option value="">No tiene</option>' : '') + Object.entries(NOMBRE_ROL).map(([k, v]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${v}</option>`).join('');
             caja.innerHTML = `
+                <div class="tarjeta" style="display:flex;flex-wrap:wrap;gap:.6rem 1rem;align-items:center;justify-content:space-between;margin-bottom:1rem">
+                    <p style="margin:0"><b>Avance en los cursos</b><br><small>Te llega a 2horas.online01@gmail.com un correo con cómo va cada secretaria y dinamizadora (Gestión, HACER y SER).</small></p>
+                    <button type="button" class="btn btn-borde btn-pequeno" id="enviar-reporte">📧 Enviarme el avance por correo</button>
+                </div>
                 <p class="vista-intro">Registra aquí a las secretarías y dinamizadoras. Apenas la guardes, la persona entra a la página → <b>Ingresar</b> → su perfil → <b>Activar mi cuenta</b>, escribe su cédula y le llega al correo el enlace para crear su contraseña. Las emprendedoras se inscriben solas desde la página.</p>
                 <form id="form-equipo" class="tarjeta" novalidate style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.5rem 1rem;align-items:end">
                     <h3 class="subtitulo-seccion" style="grid-column:1/-1;margin:0 0 .4rem">${editar ? 'Editar a ' + esc(x.nombre) : 'Registrar a una persona del equipo'}</h3>
@@ -259,11 +263,17 @@
                     <td>${esc(nombreSatelite(p.satelite))}${p.otros_roles && p.otros_roles.dinamizadora && p.otros_roles.dinamizadora.satelite ? '<small>2.º perfil: ' + esc(nombreSatelite(p.otros_roles.dinamizadora.satelite)) + '</small>' : ''}</td>
                     <td><span class="chip ${p.activada ? 'sop-resuelto' : 'sop-cerrado'}">${p.activada ? 'Activada' : 'Sin activar'}</span></td>
                     <td><button type="button" class="boton-texto" data-editar-persona="${esc(p.cedula)}">Editar</button></td></tr>`).join('') || '<tr><td colspan="5">No hay coincidencias.</td></tr>';
-                $('[data-editar-persona]').forEach((b) => b.addEventListener('click', () => { pintarEquipo(equipoDatos.personas.find((p) => p.cedula === b.dataset.editarPersona)); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
+                $$('[data-editar-persona]').forEach((b) => b.addEventListener('click', () => { pintarEquipo(equipoDatos.personas.find((p) => p.cedula === b.dataset.editarPersona)); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
             };
             pintarFilas();
             $('#equipo-buscar').addEventListener('input', (e) => { filtroEquipo = e.target.value; pintarFilas(); });
             if (editar) $('#equipo-cancelar').addEventListener('click', () => pintarEquipo());
+            $('#enviar-reporte').addEventListener('click', async (ev) => {
+                const b = ev.currentTarget;
+                b.disabled = true; b.textContent = 'Enviando…';
+                try { const r = await llamar('reporte-avance'); aviso(`Listo: te llegó el avance de ${r.personas} personas a ${r.correo}.`); b.textContent = '✓ Enviado'; }
+                catch (e) { aviso(e.message); b.disabled = false; b.textContent = '📧 Enviarme el avance por correo'; }
+            });
             $('#form-equipo').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const f = Object.fromEntries(new FormData(e.target));

@@ -823,6 +823,13 @@
         const din = d.personas.filter((p) => p.rol === 'dinamizadora');
         const sat = (id) => { const s = C.satelite(id); return s ? s.nombre : ''; };
         const hace = (f) => { if (!f) return 'Sin actividad'; const dias = Math.floor((Date.now() - new Date(f)) / 864e5); return dias <= 0 ? 'Hoy' : dias === 1 ? 'Ayer' : `Hace ${dias} días`; };
+        // Avance de una ruta: barra, cuántas lleva y si ya terminó; cerrada mientras no apruebe Gestión
+        const ruta = (p, c, que) => {
+            if (!p.activa) return '<small>—</small>';
+            if (!p.constancias.some((x) => x.curso === 'gestion')) return '<small>Se abre al aprobar Gestión</small>';
+            const n = p.avance[c] || 0, total = UNIDADES[c], ok = p.constancias.some((x) => x.curso === c);
+            return `<span class="mini-barra" title="${n} de ${total} ${que}"><span style="width:${n / total * 100}%"></span></span> ${n}/${total}${ok ? ' ✓' : ''}<small>${ok ? 'Completa' : n ? `Va en ${que === 'semanas' ? 'la semana' : 'el taller'} ${Math.min(n + 1, total)}` : 'Sin empezar'}</small>`;
+        };
         const filas = d.personas.map((p) => {
             const g = p.avance.gestion, gestionOk = p.constancias.some((x) => x.curso === 'gestion');
             const quieto = p.activa && (!p.ultima_actividad || Date.now() - new Date(p.ultima_actividad) > 7 * 864e5) && !gestionOk;
@@ -830,7 +837,8 @@
                 <td><b>${esc(p.nombre)}</b><small>${esc(p.cargo || '')}${sat(p.satelite) ? ' · ' + esc(sat(p.satelite)) : ''}</small></td>
                 <td>${p.activa ? '<span class="chip bg-menta">Activa</span>' : `<button type="button" class="boton-texto" data-codigo="${esc(p.cedula)}" data-nombre="${esc(p.nombre)}" data-celular="${esc(p.celular || '')}">Generar código</button>`}</td>
                 <td><span class="mini-barra" title="${g} de ${UNIDADES.gestion}"><span style="width:${g / UNIDADES.gestion * 100}%"></span></span> ${g}/${UNIDADES.gestion}${gestionOk ? ' ✓' : ''}</td>
-                <td>${p.avance['acompanar-hacer'] || 0}/6 · ${p.avance['facilitar-ser'] || 0}/4</td>
+                <td>${ruta(p, 'acompanar-hacer', 'semanas')}</td>
+                <td>${ruta(p, 'facilitar-ser', 'talleres')}</td>
                 <td><small>${esc(hace(p.ultima_actividad))}${p.pausas ? ` · ${p.pausas} en pausa` : ''}${quieto ? ' · sin avanzar' : ''}</small></td>
             </tr>`;
         }).join('');
@@ -860,7 +868,7 @@
                 <div class="tarjeta kpi"><b>${d.personas.filter((p) => p.pausas).length}</b><span>${d.personas.filter((p) => p.pausas).length === 1 ? 'persona' : 'personas'} con un módulo en pausa</span></div>
             </div>
             <div class="tabla-caja"><table class="tabla-equipo">
-                <thead><tr><th scope="col">Persona</th><th scope="col">Cuenta</th><th scope="col">Gestión</th><th scope="col">HACER · SER</th><th scope="col">Actividad</th></tr></thead>
+                <thead><tr><th scope="col">Persona</th><th scope="col">Cuenta</th><th scope="col">Gestión</th><th scope="col">HACER (6 semanas)</th><th scope="col">SER (4 talleres)</th><th scope="col">Actividad</th></tr></thead>
                 <tbody>${filas}</tbody></table></div>
             <p class="ayuda-campo">Las rutas HACER y SER se abren solas cuando cada persona aprueba Gestión del CIC. En rojo: personas con un módulo en pausa o más de 7 días sin avanzar.</p>
             </section>`;

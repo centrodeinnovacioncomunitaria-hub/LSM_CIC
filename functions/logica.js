@@ -1872,6 +1872,51 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     return { personas, pendientes, unidades: Object.fromEntries(Object.entries(CURSOS).map(([k, v]) => [k, v.unidades])) };
   }
 
+  // Reporte por correo del avance de cada secretaria y dinamizadora en sus cursos. Solo la administración lo pide y
+  // solo llega a soporte (2horas.online01@gmail.com): no se le escribe a nadie más. Queda en «Correos enviados».
+  async function reporteAvance(token) {
+    const quien = await usuarioDelToken(token);
+    if (!esAdmin(quien)) throw new Falla(403, 'permiso', 'El reporte de avance es para la administración.');
+    if (!driveActivo()) throw new Falla(503, 'sin_correo', 'El envío de correos no está configurado.');
+    const [dir, perf, prog, cons] = await Promise.all(['directorio', 'perfiles', 'progreso', 'constancias'].map((n) => lista(col(n))));
+    const cuentaDe = new Map(perf.filter((p) => p.rol !== 'emprendedora').map((p) => [p.cedula, p]));
+    const fecha = (f) => (f ? new Date(f).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', timeZone: 'America/Bogota' }) : 'sin actividad');
+    const filas = dir.filter((d) => !esCuentaPrueba(d)).map((d) => {
+      const c = cuentaDe.get(d._id);
+      const id = c ? c._id : null;
+      const hechas = (curso) => prog.filter((p) => p.persona === id && p.curso === curso && p.aprobado_en).length;
+      const certificado = (curso) => cons.some((x) => x.persona === id && x.curso === curso);
+      const estado = (curso) => (certificado(curso) ? 'completo ✓' : `${hechas(curso)} de ${CURSOS[curso].unidades}`);
+      const gestion = certificado('gestion');
+      return {
+        nombre: d.nombre, rol: tieneRol(d, 'secretaria') && tieneRol(d, 'dinamizadora') ? 'Secretaría y dinamizadora' : d.rol === 'secretaria' ? 'Secretaría Técnica' : 'Dinamizadora',
+        cargo: d.cargo || '', activa: !!id,
+        texto: !id ? 'Cuenta sin activar'
+          : `Gestión del CIC: ${estado('gestion')} · HACER: ${gestion ? estado('acompanar-hacer') : 'se abre al aprobar Gestión'} · SER: ${gestion ? estado('facilitar-ser') : 'se abre al aprobar Gestión'} · última actividad: ${fecha(prog.filter((p) => p.persona === id).map((p) => p.actualizado_en).sort().pop())}`,
+        orden: !id ? 0 : gestion ? 2 + hechas('acompanar-hacer') + hechas('facilitar-ser') : 1,
+      };
+    }).sort((a, b) => a.rol.localeCompare(b.rol) || a.nombre.localeCompare(b.nombre, 'es'));
+    const grupo = (titulo, xs) => xs.length ? [`${titulo} (${xs.length})`, ...xs.map((x) => `• ${x.nombre}${x.cargo ? ` — ${x.cargo}` : ''}\n  ${x.texto}`), ''] : [];
+    const secretarias = filas.filter((x) => x.rol !== 'Dinamizadora');
+    const dinamizadoras = filas.filter((x) => x.rol === 'Dinamizadora');
+    const conGestion = (xs) => xs.filter((x) => /Gestión del CIC: completo/.test(x.texto)).length;
+    const texto = [
+      `Avance del equipo en los cursos · ${new Date(ahora()).toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Bogota' })}`, '',
+      `Resumen: ${filas.filter((x) => x.activa).length} de ${filas.length} cuentas activadas · Gestión aprobada: ${conGestion(secretarias)} de ${secretarias.length} secretarias y ${conGestion(dinamizadoras)} de ${dinamizadoras.length} dinamizadoras.`, '',
+      ...grupo('SECRETARÍA TÉCNICA', secretarias),
+      ...grupo('DINAMIZADORAS', dinamizadoras),
+      'HACER tiene 6 semanas y SER 4 talleres; las dos rutas se abren solas al aprobar Gestión del CIC.',
+      `Detalle en la plataforma: ${PANEL_SOPORTE.replace(/admin\/$/, '')} → Seguimiento → Avance del equipo en los cursos.`,
+    ].join('\n');
+    let estado = 'enviado', error = null;
+    try { await drive({ accion: 'correo', asunto: `[CIC] Avance del equipo en los cursos · ${filas.length} personas`, texto }); }
+    catch (err) { estado = 'fallido'; error = String(err.message || err).slice(0, 300); }
+    try { await col('envios_correo').add({ cedula: null, tipo: 'reporte_avance', estado, correo: mascaraCorreo(CORREO_SOPORTE), motivo: `Reporte de avance de ${filas.length} personas, pedido por la administración`, error, rol: null, creado_en: hoy() }); }
+    catch (err) { console.error('No se pudo guardar el registro del reporte:', err.message); }
+    if (estado !== 'enviado') throw new Falla(502, 'correo', 'No se pudo enviar el reporte. Intenta de nuevo en unos minutos.');
+    return { ok: true, personas: filas.length, correo: mascaraCorreo(CORREO_SOPORTE) };
+  }
+
   // Constancia: al aprobar todas las unidades y enviar todas las evidencias del curso.
   async function emitirSiCompleto(perfil, curso) {
     const ctx = await contexto(perfil.id);
@@ -1975,6 +2020,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
         case 'hito': r = await hito(token, b); break;
         case 'revisar': r = await revisar(token, b); break;
         case 'equipo': r = await equipo(token); break;
+        case 'reporte-avance': r = await reporteAvance(token); break;
         case 'verificar': r = await verificar(b); break;
         default: throw new Falla(400, 'accion', 'Acción desconocida.');
       }

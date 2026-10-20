@@ -1702,7 +1702,9 @@ dialog { overflow-x: hidden; }
 .hoja-calculo .td-avance small { display: block; }
 .hoja-calculo .td-sel { width: 2.4rem; }
 #plataforma table, #vista-panel table { min-width: 0; }
-#plataforma td, #vista-panel td { overflow-wrap: anywhere; }
+#plataforma td, #vista-panel td { overflow-wrap: break-word; }
+#plataforma td .chip, #vista-panel td .chip, #plataforma td .boton-texto, #vista-panel td .boton-texto { white-space: nowrap; overflow-wrap: normal; }
+#plataforma .tabla-equipo td small { display: block; }
 @media (max-width: 1320px) {
     /* Cada emprendimiento se vuelve una tarjeta con sus 10 casillas en dos filas */
     .hoja-calculo thead { display: none; }

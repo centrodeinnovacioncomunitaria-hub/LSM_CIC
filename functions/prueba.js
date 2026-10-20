@@ -657,6 +657,13 @@ function cuentasFalsas() {
   const listaPuente = enDrive.filter((c) => c.accion === 'secretarias').pop();
   assert.ok(listaPuente && listaPuente.correos.includes('lina@correo.co') && listaPuente.correos.includes('sara@correo.co'), 'al registrar una secretaria, su correo pasa solo a la lista del puente');
   await falla('admin-equipo', {}, tSara, 403);
+  // Reporte de avance por correo: solo la administración lo pide y solo llega a soporte
+  await falla('reporte-avance', {}, tSara, 403);
+  const rep = await ok('reporte-avance', {}, tAdmin);
+  assert.ok(rep.personas >= 3);
+  const correoRep = enDrive.filter((c) => c.accion === 'correo' && /Avance del equipo/.test(c.asunto)).pop();
+  assert.equal(correoRep.para, undefined, 'el reporte va solo a soporte');
+  assert.match(correoRep.texto, /DINAMIZADORAS/); assert.match(correoRep.texto, /Gestión del CIC: completo ✓ · HACER: /);
   await falla('admin-agregar-administradora', { correo: 'nueva@correo.co' }, tSara, 403);
   await falla('admin-agregar-administradora', { correo: 'dina@correo.co' }, tAdmin, 409); // es la cuenta de una dinamizadora
   const ad = await ok('admin-agregar-administradora', { correo: 'Centro.Nuevo@correo.co' }, tAdmin);
