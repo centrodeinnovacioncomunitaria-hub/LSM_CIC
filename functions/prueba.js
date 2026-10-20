@@ -274,6 +274,11 @@ function cuentasFalsas() {
   p = await ok('mi-progreso', {}, tDina);
   assert.equal(p.cursos['acompanar-hacer'][0].estado, 'disponible');
   assert.equal(p.cursos['facilitar-ser'][0].estado, 'disponible');
+  // Completó Gestión pero el certificado no quedó emitido (cambio de reglas a mitad de camino): se emite al entrar
+  for (const d of (await db.collection('constancias').where('persona', '==', tDina).get()).docs) await db.collection('constancias').doc(d.id).delete();
+  p = await ok('mi-progreso', {}, tDina);
+  assert.ok(p.constancias.some((c) => c.curso === 'gestion'), 'el certificado pendiente se emite solo');
+  assert.equal(p.cursos['acompanar-hacer'][0].estado, 'disponible', 'y se abren las rutas');
   paso('Dinamizadora: al aprobar Gestión se abren solas las rutas HACER y SER');
 
   // ---------- Secretaría: su formación sin cuestionario y luego las rutas ----------

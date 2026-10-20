@@ -1552,7 +1552,18 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   async function miProgreso(token) {
     const p = await usuarioDelToken(token);
     if (p.rol === 'emprendedora') throw new Falla(403, 'permiso', 'Los cursos son para el equipo del CIC.');
-    return resumen(p, await contexto(p.id));
+    let ctx = await contexto(p.id);
+    // Si ya completó un curso pero su certificado no se emitió (por ejemplo, una regla cambió mientras avanzaba),
+    // se emite ahora: sin él no se abrirían los cursos siguientes.
+    let emitio = false;
+    for (const c of Object.keys(CURSOS).filter((k) => CURSOS[k].roles.includes(p.rol))) {
+      if (ctx.constancias.some((x) => x.curso === c)) continue;
+      let completo = true;
+      for (let u = 1; u <= CURSOS[c].unidades && completo; u++) completo = aprobada(ctx, c, u) && actividadHecha(ctx, c, u);
+      if (completo && await emitirSiCompleto(p, c)) emitio = true;
+    }
+    if (emitio) ctx = await contexto(p.id);
+    return resumen(p, ctx);
   }
 
   async function equipoAbierto(token, b) {
