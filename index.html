@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261036">
+    <link rel="stylesheet" href="assets/cic.css?v=20261037">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -89,7 +89,7 @@
         <div class="contenedor">
             <a href="#inicio" id="logo" class="logo" aria-label="CIC · Centro de Innovación Comunitaria, inicio">
                 <svg aria-hidden="true"><use href="#isotipo"/></svg>
-                <span><span class="logo-palabra">cic</span><span class="logo-sub">Centro de Innovación Comunitaria</span></span>
+                <span><span class="logo-palabra">cic</span><span class="logo-sub">Centro de Innovación Comunitaria para la Autonomía Económica de la Mujer</span></span>
             </a>
             <nav id="nav-publica" class="nav" aria-label="Principal">
                 <a href="#inicio">Inicio</a>
@@ -106,7 +106,7 @@
                 <div class="submenu">
                     <button type="button" class="submenu-btn" aria-expanded="false" aria-controls="sub-cursos">Equipo <svg aria-hidden="true"><use href="#flecha"/></svg></button>
                     <ul id="sub-cursos" class="submenu-lista" hidden>
-                        <li><a href="#ingresar-dinamizadora"><span class="punto bg-durazno"></span><span><b>Soy dinamizadora</b><small>Ingresa con tu cédula</small></span></a></li>
+                        <li><a href="#ingresar-dinamizadora"><span class="punto bg-durazno"></span><span><b>Soy dinamizadora (o dinamizador)</b><small>Ingresa con tu cédula</small></span></a></li>
                         <li><a href="#ingresar-secretaria"><span class="punto bg-agua"></span><span><b>Soy secretaria</b><small>Ingresa con tu cédula</small></span></a></li>
                         <li><a class="todas" href="cursos/">Cursos del equipo · con contraseña</a></li>
                     </ul>
@@ -141,6 +141,7 @@
             <div class="contenedor">
                 <div>
                     <p class="eyebrow">Emprender es florecer</p>
+                    <p class="leyenda-cic leyenda-portada">Centros de innovación comunitarios para la autonomía económica de mujeres y comunidades en situación de pobreza del Caribe colombiano</p>
                     <h1 id="titulo-inicio">Aprende, organiza y haz crecer <em>tu negocio.</em></h1>
                     <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
                     <p class="heroe-texto">La plataforma del Centro de Innovación Comunitaria: tus talleres, tu dinamizadora y tus guías en un solo lugar, para las emprendedoras del Caribe colombiano.</p>
@@ -149,7 +150,7 @@
                         <p class="roles-titulo" id="quien-eres">¿Quién eres?</p>
                         <div class="roles-tabs" role="tablist" aria-labelledby="quien-eres">
                             <button type="button" class="rol-tab" role="tab" id="rol-emprendedora" aria-controls="panel-emprendedora" aria-selected="true"><b>Soy emprendedora</b><small>Tus talleres y sus guías</small></button>
-                            <button type="button" class="rol-tab" role="tab" id="rol-dinamizadora" aria-controls="panel-dinamizadora" aria-selected="false" tabindex="-1"><b>Soy dinamizadora</b><small>Cursos para acompañar</small></button>
+                            <button type="button" class="rol-tab" role="tab" id="rol-dinamizadora" aria-controls="panel-dinamizadora" aria-selected="false" tabindex="-1"><b>Soy dinamizadora (o dinamizador)</b><small>Cursos para acompañar</small></button>
                             <button type="button" class="rol-tab" role="tab" id="rol-secretaria" aria-controls="panel-secretaria" aria-selected="false" tabindex="-1"><b>Soy secretaria</b><small>Cursos y seguimiento</small></button>
                         </div>
                         <div class="rol-panel" role="tabpanel" id="panel-emprendedora" aria-labelledby="rol-emprendedora">
@@ -436,7 +437,7 @@
                         <h2 id="titulo-equipo">Formación para quienes <em>acompañan.</em></h2>
                         <p class="lead">Dinamizadoras y Secretaría Técnica avanzan curso a curso. Cada uno se abre al aprobar el anterior.</p>
                         <div class="botones">
-                            <button type="button" class="btn btn-claro" data-abrir="ingresar" data-perfil="dinamizadora">Soy dinamizadora</button>
+                            <button type="button" class="btn btn-claro" data-abrir="ingresar" data-perfil="dinamizadora">Soy dinamizadora (o dinamizador)</button>
                             <button type="button" class="btn btn-borde-claro" data-abrir="ingresar" data-perfil="secretaria">Soy secretaria</button>
                         </div>
                     </div>
@@ -568,6 +569,7 @@
                 <svg class="trazo" aria-hidden="true"><use href="#trazo"/></svg>
                 <p id="bienvenida-texto" class="texto-suave" style="margin-top:.8rem;max-width:42rem"></p>
                 <div id="continuar" class="continuar" hidden></div>
+                <div id="novedad" class="novedad-cic" hidden></div>
                 <div id="aviso-clave" class="aviso-clave" hidden>
                     <p><strong>Tu contraseña todavía es tu número de cédula.</strong> Cualquiera que conozca tu cédula podría entrar: cámbiala ahora por una que solo tú conozcas.</p>
                     <button type="button" class="btn btn-bosque btn-pequeno" data-ir="cuenta">Cambiar contraseña</button>
@@ -600,8 +602,9 @@
                 <div>
                     <a href="#inicio" class="logo" aria-label="CIC, volver al inicio">
                         <svg aria-hidden="true"><use href="#isotipo"/></svg>
-                        <span><span class="logo-palabra">cic</span><span class="logo-sub" style="display:block">Centro de Innovación Comunitaria</span></span>
+                        <span><span class="logo-palabra">cic</span><span class="logo-sub" style="display:block">Centro de Innovación Comunitaria para la Autonomía Económica de la Mujer</span></span>
                     </a>
+                    <p class="leyenda-cic">Centros de innovación comunitarios para la autonomía económica de mujeres y comunidades en situación de pobreza del Caribe colombiano</p>
                     <p class="texto-suave" style="margin-top:1rem;font-size:.95rem">Formación y acompañamiento para la autonomía económica de las mujeres emprendedoras del Caribe, en red con la Red de Mujeres del Caribe.</p>
                 </div>
                 <div>
@@ -643,7 +646,7 @@
                 <legend>¿Quién eres?</legend>
                 <div class="perfiles">
                     <label class="perfil"><input type="radio" name="perfil" value="emprendedora"><span style="--c:var(--durazno)">Emprendedora</span></label>
-                    <label class="perfil"><input type="radio" name="perfil" value="dinamizadora"><span style="--c:var(--menta)">Dinamizadora</span></label>
+                    <label class="perfil"><input type="radio" name="perfil" value="dinamizadora"><span style="--c:var(--menta)">Dinamizadora<small class="perfil-incluyente">(o dinamizador)</small></span></label>
                     <label class="perfil"><input type="radio" name="perfil" value="secretaria"><span style="--c:var(--agua)">Secretaria</span></label>
                 </div>
             </fieldset>
@@ -743,13 +746,13 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261036"></script>
-    <script src="assets/datos-cic.js?v=20261036"></script>
-    <script src="assets/sitio.js?v=20261036"></script>
-    <script src="assets/cursos-equipo.js?v=20261036"></script>
-    <script src="assets/soporte.js?v=20261036"></script>
-    <script src="assets/soporte-flotante.js?v=20261036"></script>
-    <script src="assets/emprendimientos.js?v=20261036"></script>
+    <script src="./config.js?v=20261037"></script>
+    <script src="assets/datos-cic.js?v=20261037"></script>
+    <script src="assets/sitio.js?v=20261037"></script>
+    <script src="assets/cursos-equipo.js?v=20261037"></script>
+    <script src="assets/soporte.js?v=20261037"></script>
+    <script src="assets/soporte-flotante.js?v=20261037"></script>
+    <script src="assets/emprendimientos.js?v=20261037"></script>
     <script>
     (() => {
         'use strict';
@@ -811,7 +814,7 @@
         const sateliteDeMunicipio = (m) => SATELITES.find((s) => s.municipios.includes(m)) || null;
         const ROL = {
             secretaria:   { nombre: 'Secretaría Técnica' },
-            dinamizadora: { nombre: 'Dinamizadora' },
+            dinamizadora: { nombre: 'Dinamizadora (o dinamizador)' },
             emprendedora: { nombre: 'Emprendedora' },
         };
         // Cursos del equipo: cada módulo tiene un código que también identifica su video (ver GUIA_VIDEOS.md)
@@ -1143,11 +1146,27 @@
             if (esEquipo()) pintarCursos(); else pintarSemana();
             if (esEquipo()) pintarSeguimiento();
             pintarCuenta();
+            pintarNovedad();
             // El botón flotante de soporte usa la sesión abierta (la solicitud queda en la cuenta)
             window.CICSesion = DEMO ? null : { perfil, pedir: (accion, datos) => llamar(accion, datos, true), irSoporte: () => ir('soporte') };
             ir('cursos', false);
             window.scrollTo(0, 0);
             $('#bienvenida-titulo').focus({ preventScroll: true });
+        }
+        // Novedades de la plataforma: la más reciente se muestra hasta que la persona toca «Entendido»
+        async function pintarNovedad() {
+            const caja = $('#novedad');
+            caja.hidden = true;
+            if (DEMO) return;
+            let r;
+            try { r = await llamar('novedad', {}, true); } catch (e) { return; }
+            const n = r && r.novedad;
+            if (!n || leer(localStorage, 'cic-novedad-vista') === n.id) return;
+            caja.innerHTML = `<p class="eyebrow">Novedades de la plataforma · ${esc(fecha(n.creado_en))}</p>
+                <p><b>${esc(n.titulo)}</b></p><p class="novedad-texto">${esc(n.texto)}</p>
+                <button type="button" class="btn btn-borde btn-pequeno" data-novedad-vista>Entendido</button>`;
+            caja.hidden = false;
+            caja.querySelector('[data-novedad-vista]').addEventListener('click', () => { guardar(localStorage, 'cic-novedad-vista', n.id); caja.hidden = true; });
         }
         function mostrarPublico() {
             perfil = null;

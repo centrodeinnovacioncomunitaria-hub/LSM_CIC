@@ -68,8 +68,9 @@ sub pie {
                 <div>
                     <a href="$inicio" class="logo" aria-label="CIC, volver al inicio">
                         <svg aria-hidden="true"><use href="#isotipo"/></svg>
-                        <span><span class="logo-palabra">cic</span><span class="logo-sub" style="display:block">Centro de Innovación Comunitaria</span></span>
+                        <span><span class="logo-palabra">cic</span><span class="logo-sub" style="display:block">Centro de Innovación Comunitaria para la Autonomía Económica de la Mujer</span></span>
                     </a>
+                    <p class="leyenda-cic">Centros de innovación comunitarios para la autonomía económica de mujeres y comunidades en situación de pobreza del Caribe colombiano</p>
                     <p class="texto-suave" style="margin-top:1rem;font-size:.95rem">Formación y acompañamiento para la autonomía económica de las mujeres emprendedoras del Caribe, en red con la Red de Mujeres del Caribe.</p>
                 </div>
                 <div>
@@ -134,7 +135,7 @@ sub cabeza {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght\@6..12,400;6..12,600;6..12,700&family=Quicksand:wght\@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="${P}assets/cic.css?v=20261034">
+    <link rel="stylesheet" href="${P}assets/cic.css?v=20261037">
 $jsonld    <script>document.documentElement.classList.add('js');</script>
 </head>
 HTML
@@ -151,7 +152,7 @@ sub cuerpo_inicio {
         <div class="contenedor">
             <a href="$P" class="logo" aria-label="CIC · Centro de Innovación Comunitaria, inicio">
                 <svg aria-hidden="true"><use href="#isotipo"/></svg>
-                <span><span class="logo-palabra">cic</span><span class="logo-sub">Centro de Innovación Comunitaria</span></span>
+                <span><span class="logo-palabra">cic</span><span class="logo-sub">Centro de Innovación Comunitaria para la Autonomía Económica de la Mujer</span></span>
             </a>
 @{[ nav($P, $actual) ]}            <div class="acciones">
                 <a class="btn btn-primario btn-pequeno" href="${P}#ingresar">Ingresar <span aria-hidden="true">›</span></a>

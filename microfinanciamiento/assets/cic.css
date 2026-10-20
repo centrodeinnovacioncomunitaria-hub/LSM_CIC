@@ -1463,3 +1463,6 @@ button.descarga:disabled, button.archivo:disabled { opacity: .6; cursor: progres
 .emp-drive-ok { color: #2f7a70 !important; }
 .emp-drive-pend { color: var(--coralp) !important; }
 .emp-drive-barra { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin: 0 0 1rem; padding: .7rem 1rem; border-radius: 1rem; background: rgba(153, 207, 200, .25); border: 1px solid rgba(153, 207, 200, .6); font-size: .9rem; }
+
+/* Logo con el nombre completo del centro (en dos líneas) */
+.logo-sub { max-width: 15rem; line-height: 1.25; }

@@ -14,7 +14,7 @@
 const crypto = require('crypto');
 
 const ROLES = ['secretaria', 'dinamizadora', 'emprendedora'];
-const NOMBRE_ROL = { secretaria: 'Secretaría Técnica', dinamizadora: 'Dinamizadora', emprendedora: 'Emprendedora' };
+const NOMBRE_ROL = { secretaria: 'Secretaría Técnica', dinamizadora: 'Dinamizadora (o dinamizador)', emprendedora: 'Emprendedora' };
 // Municipios de cada satélite (los mismos de herramientas/Datos.pm)
 const SATELITES = {
   'la-guajira': { departamento: 'La Guajira', municipios: ['Riohacha', 'Albania'] },
@@ -331,6 +331,97 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     try { await col('envios_correo').add({ cedula: cedula || null, tipo, estado, correo: mascaraCorreo(destino), motivo: `Aviso: ${motivo}`, error, rol: 'secretaria', creado_en: hoy() }); }
     catch (err) { console.error('No se pudo guardar el registro del aviso:', err.message); }
     return { estado, a: destino === CORREO_SOPORTE ? 'soporte' : secretaria.nombre };
+  }
+
+  // ---------- Avisos por correo a cada persona (emprendedora, dinamizadora o secretaria) ----------
+  // Cada cambio que le importa a alguien le llega por correo (cuestionario habilitado, sesión aprobada o devuelta,
+  // asignación, comentario, cambio de semana, respuesta de soporte). Solo a correos reales; una cuenta de prueba
+  // nunca le escribe a una persona real ni al revés. Todo queda en «envios_correo» (admin/ → «Correos enviados»).
+  const SITIO_CIC = 'https://cicredmujeresdelcaribe.org/';
+  const FIRMA = ['', '— Centro de Innovación Comunitaria para la Autonomía Económica de la Mujer',
+    'Este es un aviso automático de la plataforma: no respondas a este correo. Si necesitas ayuda, toca «Soporte» en la plataforma.'];
+  const correoDe = (x) => [x && x.correo, x && x.cuenta_email].map((v) => String(v || '').trim().toLowerCase()).find((v) => correoValido(v) && !esInterno(v)) || null;
+  const primerNombre = (n) => String(n || '').trim().split(/\s+/)[0] || '';
+  async function registrarAviso(cedula, tipo, estado, correo, motivo, rol, error = null) {
+    try { await col('envios_correo').add({ cedula: cedula || null, tipo, estado, correo: correo ? mascaraCorreo(correo) : null, motivo: `Aviso: ${motivo}`, error, rol: rol || null, creado_en: hoy() }); }
+    catch (err) { console.error('No se pudo guardar el registro del aviso:', err.message); }
+  }
+  async function avisarPersona({ persona, cedula, tipo, asunto, lineas, de = null }) {
+    if (!driveActivo() || !persona) return null;
+    const ced = cedula || persona.cedula || persona._id || null;
+    const para = correoDe(persona);
+    if (!para) { await registrarAviso(ced, tipo, 'omitido', null, `${asunto} · no tiene correo registrado`, persona.rol); return null; }
+    if (de && esCuentaPrueba(de) !== esCuentaPrueba(persona)) { await registrarAviso(ced, tipo, 'omitido', para, `${asunto} · cuenta de prueba y persona real: no se envía`, persona.rol); return null; }
+    const texto = [`Hola${primerNombre(persona.nombre) ? `, ${primerNombre(persona.nombre)}` : ''}:`, '', ...lineas.filter((l) => l !== null && l !== undefined), '', `Entra a ${SITIO_CIC} para verlo.`, ...FIRMA].join('\n');
+    try {
+      const r = await drive({ accion: 'correo', persona: true, para, asunto: `[CIC] ${asunto}`, texto });
+      const llego = r && r.para ? String(r.para).toLowerCase() : para;
+      await registrarAviso(ced, tipo, llego === para ? 'enviado' : 'omitido', llego, llego === para ? asunto : `${asunto} · el puente de correo todavía no permite escribirle: llegó solo a soporte`, persona.rol);
+      return llego === para;
+    } catch (err) {
+      await registrarAviso(ced, tipo, 'fallido', para, asunto, persona.rol, String(err.message || err).slice(0, 300));
+      console.error(`Aviso «${tipo}» no enviado:`, err.message);
+      return false;
+    }
+  }
+  // La dinamizadora asignada a un emprendimiento, con su correo del directorio
+  async function dinamizadoraDe(e) {
+    if (!e || !e.dinamizadora_cedula) return null;
+    const d = comoDinamizadora(await datos(col('directorio').doc(e.dinamizadora_cedula)));
+    return d ? { ...d, cedula: e.dinamizadora_cedula, rol: 'dinamizadora' } : null;
+  }
+
+  // ---------- Novedades de la plataforma: la administración escribe qué cambió y se le envía a todo el mundo ----------
+  // Se envía por tandas (el correo de Google tiene un límite diario); «Enviar a las que faltan» continúa donde quedó.
+  const TANDA_NOVEDADES = 40;
+  async function destinatariosTodos() {
+    const porCorreo = new Map();
+    for (const x of await lista(col('perfiles'))) { const c = correoDe(x); if (c && x.rol !== 'administradora' && !esCuentaPrueba(x)) porCorreo.set(c, { nombre: x.nombre, rol: x.rol, cedula: x.cedula }); }
+    for (const x of await lista(col('directorio'))) { const c = correoDe(x); if (c && !porCorreo.has(c) && !esCuentaPrueba(x)) porCorreo.set(c, { nombre: x.nombre, rol: x.rol, cedula: x._id }); }
+    return porCorreo;
+  }
+  const vistaNovedad = (x) => ({ id: x._id, titulo: x.titulo, texto: x.texto, creado_en: x.creado_en, enviados: (x.enviados || []).length, fallidos: (x.fallidos || []).length });
+  async function adminNovedades(token) {
+    const p = await usuarioDelToken(token);
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Esta sección es solo para la administración.');
+    const todas = (await lista(col('novedades'))).sort((a, b) => String(b.creado_en).localeCompare(String(a.creado_en))).slice(0, 20);
+    return { novedades: todas.map(vistaNovedad), destinatarios: (await destinatariosTodos()).size, tanda: TANDA_NOVEDADES };
+  }
+  async function adminCrearNovedad(token, b) {
+    const p = await usuarioDelToken(token);
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Esta sección es solo para la administración.');
+    const titulo = texto(b.titulo, 120);
+    const cuerpo = String(b.texto ?? '').trim().slice(0, 4000);
+    if (titulo.length < 5) throw new Falla(400, 'titulo', 'Escribe un título corto (por ejemplo: «Mejoras en Seguimiento»).');
+    if (cuerpo.length < 20) throw new Falla(400, 'texto', 'Cuenta qué cambió (al menos una frase).');
+    const ref = await col('novedades').add({ titulo, texto: cuerpo, creado_en: hoy(), creado_por: p.id, enviados: [], fallidos: [] });
+    return { ok: true, id: ref.id };
+  }
+  async function adminEnviarNovedad(token, b) {
+    const p = await usuarioDelToken(token);
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Esta sección es solo para la administración.');
+    if (!driveActivo()) throw new Falla(400, 'correo', 'El envío de correos no está configurado.');
+    const ref = col('novedades').doc(String(b.id || '-'));
+    const n = await datos(ref);
+    if (!n) throw new Falla(404, 'no_existe', 'No encontramos esa novedad.');
+    const todos = await destinatariosTodos();
+    const ya = new Set([...(n.enviados || []), ...(n.fallidos || [])]);
+    const faltan = [...todos.entries()].filter(([c]) => !ya.has(c));
+    const enviados = [...(n.enviados || [])], fallidos = [...(n.fallidos || [])];
+    let error = null;
+    for (const [correo, x] of faltan.slice(0, TANDA_NOVEDADES)) {
+      const ok = await avisarPersona({ persona: { ...x, correo }, tipo: 'novedades', asunto: `Novedades de la plataforma: ${n.titulo}`, lineas: ['Hicimos cambios en la plataforma del CIC:', '', n.texto] });
+      if (ok) enviados.push(correo);
+      else { fallidos.push(correo); if (ok === false && fallidos.length >= 3 && !enviados.length) { error = 'El correo de Google no está enviando (puede ser el límite diario). Intenta mañana.'; break; } }
+    }
+    await ref.update({ enviados, fallidos });
+    return { ok: true, enviados: enviados.length, fallidos: fallidos.length, faltan: Math.max(0, todos.size - enviados.length - fallidos.length), total: todos.size, error };
+  }
+  // La novedad más reciente se muestra también dentro de la plataforma (a quien tenga sesión)
+  async function ultimaNovedad(token) {
+    await usuarioDelToken(token);
+    const [n] = (await lista(col('novedades'))).sort((a, b) => String(b.creado_en).localeCompare(String(a.creado_en)));
+    return { novedad: n ? { id: n._id, titulo: n.titulo, texto: n.texto, creado_en: n.creado_en } : null };
   }
 
   async function verEnviosCorreo(token) {
@@ -730,6 +821,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const e = await perfilPorCedula(validarCedula(b.cedula));
     if (!e || e.rol !== 'emprendedora' || (p.rol !== 'secretaria' && e.departamento !== p.departamento)) throw new Falla(404, 'no_existe', 'No encontramos a esa emprendedora en tu departamento.');
     await col('perfiles').doc(e.id).update({ semana_actual: semana });
+    if (Number(e.semana_actual || 1) !== semana) await avisarPersona({ persona: e, tipo: 'aviso_semana', de: p, asunto: `Ya estás en la semana ${semana}`, lineas: [`Tu dinamizadora registró que ya vas en la semana ${semana} de tu proceso.`, 'En «Mi semana» encuentras lo que te toca y las guías para descargar.'] });
     return { ok: true };
   }
 
@@ -903,6 +995,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const { _id, ...resto } = x;
     await col('tickets').doc(_id).set({ ...resto, mensajes, estado, actualizado_en: hoy(), ...(deSoporte ? { atendido_por: p.id } : {}) });
     if (!deSoporte) await avisarSoporte(x, 'mensaje', txt);
+    else if (x.persona) await avisarPersona({ persona: await perfilPorId(x.persona), tipo: 'aviso_soporte', asunto: `Respondieron tu solicitud ${x.numero}`, lineas: [`Soporte respondió tu solicitud «${x.asunto}»:`, `«${txt}»`, '', 'La ves completa en la pestaña «Soporte» de la plataforma.'] });
     return { ticket: vistaTicket({ ...x, mensajes, estado, actualizado_en: hoy() }, true) };
   }
   async function estadoTicket(token, b) {
@@ -1073,8 +1166,16 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
       if (din && e.satelite !== din.satelite) throw new Falla(400, 'satelite', `${e.nombre} es de otro satélite: solo se puede asignar a una dinamizadora de su mismo satélite.`);
       perfiles.push(e);
     }
+    const nuevas = perfiles.filter((e) => din && e.dinamizadora_cedula !== din.cedula);
     for (const e of perfiles) {
       await col('perfiles').doc(e.id).update({ dinamizadora_cedula: din ? din.cedula : null, asignada_por: p.id, asignada_en: hoy() });
+    }
+    if (din && nuevas.length) {
+      await avisarPersona({ persona: { ...din, rol: 'dinamizadora' }, cedula: din.cedula, tipo: 'aviso_asignacion', de: p,
+        asunto: nuevas.length === 1 ? `Te asignaron a ${nuevas[0].nombre}` : `Te asignaron ${nuevas.length} emprendedoras`,
+        lineas: [`La Secretaría Técnica te asignó ${nuevas.length === 1 ? 'esta emprendedora' : 'estas emprendedoras'} para acompañar:`, '', ...nuevas.map((e) => `• ${e.nombre}${e.negocio ? ` (${e.negocio})` : ''}${e.municipio ? ` · ${e.municipio}` : ''}${e.celular ? ` · ${e.celular}` : ''}`), '', 'Las encuentras en «Seguimiento» → «Mis emprendedoras».'] });
+      for (const e of nuevas) await avisarPersona({ persona: e, tipo: 'aviso_asignacion', de: p, asunto: 'Ya tienes dinamizadora',
+        lineas: [`Tu dinamizadora es ${din.nombre}.${din.celular ? ` Su celular es ${din.celular}.` : ''}`, 'Ella te acompañará en las sesiones de tu negocio y en los talleres.'] });
     }
     return { ok: true, asignados: perfiles.length, dinamizadora: din ? din.nombre : null };
   }
@@ -1149,6 +1250,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     if (x && x.respondida_en) throw new Falla(409, 'respondida', 'Esa semana ya fue respondida: no se puede cambiar.');
     const habilitada = b.habilitada !== false;
     await ref.set({ ...(x || {}), emprendedora: e.id, semana, habilitada, habilitada_por: p.id, habilitada_en: habilitada ? hoy() : null, respondida_en: null, respuestas: null });
+    if (habilitada && !(x && x.habilitada)) await avisarPersona({ persona: e, tipo: 'aviso_cuestionario', de: p, asunto: `Tu cuestionario de la semana ${semana} está listo`,
+      lineas: [`Ya puedes responder el cuestionario de aprendizaje de la semana ${semana}.`, 'Entra a la plataforma: está en «Mi semana», en «Tu cuestionario de aprendizaje». Son 5 preguntas cortas.'] });
     return verSeguimiento(token, b);
   }
   async function miAprendizaje(token) {
@@ -1254,6 +1357,12 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     if (!fila || typeof fila.ejecutada !== 'boolean') throw new Falla(400, 'ejecutada', 'Esta actividad todavía no tiene registro de la dinamizadora.');
     const comentarios = [...(fila.comentarios || []), comentario(p, txt || (estado === 'aprobada' ? 'Actividad aprobada.' : ''), estado)];
     await col('seguimiento').doc(id).set({ ...fila, comentarios, revision: { ...(fila.revision || {}), estado, revisada_en: hoy(), revisada_por: p.id, revisada_por_nombre: p.nombre } });
+    const nombreSesion = `${a.ruta === 'hacer' ? `Semana ${a.n}` : `Taller ${a.n}`}${a.titulo ? ` · ${a.titulo}` : ''}`;
+    await avisarPersona({ persona: await dinamizadoraDe(e), tipo: 'aviso_revision', de: p,
+      asunto: estado === 'aprobada' ? `Aprobaron la ${nombreSesion.split(' · ')[0]} de ${e.nombre}` : `Hay que corregir la ${nombreSesion.split(' · ')[0]} de ${e.nombre}`,
+      lineas: [estado === 'aprobada' ? `${p.nombre} (Secretaría Técnica) aprobó los documentos de ${nombreSesion} de ${e.nombre}.` : `${p.nombre} (Secretaría Técnica) te pidió corregir ${nombreSesion} de ${e.nombre}.`,
+        txt ? `\nComentario: «${txt}»` : null,
+        estado === 'devuelta' ? '\nEntra a «Seguimiento»: verás un aviso rojo con el botón «Corregir». Haz el ajuste y vuelve a enviarla.' : null] });
     return verSeguimiento(token, b);
   }
   // Comentarios de la actividad: la Secretaría deja anotaciones y la dinamizadora puede responder.
@@ -1266,6 +1375,14 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const id = idSeguimiento(e.id, a);
     const fila = (await datos(col('seguimiento').doc(id))) || { emprendedora: e.id, ruta: a.ruta, n: a.n, ejecutada: null, fecha: null, motivo: null, documentos: {}, revision: null };
     await col('seguimiento').doc(id).set({ ...fila, comentarios: [...(fila.comentarios || []), comentario(p, txt)].slice(-50) });
+    const sesion = `${a.ruta === 'hacer' ? `Semana ${a.n}` : `Taller ${a.n}`} de ${e.nombre}`;
+    if (p.rol === 'secretaria') await avisarPersona({ persona: await dinamizadoraDe(e), tipo: 'aviso_comentario', de: p, asunto: `Nueva nota de la Secretaría · ${sesion}`, lineas: [`${p.nombre} dejó una nota en la ${sesion}:`, `«${txt}»`] });
+    else if (e.asignada_por) {
+      const sec = await perfilPorId(e.asignada_por);
+      await enviarAvisoSecretaria({ tipo: 'aviso_comentario', cedula: p.cedula, secretaria: sec, involucradas: [p, e], asunto: `[CIC] Nota de ${p.nombre} · ${sesion}`,
+        texto: [`Hola${sec ? `, ${primerNombre(sec.nombre)}` : ''}:`, '', `${p.nombre} dejó una nota en la ${sesion}:`, `«${txt}»`, '', `Entra a ${SITIO_CIC} → «Seguimiento» para verla.`, ...FIRMA].join('\n'),
+        razon: `nota de ${p.nombre} en ${sesion}` });
+    }
     return verSeguimiento(token, b);
   }
   // Emprendedora: el estado de sus actividades (si ya fueron aprobadas por la Secretaría Técnica).
@@ -1705,8 +1822,15 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const comentario = texto(b.comentario, 1000);
     if (estado === 'devuelta' && comentario.length < 5) throw new Falla(400, 'comentario', 'Cuando devuelves una evidencia, escribe qué debe ajustar.');
     const ref = col('evidencias').doc(String(b.id ?? '') || '-');
-    if (!(await datos(ref))) throw new Falla(404, 'no_existe', 'No encontramos esa evidencia.');
+    const ev = await datos(ref);
+    if (!ev) throw new Falla(404, 'no_existe', 'No encontramos esa evidencia.');
     await ref.update({ estado, comentario: comentario || null, revisado_por: quien.id, revisado_en: hoy() });
+    const modulo = CURSOS[ev.curso] ? `${CURSOS[ev.curso].nombre} · ${CURSOS[ev.curso].unidad} ${ev.unidad}` : 'un módulo';
+    await avisarPersona({ persona: await perfilPorId(ev.persona), tipo: 'aviso_aporte', de: quien,
+      asunto: estado === 'aprobada' ? `Aprobaron tu aporte del foro (${modulo})` : `Revisa tu aporte del foro (${modulo})`,
+      lineas: [estado === 'aprobada' ? `La Secretaría Técnica aprobó tu aporte en el foro de ${modulo}.` : `La Secretaría Técnica te pidió ajustar tu aporte en el foro de ${modulo}.`,
+        comentario ? `\nComentario: «${comentario}»` : null,
+        estado === 'devuelta' ? '\nEntra a «Mis cursos», abre ese módulo y escribe un nuevo aporte.' : null] });
     return { ok: true };
   }
 
@@ -1792,6 +1916,10 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
         case 'revisar-actividad': r = await revisarActividad(token, b); break;
         case 'comentar-actividad': r = await comentarActividad(token, b); break;
         case 'mi-avance': r = await miAvance(token); break;
+        case 'admin-novedades': r = await adminNovedades(token); break;
+        case 'admin-crear-novedad': r = await adminCrearNovedad(token, b); break;
+        case 'admin-enviar-novedad': r = await adminEnviarNovedad(token, b); break;
+        case 'novedad': r = await ultimaNovedad(token); break;
         case 'habilitar-aprendizaje': r = await habilitarAprendizaje(token, b); break;
         case 'mi-aprendizaje': r = await miAprendizaje(token); break;
         case 'responder-aprendizaje': r = await responderAprendizaje(token, b); break;

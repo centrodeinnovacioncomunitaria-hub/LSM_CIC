@@ -1846,3 +1846,26 @@ dialog { overflow-x: hidden; }
 .emp-actividades .act-fila + .act-fila { margin-top: 0; }
 .act-fila .emp-act-cabeza { display: none; }
 .act-fila > .emp-act { padding: 1rem 1.2rem 1.2rem; }
+
+/* ---------- Banner de bienvenida de la plataforma: más bajo, para llegar rápido al contenido ---------- */
+.plataforma-cab { padding: 1.1rem 0 1rem; }
+.plataforma-cab h1 { font-size: clamp(1.6rem, 3.6vw, 2.1rem); margin-top: .2rem; }
+.plataforma-cab .trazo { display: none; }
+.plataforma-cab #bienvenida-texto { margin-top: .3rem !important; font-size: .95rem; }
+.plataforma-cab .eyebrow { font-size: .7rem; }
+
+/* ---------- Logo con el nombre completo del centro (en dos líneas) ---------- */
+.logo-sub { max-width: 15rem; line-height: 1.25; }
+.pie .logo-sub { max-width: 17rem; }
+
+/* ---------- Leyenda institucional ---------- */
+.leyenda-cic { font-family: var(--titulo); font-weight: 600; font-size: .95rem; line-height: 1.4; color: var(--bosque); border-left: 3px solid var(--coralp); padding-left: .8rem; margin: 1rem 0 0; max-width: 34rem; }
+.leyenda-portada { margin: .6rem 0 1rem; font-size: 1rem; }
+
+/* «Dinamizadora (o dinamizador)» en la caja de ingreso */
+.perfil-incluyente { display: block; font-size: .72em; font-weight: 600; color: var(--musgo); margin-top: .1rem; }
+
+/* Novedades de la plataforma (arriba, en el banner de bienvenida) */
+.novedad-cic { margin-top: .8rem; background: #fff; border: 2px solid var(--menta); border-radius: 1rem; padding: .8rem 1rem; max-width: 46rem; }
+.novedad-cic p { margin: 0 0 .3rem; }
+.novedad-texto { white-space: pre-line; font-size: .95rem; }

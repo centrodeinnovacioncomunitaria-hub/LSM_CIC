@@ -24,7 +24,7 @@
         return d === 1 ? 'ayer' : d < 30 ? `hace ${d} días` : new Date(f).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
     };
     const inicial = (n) => String(n || '?').trim().charAt(0).toUpperCase();
-    const COLOR_ROL = { Emprendedora: 'bg-durazno', Dinamizadora: 'bg-menta', 'Secretaría Técnica': 'bg-lavanda', 'Administración': 'bg-mantequilla' };
+    const COLOR_ROL = { Emprendedora: 'bg-durazno', Dinamizadora: 'bg-menta', 'Dinamizadora (o dinamizador)': 'bg-menta', 'Secretaría Técnica': 'bg-lavanda', 'Administración': 'bg-mantequilla' };
 
     let temporizador;
     function aviso(t) {

@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/cic.css?v=20261036">
+    <link rel="stylesheet" href="../assets/cic.css?v=20261037">
     <style>
         .admin-cab { background: var(--bosque); color: #fff; padding: 1.2rem 0; }
         .admin-cab .contenedor { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -68,6 +68,7 @@
                 <button type="button" role="tab" aria-selected="false" data-tab="correos">Correos enviados</button>
                 <button type="button" role="tab" aria-selected="false" data-tab="equipo">Registrar equipo</button>
                 <button type="button" role="tab" aria-selected="false" data-tab="admins">Administradoras</button>
+                <button type="button" role="tab" aria-selected="false" data-tab="novedades">Novedades</button>
             </div>
             <div id="tab-cursos"></div>
             <div id="tab-grabaciones" hidden></div>
@@ -75,14 +76,15 @@
             <div id="tab-correos" hidden></div>
             <div id="tab-equipo" hidden></div>
             <div id="tab-admins" hidden></div>
+            <div id="tab-novedades" hidden></div>
         </section>
     </main>
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="../config.js?v=20261036"></script>
-    <script src="../assets/soporte.js?v=20261036"></script>
-    <script src="../assets/datos-cic.js?v=20261036"></script>
+    <script src="../config.js?v=20261037"></script>
+    <script src="../assets/soporte.js?v=20261037"></script>
+    <script src="../assets/datos-cic.js?v=20261037"></script>
     <script>
     (() => {
         'use strict';
@@ -178,11 +180,12 @@
         // ---------- Pestañas ----------
         $$('[data-tab]').forEach((b) => b.addEventListener('click', () => {
             $$('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
-            ['cursos', 'grabaciones', 'soporte', 'correos', 'equipo', 'admins'].forEach((t) => { $(`#tab-${t}`).hidden = b.dataset.tab !== t; });
+            ['cursos', 'grabaciones', 'soporte', 'correos', 'equipo', 'admins', 'novedades'].forEach((t) => { $(`#tab-${t}`).hidden = b.dataset.tab !== t; });
             if (b.dataset.tab === 'soporte') window.CICSoporte.pintar($('#tab-soporte'), { perfil: yo, esc, aviso, pedir: llamar, satelite: (id) => DATOS.satelites.find((x) => x.id === id) || null });
             if (b.dataset.tab === 'correos') pintarCorreos();
             if (b.dataset.tab === 'equipo') pintarEquipo();
             if (b.dataset.tab === 'admins') pintarAdmins();
+            if (b.dataset.tab === 'novedades') pintarNovedades();
         }));
 
         // ---------- Registro de correos de contraseña (colección «envios_correo» de Firestore) ----------
@@ -209,7 +212,7 @@
         }
 
         // ---------- Registro de secretarías y dinamizadoras (colección «directorio») ----------
-        const NOMBRE_ROL = { secretaria: 'Secretaría Técnica', dinamizadora: 'Dinamizadora' };
+        const NOMBRE_ROL = { secretaria: 'Secretaría Técnica', dinamizadora: 'Dinamizadora (o dinamizador)' };
         let equipoDatos = null, filtroEquipo = '';
         async function pintarEquipo(editar) {
             const caja = $('#tab-equipo');
@@ -275,6 +278,47 @@
         }
 
         // ---------- Cuentas de administración ----------
+        // ---------- Novedades: contar a todo el mundo qué cambió en la plataforma ----------
+        async function pintarNovedades() {
+            const caja = $('#tab-novedades');
+            caja.innerHTML = '<p class="vista-intro">Cargando…</p>';
+            let r;
+            try { r = await llamar('admin-novedades'); } catch (e) { caja.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; return; }
+            caja.innerHTML = `
+                <p class="vista-intro">Cuando el equipo de desarrollo haga cambios en la plataforma, escríbelos aquí en palabras sencillas. Se envían por correo a las <b>${r.destinatarios}</b> personas con correo registrado (emprendedoras, dinamizadoras y secretarias) y también se ven al entrar a la plataforma. Se envían de a ${r.tanda} por vez por el límite diario del correo de Google: si quedan pendientes, toca «Enviar a las que faltan».</p>
+                <form id="form-novedad" class="tarjeta" novalidate style="display:grid;gap:.6rem">
+                    <label><span class="etiqueta">Título</span><input class="campo" name="titulo" maxlength="120" placeholder="Ej.: Seguimiento más sencillo"></label>
+                    <label><span class="etiqueta">¿Qué cambió? (una línea por cambio)</span><textarea class="campo" name="texto" rows="6" maxlength="4000" placeholder="• El Seguimiento ahora empieza con botones grandes…&#10;• Te llega un correo cuando la Secretaría aprueba tu sesión…"></textarea></label>
+                    <p class="mensaje" id="novedad-msj" role="alert" style="margin:0"></p>
+                    <div><button class="btn btn-primario" type="submit">Guardar y enviar a todo el mundo</button></div>
+                </form>
+                <h3 class="subtitulo-seccion" style="margin-top:2rem">Novedades enviadas</h3>
+                ${r.novedades.length ? r.novedades.map((n) => `<article class="tarjeta" style="margin-top:.8rem">
+                    <p class="eyebrow">${esc(new Date(n.creado_en).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }))}</p>
+                    <h4>${esc(n.titulo)}</h4><p style="white-space:pre-line">${esc(n.texto)}</p>
+                    <p><span class="chip sop-resuelto">${n.enviados} enviados</span> ${n.fallidos ? `<span class="chip sop-abierto">${n.fallidos} no llegaron</span>` : ''}
+                    ${n.enviados + n.fallidos < r.destinatarios ? `<button type="button" class="btn btn-borde btn-pequeno" data-enviar-novedad="${esc(n.id)}">Enviar a las que faltan (${r.destinatarios - n.enviados - n.fallidos})</button>` : ''}</p>
+                </article>`).join('') : '<p class="tarjeta vacio">Todavía no se han enviado novedades.</p>'}`;
+            const enviar = async (id, boton) => {
+                if (boton) { boton.disabled = true; boton.textContent = 'Enviando…'; }
+                try {
+                    const x = await llamar('admin-enviar-novedad', { id });
+                    aviso(x.error ? x.error : x.faltan ? `Se enviaron ${x.enviados} de ${x.total}. Faltan ${x.faltan}: toca «Enviar a las que faltan».` : `Listo: la novedad les llegó a ${x.enviados} personas.`);
+                } catch (e) { aviso(e.message); }
+                pintarNovedades();
+            };
+            $('#form-novedad').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const f = Object.fromEntries(new FormData(e.target));
+                if (!confirm(`¿Enviar «${f.titulo}» por correo a ${r.destinatarios} personas?`)) return;
+                const b = e.target.querySelector('[type=submit]');
+                b.disabled = true;
+                try { const n = await llamar('admin-crear-novedad', f); await enviar(n.id); }
+                catch (err) { $('#novedad-msj').textContent = err.message; $('#novedad-msj').className = 'mensaje error'; b.disabled = false; }
+            });
+            caja.querySelectorAll('[data-enviar-novedad]').forEach((b) => b.addEventListener('click', () => enviar(b.dataset.enviarNovedad, b)));
+        }
+
         async function pintarAdmins() {
             const caja = $('#tab-admins');
             caja.innerHTML = '<p class="vista-intro">Cargando…</p>';

@@ -801,7 +801,7 @@
             @media print{body{background:#fff;padding:0;min-height:0}.c{box-shadow:none;border-radius:0;width:297mm;height:210mm;aspect-ratio:auto}.acciones{display:none}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
             @media (max-width:700px){.c{aspect-ratio:auto;padding:36px 28px}h1{font-size:32px}.n{font-size:26px}.firmas{gap:24px;flex-wrap:wrap}.logos{flex-wrap:wrap;gap:16px}}</style></head>
             <body><div class="c">
-            <div class="logo-cic"><svg viewBox="12 12 96 96" aria-hidden="true"><path d="M60,104 C30,100 14,78 18,44 C44,50 58,70 60,104 Z" fill="#9ED0B7" style="mix-blend-mode:multiply"/><path d="M60,104 C90,100 106,78 102,44 C76,50 62,70 60,104 Z" fill="#F2B592" style="mix-blend-mode:multiply"/><circle cx="60" cy="30" r="12" fill="#EE9884"/></svg><span><b>cic</b><small>Centro de Innovación Comunitaria</small></span></div>
+            <div class="logo-cic"><svg viewBox="12 12 96 96" aria-hidden="true"><path d="M60,104 C30,100 14,78 18,44 C44,50 58,70 60,104 Z" fill="#9ED0B7" style="mix-blend-mode:multiply"/><path d="M60,104 C90,100 106,78 102,44 C76,50 62,70 60,104 Z" fill="#F2B592" style="mix-blend-mode:multiply"/><circle cx="60" cy="30" r="12" fill="#EE9884"/></svg><span><b>cic</b><small>Centro de Innovación Comunitaria para la Autonomía Económica de la Mujer</small></span></div>
             <h1>Certificado</h1><p class="sub">de aprobación</p>
             <p>El Centro de Innovación Comunitaria (CIC) de la Red de Mujeres del Caribe y APRODEFA</p>
             <p><b>hacen constar que</b></p>

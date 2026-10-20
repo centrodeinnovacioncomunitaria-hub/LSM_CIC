@@ -63,7 +63,8 @@ function cuentasFalsas() {
   const catalogo = { archivos: { 'hacer-1-guia': { archivo: 'guias/hacer-1-guia.pdf', nombre: 'Guía de la semana 1', tipo: 'PDF', publico: 'emprendedoras' }, 'gestion-guia': { archivo: 'material/gestion.pdf', nombre: 'Guía de estudio', tipo: 'PDF', publico: 'equipo' }, 'ser-1-estudio': { archivo: 'material/ser-1.pdf', nombre: 'Estudio SER 1', tipo: 'PDF', publico: 'equipo' } }, material: { gestion_general: ['gestion-guia'], 'facilitar-ser_1': ['ser-1-estudio'] } };
   const enDrive = []; // llamadas al puente de Drive
   let driveCaido = false;
-  const drive = async (c) => { if (driveCaido) throw new Error('sin conexión'); enDrive.push(c); return c.accion === 'subir' ? { ok: true, id: `drv${enDrive.length}`, url: `https://drive.google.com/file/d/drv${enDrive.length}/view` } : { ok: true }; };
+  let nSubidas = 0; // los avisos por correo también pasan por el puente: las subidas se numeran aparte
+  const drive = async (c) => { if (driveCaido) throw new Error('sin conexión'); enDrive.push(c); if (c.accion !== 'subir') return { ok: true }; nSubidas++; return { ok: true, id: `drv${nSubidas}`, url: `https://drive.google.com/file/d/drv${nSubidas}/view` }; };
   const { atender } = crearLogica({ db, cuentas, ahora: () => reloj, catalogo, leerArchivo: (r) => Buffer.from('%PDF ' + r), drive });
   const pedir = async (accion, datos = {}, token = null) => atender({ accion, ...datos }, token);
   // Responde un intento con n respuestas correctas (las opciones llegan en orden aleatorio)
@@ -350,7 +351,7 @@ function cuentasFalsas() {
   const conv = await ok('foro-responder', { id: tema.id, texto: 'Anótalas aparte y súmalas cuando te paguen.' }, tDina);
   assert.equal(conv.respuestas.length, 1);
   assert.equal(conv.respuestas[0].autor, 'Dina D.');
-  assert.equal(conv.respuestas[0].autor_rol, 'Dinamizadora');
+  assert.equal(conv.respuestas[0].autor_rol, 'Dinamizadora (o dinamizador)');
   await ok('foro-publicar', { categoria: 'equipo', titulo: 'Reunión de la Secretaría con el equipo', texto: 'Recordatorio de la reunión del viernes.' }, tSara);
   assert.equal((await ok('foro-temas', {}, tRosa)).temas.length, 1, 'la emprendedora no ve los temas del equipo');
   assert.equal((await ok('foro-temas', {}, tDina)).temas.filter((t) => !t.id.startsWith('modulo_')).length, 2);
@@ -575,7 +576,13 @@ function cuentasFalsas() {
   await falla('tickets', {}, tSara, 403); // la Secretaría ya no atiende el soporte
   const bandeja = await ok('tickets', {}, tAdmin);
   assert.equal(bandeja.tickets.length, 1);
-  const avisos = () => enDrive.filter((c) => c.accion === 'correo' && !/envió documentos/.test(c.asunto));
+  // Avisos a soporte (los avisos a cada persona llevan persona: true; los de documentos enviados van a la secretaria)
+  const avisos = () => enDrive.filter((c) => c.accion === 'correo' && !c.persona && !/envió documentos|Nota de/.test(c.asunto));
+  const aPersonas = enDrive.filter((c) => c.accion === 'correo' && c.persona);
+  assert.ok(aPersonas.some((c) => c.para === 'dina@correo.co' && /Aprobaron/.test(c.asunto)), 'la dinamizadora recibe correo cuando aprueban su sesión');
+  assert.ok(aPersonas.some((c) => /Hay que corregir/.test(c.asunto)), 'y cuando se la devuelven');
+  assert.ok(aPersonas.some((c) => c.para === 'dina@correo.co' && /Te asignaron/.test(c.asunto)), 'la dinamizadora recibe correo al asignarle emprendedoras');
+  assert.ok(aPersonas.every((c) => /Autonomía Económica de la Mujer/.test(c.texto)), 'los avisos llevan la firma del centro');
   assert.equal(avisos().length, 1, 'la solicitud nueva llega por correo a soporte');
   assert.match(avisos()[0].asunto, /Nueva solicitud T-/);
   assert.match(avisos()[0].texto, /El video de la semana 2/);
@@ -654,6 +661,7 @@ function cuentasFalsas() {
   await ok('admin-agregar-administradora', { correo: 'admin@correo.co' }, tAdmin); // ya es administración: no falla
   assert.equal((await ok('material-transferencia', {}, tAdmin)).unidades.length, 6);
   assert.ok((await ok('admin-contenido', {}, tAdmin)).cursos['formacion-secretaria'], 'los videos del material de transferencia se cargan desde admin/');
+// Novedades: la administración cuenta qué cambió y se le envía a todo el mundo con correo real (por tandas)  await falla('admin-crear-novedad', { titulo: 'Mejoras', texto: 'Cambiamos el seguimiento para que sea más sencillo.' }, tSara, 403);  const nov = await ok('admin-crear-novedad', { titulo: 'Mejoras en Seguimiento', texto: 'Cambiamos el seguimiento para que sea más sencillo.' }, tAdmin);  const envNov = await ok('admin-enviar-novedad', { id: nov.id }, tAdmin);  assert.ok(envNov.enviados >= 3 && envNov.faltan === 0, 'le llega a todas las personas con correo');  assert.equal((await ok('admin-enviar-novedad', { id: nov.id }, tAdmin)).enviados, envNov.enviados, 'no se repite a quien ya le llegó');  assert.equal((await ok('novedad', {}, tRosa)).novedad.titulo, 'Mejoras en Seguimiento', 'y se ve dentro de la plataforma');
   paso('Registro del equipo: la administración registra y edita secretarías y dinamizadoras (con segundo perfil)');
 
   // ---------- Mi cuenta ----------
