@@ -1,5 +1,5 @@
 // Cloud Function «cicAcceso»: une la lógica (logica.js) con Firestore y Firebase Authentication.
-// Se publica con:  firebase deploy --only functions,firestore   (ver CONFIGURAR_FIREBASE.md)
+// Se publica desde Google Cloud Shell con:  bash desplegar.sh   (ver CONFIGURAR_FIREBASE.md)
 'use strict';
 
 const { onRequest } = require('firebase-functions/v2/https');

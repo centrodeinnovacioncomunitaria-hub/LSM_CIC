@@ -49,5 +49,11 @@ echo "3/4 · Instalando dependencias…"
 
 echo "4/4 · Publicando la función…"
 if command -v firebase >/dev/null 2>&1; then FB=firebase; else FB="npx -y firebase-tools@latest"; fi
-$FB deploy --only functions --project "$PROYECTO" --non-interactive
+# Si la compilación falla, se muestran las últimas líneas de su registro para saber por qué
+if ! $FB deploy --only functions --project "$PROYECTO" --non-interactive; then
+  echo "La publicación falló. Últimas líneas de la compilación en Google Cloud:"
+  ID=$(gcloud builds list --region "$REGION" --project "$PROYECTO" --limit 1 --sort-by=~createTime --format="value(id)" 2>/dev/null || true)
+  if [ -n "$ID" ]; then gcloud builds log "$ID" --region "$REGION" --project "$PROYECTO" 2>/dev/null | tail -40; fi
+  exit 1
+fi
 echo "Listo: función publicada."
