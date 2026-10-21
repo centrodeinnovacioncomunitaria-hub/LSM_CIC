@@ -135,7 +135,7 @@ sub cabeza {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght\@6..12,400;6..12,600;6..12,700&family=Quicksand:wght\@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="${P}assets/cic.css?v=20261038">
+    <link rel="stylesheet" href="${P}assets/cic.css?v=20261039">
 $jsonld    <script>document.documentElement.classList.add('js');</script>
 </head>
 HTML

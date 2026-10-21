@@ -230,6 +230,13 @@ function cuentasFalsas() {
   p = await ok('marcar', { curso: 'gestion', unidad: 1, que: 'material' }, tDina);
   assert.equal(p.cursos.gestion[0].estado, 'en-curso');
   assert.equal(p.cursos.gestion[0].ronda, 2);
+  // Sus respuestas: ve qué eligió y qué falló; la respuesta correcta aparece solo cuando apruebe
+  let res = await ok('mis-resultados', { curso: 'gestion', unidad: 1 }, tDina);
+  assert.equal(res.intentos.length, 2); assert.equal(res.aprobada, false);
+  assert.equal(res.intentos[0].preguntas.length, 10);
+  assert.equal(res.intentos[0].preguntas.filter((x) => !x.bien).length, 5, 've cuáles falló');
+  assert.ok(res.intentos[0].preguntas.every((x) => x.respuesta && x.correcta === null && x.justificacion === null), 'antes de aprobar no se muestra la respuesta correcta');
+  await falla('mis-resultados', { curso: 'gestion', unidad: 1 }, tRosa, 403);
   paso('Cuestionario: 5 preguntas sin respuesta, 2 intentos, pausa hasta repasar video y material');
 
   const q = await ok('cuestionario', { curso: 'gestion', unidad: 1 }, tDina);
@@ -237,6 +244,9 @@ function cuentasFalsas() {
   assert.equal(bien.nota, 7);
   assert.ok(bien.detalle.filter((d) => !d.bien).every((d) => d.retro === 'Justificación oficial.'), 'al aprobar se muestra la justificación');
   assert.equal(bien.aprobado, true);
+  res = await ok('mis-resultados', { curso: 'gestion', unidad: 1 }, tDina);
+  assert.equal(res.aprobada, true); assert.equal(res.intentos.length, 3); assert.equal(res.intentos[0].nota, 7);
+  assert.ok(res.intentos[0].preguntas.filter((x) => !x.bien).every((x) => x.correcta === 'bien' && x.justificacion), 'al aprobar ve la respuesta correcta y la justificación');
   await falla('responder', { id: q.id, respuestas: responder(q, 10) }, tDina, 409);
   assert.equal(bien.progreso.cursos.gestion[1].estado, 'bloqueada', 'falta la actividad de la unidad 1');
   await falla('entregar', { curso: 'gestion', unidad: 1, texto: 'corto' }, tDina, 400);

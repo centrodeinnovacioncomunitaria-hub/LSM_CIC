@@ -1783,6 +1783,36 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     return { nota, de: c.preguntas.length, aprobado, pausado: !aprobado && intentos >= INTENTOS_POR_RONDA, intentos, detalle, constancia, progreso: resumen(perfil, await contexto(perfil.id)) };
   }
 
+  // Sus respuestas en las evaluaciones de una unidad: cada intento, cada pregunta, lo que eligió y si acertó, para que
+  // analice en qué se equivocó. La respuesta correcta y la justificación oficial aparecen cuando ya aprobó la unidad:
+  // antes, verlas le daría las respuestas del siguiente intento (el banco tiene 10 preguntas por unidad).
+  async function misResultados(token, b) {
+    const { perfil, ctx, curso, unidad } = await equipoAbierto(token, b);
+    const yaAprobada = aprobada(ctx, curso, unidad);
+    const hechos = (await lista(col('cuestionarios').where('persona', '==', perfil.id)))
+      .filter((c) => c.curso === curso && c.unidad === unidad && c.respondido_en && Array.isArray(c.respuestas))
+      .sort((x, y) => String(x.respondido_en).localeCompare(String(y.respondido_en)));
+    const banco = {};
+    const pregunta = async (id) => { if (!(id in banco)) banco[id] = await datos(col('preguntas').doc(String(id))); return banco[id]; };
+    const intentos = [];
+    for (const [n, c] of hechos.entries()) {
+      const preguntas = [];
+      for (let i = 0; i < c.preguntas.length; i++) {
+        const p = await pregunta(c.preguntas[i]);
+        if (!p) continue;
+        const orden = c.ordenes && c.ordenes[i] ? String(c.ordenes[i]).split(',').map(Number) : null;
+        const elegida = orden ? orden[c.respuestas[i]] : c.respuestas[i];
+        const bien = p.correcta === elegida;
+        preguntas.push({
+          enunciado: p.enunciado, respuesta: p.opciones[elegida] ?? null, bien,
+          correcta: yaAprobada ? p.opciones[p.correcta] : null, justificacion: yaAprobada ? p.retro || null : null,
+        });
+      }
+      intentos.push({ intento: n + 1, nota: c.nota, de: c.preguntas.length, aprobado: c.nota >= NOTA_MINIMA, fecha: c.respondido_en, preguntas });
+    }
+    return { aprobada: yaAprobada, nota_minima: NOTA_MINIMA, intentos: intentos.reverse() };
+  }
+
   // Actividad del módulo: un aporte en la conversación del módulo en el foro del equipo (ya no se piden enlaces de Drive).
   // Queda publicado en el foro, con su nombre, y llega a la Secretaría Técnica para revisarlo.
   async function entregar(token, b) {
@@ -2016,6 +2046,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
         case 'material': r = await material(token, b); break;
         case 'cuestionario': r = await cuestionario(token, b); break;
         case 'responder': r = await responder(token, b); break;
+        case 'mis-resultados': r = await misResultados(token, b); break;
         case 'entregar': r = await entregar(token, b); break;
         case 'hito': r = await hito(token, b); break;
         case 'revisar': r = await revisar(token, b); break;

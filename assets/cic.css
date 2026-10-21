@@ -1871,3 +1871,15 @@ dialog { overflow-x: hidden; }
 .novedad-cic { margin-top: .8rem; background: #fff; border: 2px solid var(--menta); border-radius: 1rem; padding: .8rem 1rem; max-width: 46rem; }
 .novedad-cic p { margin: 0 0 .3rem; }
 .novedad-texto { white-space: pre-line; font-size: .95rem; }
+
+/* Mis respuestas en las evaluaciones */
+.mis-respuestas { margin-top: .9rem; display: grid; gap: .7rem; }
+.mis-respuestas > .btn { justify-self: start; }
+.intento-res { background: #fff; border: 1px solid var(--linea); border-radius: 1rem; padding: .8rem 1rem; }
+.intento-res + .intento-res { margin-top: .6rem; }
+.intento-res summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; }
+.res-lista { margin: .8rem 0 0; padding-left: 1.4rem; display: grid; gap: .7rem; }
+.res-item { padding: .7rem .9rem; border-radius: .8rem; border-left: 5px solid var(--menta); background: #F3FAF6; display: grid; gap: .3rem; }
+.res-item.res-mal { border-left-color: var(--coralp); background: #FDF0EC; }
+.res-enunciado { font-weight: 700; }
+.res-justificacion { color: #3d5a4d; font-size: .98em; }

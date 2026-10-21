@@ -98,6 +98,7 @@
                     if (!e.video_iniciado) fila().video_inicio = ahora();
                     r = resumen(perfil, d, videos); break;
                 }
+                case 'mis-resultados': r = { aprobada: false, nota_minima: REGLAS.nota_minima, intentos: [] }; break;
                 case 'pulso-video': {
                     const e = estado(perfil, d, c, u, videos);
                     r = { faltan: e.video_faltan, total: e.video_segundos }; break;
@@ -590,13 +591,14 @@
     }
 
     function bloqueEvaluacion(e, conVideo) {
-        if (e.aprobado_en) return `<p class="paso-ok">✓ Aprobada con ${e.mejor_nota} de ${REGLAS.preguntas}</p>`;
+        const verRespuestas = e.intentos ? '<div class="mis-respuestas"><button type="button" class="btn btn-borde btn-pequeno" data-ver-resultados>📋 Ver mis respuestas</button><div data-resultados></div></div>' : '';
+        if (e.aprobado_en) return `<p class="paso-ok">✓ Aprobada con ${e.mejor_nota} de ${REGLAS.preguntas}</p>${verRespuestas}`;
         const falta = [];
         if (conVideo && !e.video_visto) falta.push('ver el video completo');
         if (!e.material_visto) falta.push('repasar el material');
         const intentos = e.intentos ? `<p class="texto-suave">Llevas ${e.intentos} de ${e.intentos_max} intentos${e.mejor_nota != null ? ` · mejor nota ${e.mejor_nota} de ${REGLAS.preguntas}` : ''}.</p>` : '';
-        if (!e.puede_cuestionario) return `${intentos}<button type="button" class="btn btn-primario" disabled>Empezar la evaluación</button><p class="ayuda-campo">Se habilita cuando termines de ${falta.join(' y ') || 'repasar el video y el material'}.</p>`;
-        return `${intentos}<button type="button" class="btn btn-primario" data-cuestionario>Empezar la evaluación${e.intentos ? ` · intento ${e.intentos + 1} de ${e.intentos_max}` : ''}</button>`;
+        if (!e.puede_cuestionario) return `${intentos}<button type="button" class="btn btn-primario" disabled>Empezar la evaluación</button><p class="ayuda-campo">Se habilita cuando termines de ${falta.join(' y ') || 'repasar el video y el material'}.</p>${verRespuestas}`;
+        return `${intentos}<button type="button" class="btn btn-primario" data-cuestionario>Empezar la evaluación${e.intentos ? ` · intento ${e.intentos + 1} de ${e.intentos_max}` : ''}</button>${verRespuestas}`;
     }
 
     // Actividad obligatoria: un aporte en la conversación del módulo en el foro del equipo (sin enlaces de Drive)
@@ -691,6 +693,7 @@
             try { estado = await api('marcar', { ...datos, que: b.dataset.marcar }); pintarLeccion(); }
             catch (x) { C.aviso(x.message); b.disabled = false; }
         }));
+        v.querySelectorAll('[data-ver-resultados]').forEach((b) => b.addEventListener('click', () => verMisRespuestas(b, datos)));
         const cue = v.querySelector('[data-cuestionario]');
         if (cue) cue.addEventListener('click', () => empezarCuestionario(cue));
         const form = v.querySelector('.form-evidencia');
@@ -748,6 +751,28 @@
                 C.vista.querySelector('#paso-evaluacion').scrollIntoView({ behavior: 'smooth', block: 'start' });
             } catch (e) { m.textContent = e.message; m.hidden = false; b.disabled = false; b.textContent = 'Enviar respuestas'; }
         });
+    }
+
+    // Mis respuestas: cada intento con lo que eligió y si acertó; la respuesta correcta, cuando ya aprobó
+    async function verMisRespuestas(b, datos) {
+        const caja = b.parentNode.querySelector('[data-resultados]');
+        if (caja.innerHTML) { caja.innerHTML = ''; b.textContent = '📋 Ver mis respuestas'; return; }
+        b.disabled = true;
+        let r;
+        try { r = await api('mis-resultados', datos); } catch (x) { C.aviso(x.message); b.disabled = false; return; }
+        b.disabled = false; b.textContent = 'Ocultar mis respuestas';
+        const fecha = (f) => new Date(f).toLocaleString('es-CO', { day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' });
+        caja.innerHTML = !r.intentos.length ? '<p class="texto-suave">Todavía no has terminado ningún intento.</p>' : `
+            <p class="ayuda-campo">${r.aprobada ? 'Ya aprobaste: en cada pregunta que fallaste ves la respuesta correcta y la explicación.' : 'Aquí ves lo que respondiste y cuáles fallaste (en rojo). La respuesta correcta y la explicación aparecen cuando apruebes; mientras tanto, repasa esos temas en el video y en el material.'}</p>
+            ${r.intentos.map((t, k) => `<details class="intento-res" ${k === 0 ? 'open' : ''}>
+                <summary><b>Intento ${t.intento}</b> · ${t.nota} de ${t.de} · <span class="chip ${t.aprobado ? 'bg-menta' : 'sop-abierto'}">${t.aprobado ? 'Aprobado' : 'No aprobado'}</span> <small>${esc(fecha(t.fecha))}</small></summary>
+                <ol class="res-lista">${t.preguntas.map((x) => `<li class="res-item ${x.bien ? 'res-bien' : 'res-mal'}">
+                    <p class="res-enunciado">${esc(x.enunciado)}</p>
+                    <p><span aria-hidden="true">${x.bien ? '✓' : '✗'}</span> <b>Tu respuesta:</b> ${esc(x.respuesta || 'Sin respuesta')} <span class="sr-only">${x.bien ? '(correcta)' : '(incorrecta)'}</span></p>
+                    ${!x.bien && x.correcta ? `<p><b>Respuesta correcta:</b> ${esc(x.correcta)}</p>` : ''}
+                    ${!x.bien && x.justificacion ? `<p class="res-justificacion">${esc(x.justificacion)}</p>` : ''}
+                </li>`).join('')}</ol>
+            </details>`).join('')}`;
     }
 
     async function refrescar() {
