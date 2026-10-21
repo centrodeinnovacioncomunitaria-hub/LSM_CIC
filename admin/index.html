@@ -380,7 +380,7 @@
                 <section class="curso-admin bienvenida-admin" aria-labelledby="t-bv">
                     <div class="unidad-admin" data-bienvenida>
                         <h4 id="t-bv"><span class="codigo">BIENVENIDA</span> Video de bienvenida · obligatorio <small class="${bv ? 'estado-ok' : 'estado-falta'}">${bv ? 'publicado: ya se exige antes del curso Gestión del CIC' : 'falta: mientras no haya video, el curso Gestión se abre sin este paso'}</small></h4>
-                        <p class="texto-suave" style="grid-column:1/-1;margin:0">Todas las secretarias y dinamizadoras deben ver este video de presentación (al menos el 90 % de su duración) para desbloquear el curso Gestión del CIC.</p>
+                        <p class="texto-suave" style="grid-column:1/-1;margin:0">Todas las secretarias y dinamizadoras deben ver este video de presentación completo (toda su duración, con la página abierta) para desbloquear el curso Gestión del CIC.</p>
                         <form class="form-bienvenida" novalidate>
                             <label class="etiqueta" for="v-bv">Enlace de Google Drive (o YouTube)</label>
                             <input class="campo" id="v-bv" name="url" type="url" placeholder="https://drive.google.com/file/d/…/view" value="${esc(enlaceVideo(bv))}">
@@ -390,7 +390,7 @@
                         </form>
                     </div>
                 </section>
-                <p class="vista-intro">Pega el enlace de cada video de Google Drive (compártelo como «Cualquier persona con el enlace · Lector») y su duración en minutos: la evaluación se habilita cuando la persona lleva al menos el 90 % de ese tiempo con el video abierto. Las guías en PDF ya están cargadas en la plataforma; si quieres sumar otro material, escribe una línea por archivo: <b>Nombre | enlace</b>.</p>
+                <p class="vista-intro">Pega el enlace de cada video de Google Drive (compártelo como «Cualquier persona con el enlace · Lector») y su duración exacta (minutos:segundos): la evaluación se habilita cuando la persona ve el video completo, con la página abierta y el video en pantalla. Las guías en PDF ya están cargadas en la plataforma; si quieres sumar otro material, escribe una línea por archivo: <b>Nombre | enlace</b>.</p>
                 ${Object.entries(contenido.cursos).map(([id, c]) => {
                     const conVideo = c.unidades.filter((u) => u.video).length;
                     return `<details class="curso-admin" ${id === 'gestion' ? 'open' : ''}>
