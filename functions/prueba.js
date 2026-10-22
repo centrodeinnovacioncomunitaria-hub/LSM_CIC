@@ -693,19 +693,16 @@ function cuentasFalsas() {
   // Correo de finalización: al terminar los tres cursos (queda pendiente hasta que la administración guarde el evento)
   for (let u = 1; u <= 6; u++) await completar(tSara, 'acompanar-hacer', u);
   for (let u = 1; u <= 4; u++) await completar(tSara, 'facilitar-ser', u);
-  let fin3 = await ok('admin-finalizacion', {}, tAdmin);
-  const saraFin = fin3.personas.find((x) => x.nombre === 'Sara Secretaria Uno');
-  assert.ok(saraFin && !saraFin.enviado_en, 'terminó los tres cursos; sin evento configurado, el correo queda pendiente');
-  await falla('admin-enviar-finalizaciones', {}, tAdmin, 400);
-  await falla('admin-guardar-evento', { fecha: 'Sábado 15 de noviembre, 9:00 a. m.', lugar: 'Barranquilla' }, tSara, 403);
-  await ok('admin-guardar-evento', { fecha: 'Sábado 15 de noviembre, 9:00 a. m.', lugar: 'Barranquilla' }, tAdmin);
-  const envFin = await ok('admin-enviar-finalizaciones', {}, tAdmin);
-  assert.ok(envFin.enviados >= 1, 'se envía a quienes ya terminaron');
+  // Sale sola al terminar el tercer curso: fecha del evento = día en que terminó; lugar = su satélite
   const correoFin = enDrive.filter((c) => c.accion === 'correo' && c.html && c.para === 'sara@correo.co').pop();
-  assert.ok(correoFin && /¡Lo lograste, Sara!/.test(correoFin.html) && /Sara Secretaria Uno/.test(correoFin.html) && /Barranquilla/.test(correoFin.html), 'el correo lleva su nombre y el evento');
-  assert.ok(!/Marta/.test(correoFin.html), 'no queda el nombre del ejemplo');
-  fin3 = await ok('admin-finalizacion', {}, tAdmin);
-  assert.ok(fin3.personas.find((x) => x.nombre === 'Sara Secretaria Uno').enviado_en);
+  assert.ok(correoFin && /¡Lo lograste, Sara!/.test(correoFin.html) && /Sara Secretaria Uno/.test(correoFin.html), 'el correo lleva su nombre');
+  assert.ok(!/Marta/.test(correoFin.html) && !/\[Fecha|\[Lugar/.test(correoFin.html), 'no queda nada del ejemplo');
+  const hoyLargo = new Date(reloj).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Bogota' });
+  assert.ok(correoFin.html.split(hoyLargo).length >= 3, 'la fecha del evento es el día en que terminó');
+  assert.ok(/Satélite Santa Marta · Magdalena|Magdalena/.test(correoFin.html), 'el lugar es su satélite o departamento');
+  const fin3 = await ok('admin-finalizacion', {}, tAdmin);
+  assert.ok(fin3.personas.find((x) => x.nombre === 'Sara Secretaria Uno').enviado_en, 'queda registrado como enviado');
+  assert.ok((await ok('admin-vista-finalizacion', {}, tAdmin)).html.includes('Nombre Apellido de Ejemplo'));
   assert.equal((await ok('admin-enviar-finalizaciones', {}, tAdmin)).enviados, 0, 'no se repite');
   paso('Registro del equipo: la administración registra y edita secretarías y dinamizadoras (con segundo perfil)');
 
