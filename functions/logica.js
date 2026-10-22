@@ -12,6 +12,7 @@
 'use strict';
 
 const crypto = require('crypto');
+const { htmlFinalizacion, textoFinalizacion } = require('./plantillas/finalizacion');
 
 const ROLES = ['secretaria', 'dinamizadora', 'emprendedora'];
 const NOMBRE_ROL = { secretaria: 'Secretaría Técnica', dinamizadora: 'Dinamizadora (o dinamizador)', emprendedora: 'Emprendedora' };
@@ -1955,7 +1956,98 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     const codigo = `CIC-${CURSOS[curso].prefijo.replace('-', '')}-${Array.from({ length: 6 }, () => alfabeto[crypto.randomInt(alfabeto.length)]).join('')}`;
     await col('constancias').doc(codigo).set({ persona: perfil.id, curso, nombre: perfil.nombre, emitida_en: hoy() });
+    // Si con esta constancia ya terminó los tres cursos, le llega el correo de finalización (pase al evento)
+    await enviarFinalizacion(perfil).catch((err) => console.error('Correo de finalización:', err.message));
     return { codigo, curso, nombre_curso: CURSOS[curso].nombre };
+  }
+
+  // ---------- Correo de finalización: a quien terminó y aprobó los tres cursos (una sola vez por persona) ----------
+  // Se envía solo cuando la administración ya escribió la fecha y el lugar del evento fundacional (admin/ → «Finalización»);
+  // mientras tanto queda pendiente y sale al guardar esos datos o con «Enviar a quienes ya terminaron».
+  const fechaLarga = (iso) => new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Bogota' });
+  async function datosEvento() {
+    const ev = await datos(col('config').doc('evento_fundacional'));
+    return ev && ev.fecha && ev.lugar ? ev : null;
+  }
+  // Fecha en que terminó los tres cursos (la de su última constancia), o null si aún le falta alguno
+  async function terminoLosTres(personaId) {
+    const cs = await lista(col('constancias').where('persona', '==', personaId));
+    if (!Object.keys(CURSOS).every((c) => cs.some((x) => x.curso === c))) return null;
+    return cs.filter((x) => CURSOS[x.curso]).map((x) => x.emitida_en).sort().pop();
+  }
+  async function enviarFinalizacion(perfil, ev = null) {
+    if (!perfil || perfil.rol === 'emprendedora' || esAdmin(perfil)) return null;
+    const ref = col('finalizaciones').doc(perfil.id);
+    const previa = await datos(ref);
+    if (previa && previa.enviado_en) return 'ya';
+    const termino = await terminoLosTres(perfil.id);
+    if (!termino) return null;
+    const evento = ev || await datosEvento();
+    if (!evento || !driveActivo()) { await ref.set({ persona: perfil.id, nombre: perfil.nombre, termino_en: termino, pendiente: true, enviado_en: null }); return 'pendiente'; }
+    const para = correoDe(perfil);
+    if (!para) { await ref.set({ persona: perfil.id, nombre: perfil.nombre, termino_en: termino, pendiente: true, enviado_en: null, motivo: 'sin correo' }); await registrarAviso(perfil.cedula, 'finalizacion', 'omitido', null, 'Correo de finalización · no tiene correo registrado', perfil.rol); return 'sin_correo'; }
+    const d = { nombrePila: primerNombre(perfil.nombre), nombreCompleto: perfil.nombre, fechaFin: fechaLarga(termino), fechaEvento: evento.fecha, lugarEvento: evento.lugar };
+    try {
+      const r = await drive({ accion: 'correo', persona: true, para, asunto: '¡Lo lograste! Tu constancia de finalización · CIC', texto: textoFinalizacion(d), html: htmlFinalizacion(d) });
+      const llego = r && r.para ? String(r.para).toLowerCase() === para : true;
+      await registrarAviso(perfil.cedula, 'finalizacion', llego ? 'enviado' : 'omitido', llego ? para : CORREO_SOPORTE, llego ? 'Correo de finalización (pase al evento)' : 'Correo de finalización · el puente no permite escribirle: llegó solo a soporte', perfil.rol);
+      if (!llego) { await ref.set({ persona: perfil.id, nombre: perfil.nombre, termino_en: termino, pendiente: true, enviado_en: null }); return 'fallido'; }
+      await ref.set({ persona: perfil.id, nombre: perfil.nombre, termino_en: termino, pendiente: false, enviado_en: hoy(), correo: mascaraCorreo(para) });
+      return 'enviado';
+    } catch (err) {
+      await registrarAviso(perfil.cedula, 'finalizacion', 'fallido', para, 'Correo de finalización', perfil.rol, String(err.message || err).slice(0, 300));
+      await ref.set({ persona: perfil.id, nombre: perfil.nombre, termino_en: termino, pendiente: true, enviado_en: null });
+      return 'fallido';
+    }
+  }
+  // Administración: datos del evento, quiénes terminaron los tres cursos y si ya les llegó el correo
+  async function adminFinalizacion(token) {
+    const p = await usuarioDelToken(token);
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Esta sección es solo para la administración.');
+    const ev = await datos(col('config').doc('evento_fundacional'));
+    const env = Object.fromEntries((await lista(col('finalizaciones'))).map((x) => [x._id, x]));
+    const personas = [];
+    for (const x of (await lista(col('perfiles'))).filter((y) => y.rol !== 'emprendedora' && y.rol !== 'administradora')) {
+      const termino = await terminoLosTres(x._id);
+      if (termino) personas.push({ id: x._id, nombre: x.nombre, rol: x.rol, termino_en: termino, correo: correoDe(x) ? mascaraCorreo(correoDe(x)) : null, enviado_en: (env[x._id] && env[x._id].enviado_en) || null });
+    }
+    personas.sort((a, b) => String(a.termino_en).localeCompare(String(b.termino_en)));
+    return { evento: { fecha: (ev && ev.fecha) || '', lugar: (ev && ev.lugar) || '' }, personas, pendientes: personas.filter((x) => !x.enviado_en).length };
+  }
+  async function adminGuardarEvento(token, b) {
+    const p = await usuarioDelToken(token);
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Esta sección es solo para la administración.');
+    const fecha = texto(b.fecha, 120), lugar = texto(b.lugar, 200);
+    if (fecha.length < 6) throw new Falla(400, 'fecha', 'Escribe la fecha y la hora del evento (por ejemplo: «sábado 15 de noviembre de 2026, 9:00 a. m.»).');
+    if (lugar.length < 4) throw new Falla(400, 'lugar', 'Escribe el lugar del evento.');
+    await col('config').doc('evento_fundacional').set({ fecha, lugar, actualizado_por: p.id, actualizado_en: hoy() });
+    return { ok: true };
+  }
+  // Vista previa del correo tal como le llegará a una persona (con su nombre si se indica)
+  async function adminVistaFinalizacion(token, b) {
+    const p = await usuarioDelToken(token);
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Esta sección es solo para la administración.');
+    const ev = await datos(col('config').doc('evento_fundacional')) || {};
+    const x = b.id ? await perfilPorId(String(b.id)) : null;
+    const termino = x ? await terminoLosTres(x.id) : null;
+    const nombre = x ? x.nombre : 'Nombre Apellido de Ejemplo';
+    return { html: htmlFinalizacion({ nombrePila: primerNombre(nombre), nombreCompleto: nombre, fechaFin: fechaLarga(termino || hoy()), fechaEvento: ev.fecha || '(falta escribir la fecha del evento)', lugarEvento: ev.lugar || '(falta escribir el lugar del evento)' }) };
+  }
+  // Envía el correo a quienes ya terminaron y aún no lo tienen (por tandas, por el límite diario de Gmail)
+  async function adminEnviarFinalizaciones(token, b) {
+    const p = await usuarioDelToken(token);
+    if (!esAdmin(p)) throw new Falla(403, 'permiso', 'Esta sección es solo para la administración.');
+    const ev = await datosEvento();
+    if (!ev) throw new Falla(400, 'evento', 'Primero guarda la fecha y el lugar del evento: van dentro del correo.');
+    const r = await adminFinalizacion(token);
+    const faltan = r.personas.filter((x) => !x.enviado_en && (!b.id || x.id === b.id));
+    let enviados = 0, fallidos = 0;
+    for (const x of faltan.slice(0, TANDA_NOVEDADES)) {
+      const res = await enviarFinalizacion(await perfilPorId(x.id), ev);
+      if (res === 'enviado') enviados++; else fallidos++;
+      if (fallidos >= 3 && !enviados) break; // probablemente se agotó el límite diario
+    }
+    return { ok: true, enviados, fallidos, faltan: Math.max(0, faltan.length - enviados) };
   }
 
   // Verificación pública de una constancia: solo iniciales, por privacidad.
@@ -2003,6 +2095,10 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
         case 'comentar-actividad': r = await comentarActividad(token, b); break;
         case 'mi-avance': r = await miAvance(token); break;
         case 'admin-novedades': r = await adminNovedades(token); break;
+        case 'admin-finalizacion': r = await adminFinalizacion(token); break;
+        case 'admin-guardar-evento': r = await adminGuardarEvento(token, b); break;
+        case 'admin-enviar-finalizaciones': r = await adminEnviarFinalizaciones(token, b); break;
+        case 'admin-vista-finalizacion': r = await adminVistaFinalizacion(token, b); break;
         case 'admin-crear-novedad': r = await adminCrearNovedad(token, b); break;
         case 'admin-enviar-novedad': r = await adminEnviarNovedad(token, b); break;
         case 'novedad': r = await ultimaNovedad(token); break;

@@ -69,6 +69,7 @@
                 <button type="button" role="tab" aria-selected="false" data-tab="equipo">Registrar equipo</button>
                 <button type="button" role="tab" aria-selected="false" data-tab="admins">Administradoras</button>
                 <button type="button" role="tab" aria-selected="false" data-tab="novedades">Novedades</button>
+                <button type="button" role="tab" aria-selected="false" data-tab="finalizacion">Finalización</button>
             </div>
             <div id="tab-cursos"></div>
             <div id="tab-grabaciones" hidden></div>
@@ -77,6 +78,7 @@
             <div id="tab-equipo" hidden></div>
             <div id="tab-admins" hidden></div>
             <div id="tab-novedades" hidden></div>
+            <div id="tab-finalizacion" hidden></div>
         </section>
     </main>
 
@@ -180,12 +182,13 @@
         // ---------- Pestañas ----------
         $$('[data-tab]').forEach((b) => b.addEventListener('click', () => {
             $$('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
-            ['cursos', 'grabaciones', 'soporte', 'correos', 'equipo', 'admins', 'novedades'].forEach((t) => { $(`#tab-${t}`).hidden = b.dataset.tab !== t; });
+            ['cursos', 'grabaciones', 'soporte', 'correos', 'equipo', 'admins', 'novedades', 'finalizacion'].forEach((t) => { $(`#tab-${t}`).hidden = b.dataset.tab !== t; });
             if (b.dataset.tab === 'soporte') window.CICSoporte.pintar($('#tab-soporte'), { perfil: yo, esc, aviso, pedir: llamar, satelite: (id) => DATOS.satelites.find((x) => x.id === id) || null });
             if (b.dataset.tab === 'correos') pintarCorreos();
             if (b.dataset.tab === 'equipo') pintarEquipo();
             if (b.dataset.tab === 'admins') pintarAdmins();
             if (b.dataset.tab === 'novedades') pintarNovedades();
+            if (b.dataset.tab === 'finalizacion') pintarFinalizacion();
         }));
 
         // ---------- Registro de correos de contraseña (colección «envios_correo» de Firestore) ----------
@@ -289,6 +292,63 @@
 
         // ---------- Cuentas de administración ----------
         // ---------- Novedades: contar a todo el mundo qué cambió en la plataforma ----------
+        // ---------- Correo de finalización: pase al evento para quien termina los tres cursos ----------
+        async function pintarFinalizacion() {
+            const caja = $('#tab-finalizacion');
+            caja.innerHTML = '<p class="vista-intro">Cargando…</p>';
+            let r;
+            try { r = await llamar('admin-finalizacion'); } catch (e) { caja.innerHTML = `<p class="mensaje error">${esc(e.message)}</p>`; return; }
+            const listo = r.evento.fecha && r.evento.lugar;
+            const fecha = (f) => new Date(f).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+            caja.innerHTML = `
+                <p class="vista-intro">Cuando una secretaria o dinamizadora termina y aprueba los <b>tres cursos</b> (Gestión, HACER y SER), le llega sola la «Constancia de finalización» con su nombre: es su pase al evento fundacional. Cada persona lo recibe una sola vez.</p>
+                ${listo ? '' : '<p class="mensaje error" style="margin:1rem 0">Falta la fecha y el lugar del evento: mientras no los escribas, los correos quedan en espera.</p>'}
+                <form id="form-evento" class="tarjeta" novalidate style="display:grid;gap:.6rem;max-width:40rem">
+                    <h3 class="subtitulo-seccion" style="margin:0">Datos del evento fundacional (van dentro del correo)</h3>
+                    <label><span class="etiqueta">Fecha y hora</span><input class="campo" name="fecha" maxlength="120" value="${esc(r.evento.fecha)}" placeholder="Ej.: sábado 15 de noviembre de 2026, 9:00 a. m."></label>
+                    <label><span class="etiqueta">Lugar</span><input class="campo" name="lugar" maxlength="200" value="${esc(r.evento.lugar)}" placeholder="Ej.: Centro de Convenciones, Barranquilla"></label>
+                    <p class="mensaje" id="evento-msj" role="alert" style="margin:0"></p>
+                    <div style="display:flex;flex-wrap:wrap;gap:.6rem"><button class="btn btn-primario" type="submit">Guardar datos del evento</button><button class="btn btn-borde" type="button" data-vista-fin>Ver cómo se ve el correo</button></div>
+                </form>
+                <div id="vista-fin" hidden style="margin-top:1rem"></div>
+                <h3 class="subtitulo-seccion" style="margin-top:2rem">Personas que terminaron los tres cursos (${r.personas.length})</h3>
+                ${r.pendientes && listo ? `<p><button type="button" class="btn btn-primario" data-enviar-fin>Enviar el correo a quienes ya terminaron (${r.pendientes})</button> <small class="texto-suave">Se envían de a 40 por el límite diario de Gmail.</small></p>` : ''}
+                <div class="tabla-caja"><table><thead><tr><th scope="col">Persona</th><th scope="col">Terminó</th><th scope="col">Correo de finalización</th><th scope="col"></th></tr></thead>
+                <tbody>${r.personas.map((x) => `<tr><td><b>${esc(x.nombre)}</b><small>${esc(x.correo || 'sin correo registrado')}</small></td>
+                    <td>${esc(fecha(x.termino_en))}</td>
+                    <td>${x.enviado_en ? `<span class="chip sop-resuelto">Enviado · ${esc(fecha(x.enviado_en))}</span>` : '<span class="chip sop-cerrado">Pendiente</span>'}</td>
+                    <td><button type="button" class="boton-texto" data-vista-fin="${esc(x.id)}">Ver su correo</button></td></tr>`).join('') || '<tr><td colspan="4">Todavía nadie ha terminado los tres cursos.</td></tr>'}</tbody></table></div>`;
+            $('#form-evento').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const f = Object.fromEntries(new FormData(e.target));
+                try {
+                    await llamar('admin-guardar-evento', f);
+                    aviso('Datos del evento guardados.');
+                    pintarFinalizacion();
+                } catch (err) { $('#evento-msj').textContent = err.message; $('#evento-msj').className = 'mensaje error'; }
+            });
+            caja.querySelectorAll('[data-vista-fin]').forEach((b) => b.addEventListener('click', async () => {
+                const v = $('#vista-fin');
+                try {
+                    const x = await llamar('admin-vista-finalizacion', b.dataset.vistaFin ? { id: b.dataset.vistaFin } : {});
+                    v.hidden = false;
+                    v.innerHTML = '<iframe title="Vista previa del correo de finalización" style="width:100%;max-width:660px;height:900px;border:1px solid var(--linea);border-radius:1rem;background:#fff"></iframe>';
+                    v.querySelector('iframe').srcdoc = x.html;
+                    v.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } catch (err) { aviso(err.message); }
+            }));
+            const env = caja.querySelector('[data-enviar-fin]');
+            if (env) env.addEventListener('click', async () => {
+                if (!confirm(`¿Enviar la constancia de finalización a ${r.pendientes} persona(s)?`)) return;
+                env.disabled = true; env.textContent = 'Enviando…';
+                try {
+                    const x = await llamar('admin-enviar-finalizaciones');
+                    aviso(x.faltan ? `Se enviaron ${x.enviados}. Faltan ${x.faltan}: vuelve a tocar el botón (mañana, si se agotó el límite diario).` : `Listo: se enviaron ${x.enviados}.`);
+                } catch (err) { aviso(err.message); }
+                pintarFinalizacion();
+            });
+        }
+
         async function pintarNovedades() {
             const caja = $('#tab-novedades');
             caja.innerHTML = '<p class="vista-intro">Cargando…</p>';

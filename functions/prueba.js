@@ -683,7 +683,30 @@ function cuentasFalsas() {
   await ok('admin-agregar-administradora', { correo: 'admin@correo.co' }, tAdmin); // ya es administración: no falla
   assert.equal((await ok('material-transferencia', {}, tAdmin)).unidades.length, 6);
   assert.ok((await ok('admin-contenido', {}, tAdmin)).cursos['formacion-secretaria'], 'los videos del material de transferencia se cargan desde admin/');
-// Novedades: la administración cuenta qué cambió y se le envía a todo el mundo con correo real (por tandas)  await falla('admin-crear-novedad', { titulo: 'Mejoras', texto: 'Cambiamos el seguimiento para que sea más sencillo.' }, tSara, 403);  const nov = await ok('admin-crear-novedad', { titulo: 'Mejoras en Seguimiento', texto: 'Cambiamos el seguimiento para que sea más sencillo.' }, tAdmin);  const envNov = await ok('admin-enviar-novedad', { id: nov.id }, tAdmin);  assert.ok(envNov.enviados >= 3 && envNov.faltan === 0, 'le llega a todas las personas con correo');  assert.equal((await ok('admin-enviar-novedad', { id: nov.id }, tAdmin)).enviados, envNov.enviados, 'no se repite a quien ya le llegó');  assert.equal((await ok('novedad', {}, tRosa)).novedad.titulo, 'Mejoras en Seguimiento', 'y se ve dentro de la plataforma');
+  // Novedades: la administración cuenta qué cambió y se le envía a todo el mundo con correo real (por tandas)
+  await falla('admin-crear-novedad', { titulo: 'Mejoras', texto: 'Cambiamos el seguimiento para que sea más sencillo.' }, tSara, 403);
+  const nov = await ok('admin-crear-novedad', { titulo: 'Mejoras en Seguimiento', texto: 'Cambiamos el seguimiento para que sea más sencillo.' }, tAdmin);
+  const envNov = await ok('admin-enviar-novedad', { id: nov.id }, tAdmin);
+  assert.ok(envNov.enviados >= 3 && envNov.faltan === 0, 'le llega a todas las personas con correo');
+  assert.equal((await ok('admin-enviar-novedad', { id: nov.id }, tAdmin)).enviados, envNov.enviados, 'no se repite a quien ya le llegó');
+  assert.equal((await ok('novedad', {}, tRosa)).novedad.titulo, 'Mejoras en Seguimiento', 'y se ve dentro de la plataforma');
+  // Correo de finalización: al terminar los tres cursos (queda pendiente hasta que la administración guarde el evento)
+  for (let u = 1; u <= 6; u++) await completar(tSara, 'acompanar-hacer', u);
+  for (let u = 1; u <= 4; u++) await completar(tSara, 'facilitar-ser', u);
+  let fin3 = await ok('admin-finalizacion', {}, tAdmin);
+  const saraFin = fin3.personas.find((x) => x.nombre === 'Sara Secretaria Uno');
+  assert.ok(saraFin && !saraFin.enviado_en, 'terminó los tres cursos; sin evento configurado, el correo queda pendiente');
+  await falla('admin-enviar-finalizaciones', {}, tAdmin, 400);
+  await falla('admin-guardar-evento', { fecha: 'Sábado 15 de noviembre, 9:00 a. m.', lugar: 'Barranquilla' }, tSara, 403);
+  await ok('admin-guardar-evento', { fecha: 'Sábado 15 de noviembre, 9:00 a. m.', lugar: 'Barranquilla' }, tAdmin);
+  const envFin = await ok('admin-enviar-finalizaciones', {}, tAdmin);
+  assert.ok(envFin.enviados >= 1, 'se envía a quienes ya terminaron');
+  const correoFin = enDrive.filter((c) => c.accion === 'correo' && c.html && c.para === 'sara@correo.co').pop();
+  assert.ok(correoFin && /¡Lo lograste, Sara!/.test(correoFin.html) && /Sara Secretaria Uno/.test(correoFin.html) && /Barranquilla/.test(correoFin.html), 'el correo lleva su nombre y el evento');
+  assert.ok(!/Marta/.test(correoFin.html), 'no queda el nombre del ejemplo');
+  fin3 = await ok('admin-finalizacion', {}, tAdmin);
+  assert.ok(fin3.personas.find((x) => x.nombre === 'Sara Secretaria Uno').enviado_en);
+  assert.equal((await ok('admin-enviar-finalizaciones', {}, tAdmin)).enviados, 0, 'no se repite');
   paso('Registro del equipo: la administración registra y edita secretarías y dinamizadoras (con segundo perfil)');
 
   // ---------- Mi cuenta ----------
