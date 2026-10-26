@@ -11,6 +11,8 @@
     const nombreSat = (id) => { const s = C.satelite(id); return s ? s.nombre : ''; };
     const whatsapp = (cel) => { const d = String(cel || '').replace(/\D/g, ''); return d.length >= 10 ? `https://wa.me/57${d.slice(-10)}` : null; };
 
+    // Archivos de una parte de la sesión como lista. Acepta también el formato anterior del servidor (un solo archivo).
+    const archivosDe = (a, tipo) => { const x = a.documentos && a.documentos[tipo]; return Array.isArray(x) ? x : x ? [{ clave: tipo, ...x }] : []; };
     const REVISION = {
         enviada: ['En revisión de la Secretaría Técnica', 'emp-pend'],
         aprobada: ['✓ Aprobada por la Secretaría Técnica', 'emp-ok'],
@@ -315,7 +317,7 @@
     // Estado de una sesión en palabras, según quién mira
     function estadoSesion(a) {
         const rev = a.revision ? a.revision.estado : null;
-        const docs = a.requeridos.every((d) => (a.documentos[d.tipo] || []).length);
+        const docs = a.requeridos.every((d) => archivosDe(a, d.tipo).length);
         const din = C.perfil.rol === 'dinamizadora';
         if (rev === 'aprobada') return ['aprobada', 'Aprobada'];
         if (rev === 'enviada') return ['revision', din ? 'Enviada · esperando a la Secretaría' : 'Por revisar'];
@@ -347,7 +349,7 @@
             </li>`).join('')}</ul></section>`;
     }
     function estadoChip(a) {
-        if (a.ejecutada === true) { const completos = a.requeridos.every((d) => (a.documentos[d.tipo] || []).length); return completos ? '<span class="chip emp-ok">Ejecutada · documentos completos</span>' : '<span class="chip emp-pend">Ejecutada · faltan documentos</span>'; }
+        if (a.ejecutada === true) { const completos = a.requeridos.every((d) => archivosDe(a, d.tipo).length); return completos ? '<span class="chip emp-ok">Ejecutada · documentos completos</span>' : '<span class="chip emp-pend">Ejecutada · faltan documentos</span>'; }
         if (a.ejecutada === false) return '<span class="chip emp-no">No se ejecutó</span>';
         return '<span class="chip">Pendiente</span>';
     }
@@ -362,7 +364,7 @@
         // La Secretaría solo registra la sesión cuando el emprendimiento no tiene dinamizadora asignada
         const registra = esDin || (esSec && !(fichaActual && fichaActual.dinamizadora));
         const fija = !registra || (esDin && (rev === 'enviada' || rev === 'aprobada'));
-        const completa = a.ejecutada === true ? a.requeridos.every((d) => (a.documentos[d.tipo] || []).length) : a.ejecutada === false && !!a.motivo;
+        const completa = a.ejecutada === true ? a.requeridos.every((d) => archivosDe(a, d.tipo).length) : a.ejecutada === false && !!a.motivo;
         const comentarios = a.comentarios || [];
         const devolucion = rev === 'devuelta' ? [...comentarios].reverse().find((c) => c.estado === 'devuelta') : null;
         return `<li class="emp-act ${a.ejecutada === true ? 'es-si' : a.ejecutada === false ? 'es-no' : ''} ${rev ? 'rev-' + rev : ''}" data-act="${clave}">
@@ -383,7 +385,7 @@
                 <input type="date" id="fecha-${clave}" class="campo campo-mini" data-fecha value="${esc(a.fecha || '')}" ${fija ? 'disabled' : ''}>
                 <p class="emp-pregunta">${fija ? 'Documentos' : 'Documentos que debes subir'}</p>
                 <ul class="emp-docs lista-limpia">${a.requeridos.map((d) => {
-                    const lista = a.documentos[d.tipo] || [];
+                    const lista = archivosDe(a, d.tipo);
                     return `<li class="emp-doc emp-doc-grupo ${lista.length ? 'subido' : ''}">
                         <div class="emp-doc-cabeza">
                             <span class="emp-doc-icono" aria-hidden="true">${lista.length ? '✓' : d.tipo === 'acta' ? '📝' : '🧰'}</span>
