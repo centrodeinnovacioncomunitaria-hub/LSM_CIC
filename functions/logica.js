@@ -1027,25 +1027,37 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     ...[['A14'], ['A15'], ['A16'], ['A17']].map((h, i) => ({ ruta: 'ser', n: i + 1, nombre: `Ruta SER · Taller ${i + 1}`, titulo: TITULOS_SER[i], herramientas: h })),
   ];
   const TIPOS_DOCUMENTO = ['acta', 'herramienta'];
+  // Cada sesión admite varios archivos por tipo, subidos uno por uno. Claves: 'acta', 'acta_2'… y 'herramienta', 'herramienta_2'…
+  const MAX_POR_TIPO = 12;
+  const tipoDeClave = (k) => String(k).split('_')[0];
+  const numeroDeClave = (k) => Number(String(k).split('_')[1] || 1);
+  const claveValida = (k) => /^(acta|herramienta)(_([2-9]|1[0-2]))?$/.test(String(k || ''));
+  const clavesDe = (docs, tipo) => Object.keys(docs || {}).filter((k) => claveValida(k) && tipoDeClave(k) === tipo && docs[k]).sort((a, b) => numeroDeClave(a) - numeroDeClave(b));
+  const tieneTipo = (docs, tipo) => clavesDe(docs, tipo).length > 0;
+  const documentosCompletos = (docs) => TIPOS_DOCUMENTO.every((t) => tieneTipo(docs, t));
   const TIPOS_ARCHIVO = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
   const MAX_BYTES_DOCUMENTO = 5 * 1024 * 1024;
   const CARACTERES_POR_PARTE = 900000; // cada documento de Firestore admite hasta 1 MiB
   const actividadDe = (ruta, n) => ACTIVIDADES.find((a) => a.ruta === ruta && a.n === Number(n)) || null;
   const idSeguimiento = (emp, a) => `${emp}_${a.ruta}_${a.n}`;
   const requeridos = (a) => [
-    { tipo: 'acta', nombre: 'Acta de la sesión', detalle: 'Firmada por la emprendedora y la dinamizadora (foto o PDF).' },
-    { tipo: 'herramienta', nombre: `Herramienta${a.herramientas.length > 1 ? 's' : ''} ${a.herramientas.join(', ')} diligenciada${a.herramientas.length > 1 ? 's' : ''}`, detalle: 'Foto o PDF de la herramienta trabajada en la sesión.' },
+    { tipo: 'acta', nombre: 'Documentos de la sesión', detalle: 'Acta firmada, informe de la sesión, registro fotográfico, lista de asistencia, evaluación de comprensión temática… Súbelos uno por uno (foto o PDF).' },
+    { tipo: 'herramienta', nombre: `Herramienta${a.herramientas.length > 1 ? 's' : ''} ${a.herramientas.join(', ')} diligenciada${a.herramientas.length > 1 ? 's' : ''}`, detalle: 'Foto o PDF de la herramienta trabajada en la sesión. Si son varias hojas, súbelas una por una.' },
   ];
   const metaDocumento = (m) => (m ? { nombre: m.nombre, mime: m.mime, bytes: m.bytes, subido_en: m.subido_en, drive_url: m.drive_url || null, drive_pendiente: !!m.drive_pendiente } : null);
   // Copia en Google Drive: «CIC · Documentos de seguimiento / Satélite / Emprendimiento · CC / HACER · Semana N»
   const driveActivo = () => !!(drive && (!drive.activo || drive.activo()));
   const nombreSatelite = (id) => (SATELITES[id] ? `${SATELITES[id].departamento} · ${SATELITES[id].municipios.join(' y ')}` : 'Sin satélite');
   const rutaDrive = (e, a) => [nombreSatelite(e.satelite), `${e.nombre} · CC ${e.cedula}`, a.ruta === 'hacer' ? `HACER · Semana ${a.n}` : `SER · Taller ${a.n}`];
-  const nombreDrive = (a, tipo, mime, fecha) => `${tipo === 'acta' ? 'Acta de la sesión' : `Herramientas ${a.herramientas.join('-')}`}${fecha ? ` · ${fecha}` : ''}.${TIPOS_ARCHIVO[mime] || 'bin'}`;
-  async function copiarEnDrive(e, a, tipo, mime, base64, fecha, anterior) {
+  const nombreDrive = (a, clave, mime, fecha) => {
+    const n = numeroDeClave(clave);
+    const base = tipoDeClave(clave) === 'acta' ? 'Documento de la sesión' : `Herramientas ${a.herramientas.join('-')}`;
+    return `${base}${n > 1 ? ` (${n})` : ''}${fecha ? ` · ${fecha}` : ''}.${TIPOS_ARCHIVO[mime] || 'bin'}`;
+  };
+  async function copiarEnDrive(e, a, clave, mime, base64, fecha, anterior) {
     if (!driveActivo()) return {};
     try {
-      const r = await drive({ accion: 'subir', ruta: rutaDrive(e, a), nombre: nombreDrive(a, tipo, mime, fecha), mime, base64, reemplazar: (anterior && anterior.drive_id) || null });
+      const r = await drive({ accion: 'subir', ruta: rutaDrive(e, a), nombre: nombreDrive(a, clave, mime, fecha), mime, base64, reemplazar: (anterior && anterior.drive_id) || null });
       return r && r.id ? { drive_id: r.id, drive_url: r.url || null, drive_pendiente: false } : { drive_pendiente: true };
     } catch (err) {
       console.error('No se pudo copiar en Drive:', err.message);
@@ -1060,7 +1072,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
       total: ACTIVIDADES.length,
       ejecutadas: ejecutadas.length,
       no_ejecutadas: filas.filter((x) => x.ejecutada === false).length,
-      con_documentos: ejecutadas.filter((x) => TIPOS_DOCUMENTO.every((t) => x.documentos && x.documentos[t])).length,
+      con_documentos: ejecutadas.filter((x) => documentosCompletos(x.documentos)).length,
       por_revisar: filas.filter((x) => estadoRevision(x) === 'enviada').length,
       aprobadas: filas.filter((x) => estadoRevision(x) === 'aprobada').length,
       devueltas: filas.filter((x) => estadoRevision(x) === 'devuelta').length,
@@ -1084,7 +1096,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const avance = (id) => avanceDe(porPersona[id] || []);
     avance.celdas = (id) => Object.fromEntries((porPersona[id] || []).map((x) => [`${x.ruta}_${x.n}`, {
       e: typeof x.ejecutada === 'boolean' ? x.ejecutada : null,
-      d: TIPOS_DOCUMENTO.every((t) => x.documentos && x.documentos[t]),
+      d: documentosCompletos(x.documentos),
       r: estadoRevision(x), f: x.fecha || null, c: (x.comentarios || []).length,
     }]));
     avance.aprendizaje = (id) => {
@@ -1122,7 +1134,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   async function documentosSinDrive() {
     const faltan = [];
     for (const x of await lista(col('seguimiento'))) {
-      for (const t of TIPOS_DOCUMENTO) { const m = x.documentos && x.documentos[t]; if (m && !m.drive_id) faltan.push([x, t]); }
+      for (const k of Object.keys(x.documentos || {}).filter(claveValida)) { const m = x.documentos[k]; if (m && !m.drive_id) faltan.push([x, k]); }
     }
     return faltan;
   }
@@ -1209,7 +1221,8 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
         return {
           ruta: a.ruta, n: a.n, nombre: a.nombre, titulo: a.titulo, herramientas: a.herramientas, requeridos: requeridos(a),
           ejecutada: x ? x.ejecutada : null, fecha: x ? x.fecha || null : null, motivo: x ? x.motivo || null : null,
-          documentos: Object.fromEntries(TIPOS_DOCUMENTO.map((t) => [t, metaDocumento(x && x.documentos && x.documentos[t])])),
+          // Por tipo, la lista de archivos subidos (cada uno con su clave para verlo, reemplazarlo o quitarlo)
+          documentos: Object.fromEntries(TIPOS_DOCUMENTO.map((t) => [t, clavesDe(x && x.documentos, t).map((k) => ({ clave: k, ...metaDocumento(x.documentos[k]) }))])),
           revision: vistaRevision(x), comentarios: vistaComentarios(x),
         };
       }),
@@ -1312,7 +1325,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     const fila = await datos(col('seguimiento').doc(id));
     if (!fila || typeof fila.ejecutada !== 'boolean') throw new Falla(400, 'ejecutada', 'Primero marca si la actividad se ejecutó.');
     exigirEditable(p, fila);
-    if (fila.ejecutada && !TIPOS_DOCUMENTO.every((t) => fila.documentos && fila.documentos[t])) throw new Falla(400, 'documentos', 'Antes de enviarla, sube el acta de la sesión y la herramienta diligenciada.');
+    if (fila.ejecutada && !documentosCompletos(fila.documentos)) throw new Falla(400, 'documentos', 'Antes de enviarla, sube al menos un documento de la sesión y la herramienta diligenciada.');
     if (!fila.ejecutada && !fila.motivo) throw new Falla(400, 'motivo', 'Antes de enviarla, escribe y guarda por qué no se ejecutó.');
     const nota = texto(b.nota, 1000);
     const comentarios = [...(fila.comentarios || []), ...(nota ? [comentario(p, nota, 'enviada')] : [])];
@@ -1332,7 +1345,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
       `La dinamizadora ${p.nombre} envió documentos para tu aprobación.`, '',
       `Emprendimiento: ${e.nombre}${e.negocio ? ` (${e.negocio})` : ''}`,
       `Actividad: ${actividad}`,
-      fila.ejecutada ? `Sesión del ${fila.fecha || 'día sin indicar'} · acta y herramienta adjuntas en la plataforma.` : `No se ejecutó. Motivo: ${fila.motivo}`,
+      fila.ejecutada ? `Sesión del ${fila.fecha || 'día sin indicar'} · ${clavesDe(fila.documentos, 'acta').length} documento(s) de la sesión y ${clavesDe(fila.documentos, 'herramienta').length} archivo(s) de herramientas en la plataforma.` : `No se ejecutó. Motivo: ${fila.motivo}`,
       nota ? `\nMensaje de la dinamizadora: «${nota}»` : '', '',
       `Para revisarla: entra a ${PANEL_SOPORTE.replace(/admin\/$/, '')} con tu cédula, elige «Secretaria», abre «Seguimiento» y toca «Abrir tarjetas» en ese emprendimiento.`,
       'Ahí respondes «¿Se aprueban los documentos?» con Sí o No y le dejas tus comentarios.',
@@ -1417,39 +1430,52 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     if (!base64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) throw new Falla(400, 'archivo', 'No pudimos leer el archivo. Intenta de nuevo.');
     const bytes = Buffer.from(base64, 'base64').length;
     if (bytes > MAX_BYTES_DOCUMENTO) throw new Falla(400, 'archivo', 'El archivo pesa más de 5 MB. Toma la foto con menos resolución o comprime el PDF.');
-    const base = `${id}_${b.tipo}`;
+    const docs = fila.documentos || {};
+    let clave;
+    if (b.clave) {
+      if (!claveValida(b.clave) || tipoDeClave(b.clave) !== b.tipo || !docs[b.clave]) throw new Falla(404, 'no_existe', 'Ese documento ya no existe. Vuelve a abrir la sesión.');
+      clave = b.clave;
+    } else {
+      const usadas = clavesDe(docs, b.tipo);
+      if (usadas.length >= MAX_POR_TIPO) throw new Falla(400, 'limite', `Ya hay ${MAX_POR_TIPO} archivos en esta parte. Quita alguno o júntalos en un PDF.`);
+      const libre = Array.from({ length: MAX_POR_TIPO }, (_, i) => (i ? `${b.tipo}_${i + 1}` : b.tipo)).find((k) => !docs[k]);
+      clave = libre;
+    }
+    const base = `${id}_${clave}`;
     const partes = Math.ceil(base64.length / CARACTERES_POR_PARTE);
     for (let i = 0; i < partes; i++) await col('documentos').doc(`${base}_${i}`).set({ parte: base64.slice(i * CARACTERES_POR_PARTE, (i + 1) * CARACTERES_POR_PARTE) });
-    const anterior = fila.documentos && fila.documentos[b.tipo];
+    const anterior = docs[clave];
     if (anterior && anterior.partes > partes) await borrarPartes(base, partes, anterior.partes);
     const nombre = (texto(b.nombre, 120) || b.tipo).replace(/[\\/:*?"<>|]+/g, '_');
-    const enDrive = await copiarEnDrive(e, a, b.tipo, mime, base64, fila.fecha, anterior);
-    await col('seguimiento').doc(id).set({ ...fila, documentos: { ...(fila.documentos || {}), [b.tipo]: { nombre, mime, bytes, partes, subido_por: p.id, subido_en: hoy(), ...enDrive } } });
+    const enDrive = await copiarEnDrive(e, a, clave, mime, base64, fila.fecha, anterior);
+    await col('seguimiento').doc(id).set({ ...fila, documentos: { ...docs, [clave]: { nombre, mime, bytes, partes, subido_por: p.id, subido_en: hoy(), ...enDrive } } });
     return verSeguimiento(token, b);
   }
   async function verDocumento(token, b) {
     const { e } = await emprendimientoPermitido(token, b.cedula);
     const a = actividadDe(b.ruta, b.n);
-    const fila = a && TIPOS_DOCUMENTO.includes(b.tipo) ? await datos(col('seguimiento').doc(idSeguimiento(e.id, a))) : null;
-    const m = fila && fila.documentos && fila.documentos[b.tipo];
+    const clave = b.clave || b.tipo;
+    const fila = a && claveValida(clave) ? await datos(col('seguimiento').doc(idSeguimiento(e.id, a))) : null;
+    const m = fila && fila.documentos && fila.documentos[clave];
     if (!m) throw new Falla(404, 'no_existe', 'Ese documento todavía no se ha subido.');
     let base64 = '';
-    for (let i = 0; i < m.partes; i++) { const parte = await datos(col('documentos').doc(`${idSeguimiento(e.id, a)}_${b.tipo}_${i}`)); base64 += parte ? parte.parte : ''; }
+    for (let i = 0; i < m.partes; i++) { const parte = await datos(col('documentos').doc(`${idSeguimiento(e.id, a)}_${clave}_${i}`)); base64 += parte ? parte.parte : ''; }
     return { nombre: m.nombre, mime: m.mime, base64 };
   }
   async function quitarDocumento(token, b) {
     const { p, e } = await emprendimientoPermitido(token, b.cedula);
     const a = actividadDe(b.ruta, b.n);
-    if (!a || !TIPOS_DOCUMENTO.includes(b.tipo)) throw new Falla(400, 'tipo', 'Ese documento no existe.');
+    const clave = b.clave || b.tipo;
+    if (!a || !claveValida(clave)) throw new Falla(400, 'tipo', 'Ese documento no existe.');
     const id = idSeguimiento(e.id, a);
     const fila = await datos(col('seguimiento').doc(id));
     exigirEditable(p, fila);
-    const m = fila && fila.documentos && fila.documentos[b.tipo];
+    const m = fila && fila.documentos && fila.documentos[clave];
     if (m) {
       if (m.drive_id && driveActivo()) await drive({ accion: 'quitar', id: m.drive_id }).catch((err) => console.error('Drive:', err.message));
-      await borrarPartes(`${id}_${b.tipo}`, 0, m.partes);
+      await borrarPartes(`${id}_${clave}`, 0, m.partes);
       const documentos = { ...fila.documentos };
-      delete documentos[b.tipo];
+      delete documentos[clave];
       await col('seguimiento').doc(id).set({ ...fila, documentos });
     }
     return verSeguimiento(token, b);

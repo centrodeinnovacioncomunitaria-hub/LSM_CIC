@@ -443,11 +443,12 @@ function cuentasFalsas() {
   await falla('subir-documento', { ...act, tipo: 'otro', mime: 'image/jpeg', base64: 'AAAA' }, tDina, 400);
   const grande = Buffer.alloc(2 * 1024 * 1024, 7).toString('base64'); // 2 MB → varias partes
   sg = await ok('subir-documento', { ...act, tipo: 'acta', mime: 'application/pdf', nombre: 'acta semana 1.pdf', base64: grande }, tDina);
-  assert.equal(sg.actividades[0].documentos.acta.bytes, 2 * 1024 * 1024);
+  assert.equal(sg.actividades[0].documentos.acta[0].bytes, 2 * 1024 * 1024);
+  assert.equal(sg.actividades[0].requeridos[0].nombre, 'Documentos de la sesión');
   assert.equal(sg.avance.con_documentos, 0, 'falta la herramienta');
   const doc = await ok('ver-documento', { ...act, tipo: 'acta' }, tSara);
   assert.equal(doc.base64, grande, 'la Secretaría descarga el archivo completo, armado desde sus partes');
-  await ok('subir-documento', { ...act, tipo: 'acta', mime: 'image/png', nombre: 'acta.png', base64: 'iVBORw0KGgo=' }, tDina);
+  await ok('subir-documento', { ...act, tipo: 'acta', clave: 'acta', mime: 'image/png', nombre: 'acta.png', base64: 'iVBORw0KGgo=' }, tDina); // reemplaza el primero
   assert.ok(!db.datos.has('documentos/' + tRosa + '_hacer_1_acta_1'), 'al reemplazar, se borran las partes sobrantes');
   sg = await ok('subir-documento', { ...act, tipo: 'herramienta', mime: 'image/jpeg', nombre: 'a1.jpg', base64: '/9j/4AAQ' }, tDina);
   assert.equal(sg.avance.con_documentos, 1);
@@ -457,7 +458,19 @@ function cuentasFalsas() {
   assert.equal(sg.actividades[7].motivo, 'La emprendedora estaba enferma');
   assert.equal(sg.avance.no_ejecutadas, 1);
   sg = await ok('quitar-documento', { ...act, tipo: 'herramienta' }, tDina);
-  assert.equal(sg.actividades[0].documentos.herramienta, null);
+  assert.deepEqual(sg.actividades[0].documentos.herramienta, []);
+  // Varios documentos de la sesión, uno por uno: informe, fotos, asistencia…
+  sg = await ok('subir-documento', { ...act, tipo: 'acta', mime: 'application/pdf', nombre: 'informe.pdf', base64: 'JVBERi0x' }, tDina);
+  sg = await ok('subir-documento', { ...act, tipo: 'acta', mime: 'image/jpeg', nombre: 'fotos.jpg', base64: '/9j/4AAQ' }, tDina);
+  assert.deepEqual(sg.actividades[0].documentos.acta.map((d) => d.nombre), ['acta.png', 'informe.pdf', 'fotos.jpg'], 'se suman, no se reemplazan');
+  assert.deepEqual(sg.actividades[0].documentos.acta.map((d) => d.clave), ['acta', 'acta_2', 'acta_3']);
+  assert.equal((await ok('ver-documento', { ...act, clave: 'acta_2' }, tSara)).nombre, 'informe.pdf');
+  sg = await ok('quitar-documento', { ...act, clave: 'acta_2' }, tDina);
+  assert.deepEqual(sg.actividades[0].documentos.acta.map((d) => d.nombre), ['acta.png', 'fotos.jpg'], 'se quita solo ese');
+  await falla('ver-documento', { ...act, clave: 'acta_2' }, tSara, 404);
+  sg = await ok('subir-documento', { ...act, tipo: 'acta', mime: 'application/pdf', nombre: 'asistencia.pdf', base64: 'JVBERi0x' }, tDina);
+  assert.equal(sg.actividades[0].documentos.acta.find((d) => d.nombre === 'asistencia.pdf').clave, 'acta_2', 'reutiliza el lugar libre');
+  await falla('subir-documento', { ...act, tipo: 'acta', clave: 'acta_9', mime: 'image/png', base64: 'iVBORw0KGgo=' }, tDina, 404);
   em = await ok('emprendimientos', {}, tSara);
   assert.deepEqual(em.emprendimientos.find((x) => x.cedula === '44444444').avance, { total: 10, ejecutadas: 1, no_ejecutadas: 1, con_documentos: 0, por_revisar: 0, aprobadas: 0, devueltas: 0 });
   // Envío a la Secretaría Técnica, revisión con comentarios y estado para la emprendedora
@@ -562,21 +575,22 @@ function cuentasFalsas() {
   const subidas = enDrive.filter((c) => c.accion === 'subir');
   assert.ok(subidas.length >= 3, 'cada documento subido se copia en Drive');
   assert.deepEqual(subidas[0].ruta, ['Magdalena · Santa Marta', 'Rosa Emprendedora · CC 44444444', 'HACER · Semana 1']);
-  assert.equal(subidas[0].nombre, 'Acta de la sesión · 2026-10-08.pdf');
+  assert.equal(subidas[0].nombre, 'Documento de la sesión · 2026-10-08.pdf');
+  assert.ok(subidas.some((c) => c.nombre === 'Documento de la sesión (3) · 2026-10-08.jpg'), 'en Drive cada documento queda numerado');
   assert.equal(subidas[1].reemplazar, 'drv1', 'al reemplazar, el archivo anterior va a la papelera de Drive');
   assert.ok(enDrive.some((c) => c.accion === 'quitar'), 'al quitar un documento, también sale de Drive');
   await ok('asignar', { cedulas: ['44444444'], dinamizadora: '22222222' }, tSara);
   driveCaido = true;
   await ok('marcar-actividad', { ...act, n: 2, ejecutada: true }, tDina);
   sg = await ok('subir-documento', { ...act, n: 2, tipo: 'herramienta', mime: 'image/jpeg', nombre: 'a1.jpg', base64: '/9j/4AAQ' }, tDina);
-  assert.equal(sg.actividades[1].documentos.herramienta.drive_pendiente, true, 'si Drive falla, el documento queda en la plataforma y pendiente');
+  assert.equal(sg.actividades[1].documentos.herramienta[0].drive_pendiente, true, 'si Drive falla, el documento queda en la plataforma y pendiente');
   assert.equal((await ok('emprendimientos', {}, tSara)).drive.pendientes, 1);
   await falla('sincronizar-drive', {}, tDina, 403);
   driveCaido = false;
   const sync = await ok('sincronizar-drive', {}, tSara);
   assert.deepEqual(sync, { enviados: 1, pendientes: 0 });
   sg = await ok('seguimiento', { cedula: '44444444' }, tDina);
-  assert.ok(sg.actividades[1].documentos.herramienta.drive_url.startsWith('https://drive.google.com/'));
+  assert.ok(sg.actividades[1].documentos.herramienta[0].drive_url.startsWith('https://drive.google.com/'));
   await ok('asignar', { cedulas: ['44444444'], dinamizadora: null }, tSara);
   paso('Documentos de seguimiento: copia en Google Drive por satélite, emprendimiento y semana; pendientes se reenvían');
 

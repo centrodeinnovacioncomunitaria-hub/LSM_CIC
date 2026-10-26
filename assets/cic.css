@@ -1883,3 +1883,14 @@ dialog { overflow-x: hidden; }
 .res-item.res-mal { border-left-color: var(--coralp); background: #FDF0EC; }
 .res-enunciado { font-weight: 700; }
 .res-justificacion { color: #3d5a4d; font-size: .98em; }
+
+/* ---------- Varios documentos por sesión: cada parte con su lista de archivos y «+ Agregar otro documento» ---------- */
+.emp-doc.emp-doc-grupo { display: block; }
+.emp-doc-cabeza { display: grid; grid-template-columns: auto 1fr; gap: .2rem .7rem; align-items: center; }
+.emp-doc-cuenta { font-weight: 600; color: #4F6B5E; }
+.emp-archivos { display: grid; gap: .35rem; margin: .6rem 0 .6rem 2.4rem; }
+.emp-archivo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .3rem .8rem; background: #fff; border: 1px solid var(--linea); border-radius: .7rem; padding: .45rem .7rem; }
+.emp-archivo-nombre { overflow-wrap: anywhere; font-size: .92rem; }
+.emp-archivo-acciones { display: flex; align-items: center; gap: .6rem; }
+.emp-doc-grupo > .emp-subir { margin: .3rem 0 0 2.4rem; }
+@media (max-width: 560px) { .emp-archivos, .emp-doc-grupo > .emp-subir { margin-left: 0; } }

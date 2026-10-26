@@ -1,6 +1,6 @@
 // Emprendimientos: la Secretaría Técnica asigna cada emprendimiento a una dinamizadora de su satélite y la
 // dinamizadora chulea si cada actividad (6 semanas HACER y 4 talleres SER) se ejecutó; si se ejecutó, sube el
-// acta de la sesión y la herramienta diligenciada. Lo usa la vista «Seguimiento» de index.html.
+// los documentos de la sesión (acta, informe, fotos, asistencia…) y la herramienta diligenciada, uno por uno. Lo usa la vista «Seguimiento» de index.html.
 (() => {
     'use strict';
     let C = null; // contexto de la página: perfil, llamar, aviso, esc, satelite, SATELITES, DEMO
@@ -117,7 +117,7 @@
         cuentaSeccion(cont, items.length);
         cont.innerHTML = `
             <h2>Revisar sesiones enviadas</h2>
-            <p class="vista-intro">Las dinamizadoras enviaron estas sesiones con el acta y la herramienta. Toca <b>Revisar</b>, mira los documentos y responde si se aprueban.</p>
+            <p class="vista-intro">Las dinamizadoras enviaron estas sesiones con los documentos de la sesión y la herramienta. Toca <b>Revisar</b>, mira los documentos y responde si se aprueban.</p>
             ${items.length ? `<ul class="lista-limpia tarea-lista">${items.map(({ x, r, n, f }) => `<li class="tarea-fila">
                 <span class="tarea-fila-icono c-revision" aria-hidden="true">📄</span>
                 <div class="tarea-fila-texto"><b>${esc(nombreAct(r, n))} de ${esc(x.nombre)}</b><small>${esc(x.negocio || 'Sin nombre de negocio')} · enviada por ${esc(x.dinamizadora_nombre || 'la dinamizadora')}${f ? ` · sesión del ${esc(f)}` : ''}</small></div>
@@ -271,7 +271,7 @@
         const visibles = lista.filter((x) => !t || [x.nombre, x.negocio, x.municipio].join(' ').toLowerCase().includes(t));
         cont.innerHTML = `
             <h2>Mis emprendedoras</h2>
-            <p class="vista-intro">Después de cada sesión, toca el botón rojo de la emprendedora y sigue los pasos: <b>¿se hizo?</b> → <b>sube el acta y la herramienta</b> → <b>envía a la Secretaría</b>.</p>
+            <p class="vista-intro">Después de cada sesión, toca el botón rojo de la emprendedora y sigue los pasos: <b>¿se hizo?</b> → <b>sube los documentos de la sesión y la herramienta</b> → <b>envía a la Secretaría</b>.</p>
             ${devueltas.length ? `<div class="aviso-correcciones" role="alert"><p><b>⚠ La Secretaría te pidió corregir ${devueltas.length === 1 ? 'una sesión' : `${devueltas.length} sesiones`}</b></p>
                 <ul class="lista-limpia">${devueltas.map(({ x, r, n }) => `<li><span>${esc(nombreAct(r, n))} de ${esc(x.nombre)}</span><button type="button" class="btn btn-primario btn-pequeno" data-ver="${esc(x.cedula)}" data-foco="${r}-${n}">Corregir ›</button></li>`).join('')}</ul></div>` : ''}
             ${lista.length > 6 ? `<div class="controles" style="margin-top:0"><div><label class="etiqueta" for="mias-buscar">Buscar emprendedora</label><input id="mias-buscar" class="campo" type="search" value="${esc(H.texto || '')}"></div></div>` : ''}
@@ -315,7 +315,7 @@
     // Estado de una sesión en palabras, según quién mira
     function estadoSesion(a) {
         const rev = a.revision ? a.revision.estado : null;
-        const docs = a.requeridos.every((d) => a.documentos[d.tipo]);
+        const docs = a.requeridos.every((d) => (a.documentos[d.tipo] || []).length);
         const din = C.perfil.rol === 'dinamizadora';
         if (rev === 'aprobada') return ['aprobada', 'Aprobada'];
         if (rev === 'enviada') return ['revision', din ? 'Enviada · esperando a la Secretaría' : 'Por revisar'];
@@ -347,11 +347,11 @@
             </li>`).join('')}</ul></section>`;
     }
     function estadoChip(a) {
-        if (a.ejecutada === true) { const completos = a.requeridos.every((d) => a.documentos[d.tipo]); return completos ? '<span class="chip emp-ok">Ejecutada · documentos completos</span>' : '<span class="chip emp-pend">Ejecutada · faltan documentos</span>'; }
+        if (a.ejecutada === true) { const completos = a.requeridos.every((d) => (a.documentos[d.tipo] || []).length); return completos ? '<span class="chip emp-ok">Ejecutada · documentos completos</span>' : '<span class="chip emp-pend">Ejecutada · faltan documentos</span>'; }
         if (a.ejecutada === false) return '<span class="chip emp-no">No se ejecutó</span>';
         return '<span class="chip">Pendiente</span>';
     }
-    // Tarjeta de cada sesión. Dinamizadora: marca si se hizo, sube acta y herramienta y la envía a la Secretaría.
+    // Tarjeta de cada sesión. Dinamizadora: marca si se hizo, sube los documentos y la herramienta y la envía a la Secretaría.
     // Secretaría: ve lo mismo y responde «¿Se aprueban los documentos?» con Sí o No, con sus comentarios.
     let fichaActual = null;
     function tarjetaActividad(a) {
@@ -362,7 +362,7 @@
         // La Secretaría solo registra la sesión cuando el emprendimiento no tiene dinamizadora asignada
         const registra = esDin || (esSec && !(fichaActual && fichaActual.dinamizadora));
         const fija = !registra || (esDin && (rev === 'enviada' || rev === 'aprobada'));
-        const completa = a.ejecutada === true ? a.requeridos.every((d) => a.documentos[d.tipo]) : a.ejecutada === false && !!a.motivo;
+        const completa = a.ejecutada === true ? a.requeridos.every((d) => (a.documentos[d.tipo] || []).length) : a.ejecutada === false && !!a.motivo;
         const comentarios = a.comentarios || [];
         const devolucion = rev === 'devuelta' ? [...comentarios].reverse().find((c) => c.estado === 'devuelta') : null;
         return `<li class="emp-act ${a.ejecutada === true ? 'es-si' : a.ejecutada === false ? 'es-no' : ''} ${rev ? 'rev-' + rev : ''}" data-act="${clave}">
@@ -383,15 +383,17 @@
                 <input type="date" id="fecha-${clave}" class="campo campo-mini" data-fecha value="${esc(a.fecha || '')}" ${fija ? 'disabled' : ''}>
                 <p class="emp-pregunta">${fija ? 'Documentos' : 'Documentos que debes subir'}</p>
                 <ul class="emp-docs lista-limpia">${a.requeridos.map((d) => {
-                    const m = a.documentos[d.tipo];
-                    return `<li class="emp-doc ${m ? 'subido' : ''}">
-                        <span class="emp-doc-icono" aria-hidden="true">${m ? '✓' : d.tipo === 'acta' ? '📝' : '🧰'}</span>
-                        <div class="emp-doc-texto"><b>${esc(d.nombre)}</b><small>${m ? `${esc(m.nombre)} · ${kb(m.bytes)}` : fija ? 'No se subió' : esc(d.detalle)}</small>${m && m.drive_url && esSec ? `<a class="emp-drive" href="${esc(m.drive_url)}" target="_blank" rel="noopener">Abrir en Google Drive</a>` : m && m.drive_url ? '<small class="emp-drive-ok">✓ Copia guardada en Google Drive</small>' : m && m.drive_pendiente ? '<small class="emp-drive-pend">Copia en Google Drive pendiente</small>' : ''}</div>
-                        <div class="emp-doc-acciones">
-                            ${m ? `<button type="button" class="btn btn-borde btn-pequeno" data-ver-doc="${d.tipo}">Ver</button>` : ''}
-                            ${fija ? '' : `<label class="btn ${m ? 'btn-borde' : 'btn-primario'} btn-pequeno emp-subir">${m ? 'Reemplazar' : 'Subir foto o PDF'}<input type="file" accept="image/*,application/pdf" data-subir="${d.tipo}" hidden></label>
-                            ${m ? `<button type="button" class="boton-texto emp-quitar" data-quitar-doc="${d.tipo}">Quitar</button>` : ''}`}
+                    const lista = a.documentos[d.tipo] || [];
+                    return `<li class="emp-doc emp-doc-grupo ${lista.length ? 'subido' : ''}">
+                        <div class="emp-doc-cabeza">
+                            <span class="emp-doc-icono" aria-hidden="true">${lista.length ? '✓' : d.tipo === 'acta' ? '📝' : '🧰'}</span>
+                            <div class="emp-doc-texto"><b>${esc(d.nombre)}${lista.length ? ` <span class="emp-doc-cuenta">(${lista.length})</span>` : ''}</b><small>${fija && !lista.length ? 'No se subió' : esc(d.detalle)}</small></div>
                         </div>
+                        ${lista.length ? `<ul class="lista-limpia emp-archivos">${lista.map((m) => `<li class="emp-archivo">
+                            <span class="emp-archivo-nombre">📄 ${esc(m.nombre)} <small>· ${kb(m.bytes)}</small>${m.drive_url && esSec ? ` <a class="emp-drive" href="${esc(m.drive_url)}" target="_blank" rel="noopener">Abrir en Google Drive</a>` : m.drive_url ? ' <small class="emp-drive-ok">✓ copia en Google Drive</small>' : m.drive_pendiente ? ' <small class="emp-drive-pend">copia en Google Drive pendiente</small>' : ''}</span>
+                            <span class="emp-archivo-acciones"><button type="button" class="btn btn-borde btn-pequeno" data-ver-doc="${esc(m.clave)}">Ver</button>${fija ? '' : `<button type="button" class="boton-texto emp-quitar" data-quitar-doc="${esc(m.clave)}">Quitar</button>`}</span>
+                        </li>`).join('')}</ul>` : ''}
+                        ${fija ? '' : `<label class="btn ${lista.length ? 'btn-borde' : 'btn-primario'} btn-pequeno emp-subir">${lista.length ? '+ Agregar otro documento' : 'Subir foto o PDF'}<input type="file" accept="image/*,application/pdf" data-subir="${d.tipo}" multiple hidden></label>`}
                     </li>`;
                 }).join('')}</ul>` : ''}
             ${a.ejecutada === false ? `
@@ -429,7 +431,7 @@
             if (rev === 'enviada') return `<p class="emp-revision emp-estado-envio">📨 Enviada a la Secretaría Técnica (${esc(fechaCorta(a.revision.enviada_en))}). Le llegó un correo y te avisaremos aquí cuando la revise.</p>`;
             if (rev === 'aprobada') return `<p class="emp-revision paso-ok">✓ Aprobada${a.revision.revisada_por_nombre ? ` por ${esc(a.revision.revisada_por_nombre)}` : ''} el ${esc(fechaCorta(a.revision.revisada_en))}</p>`;
             return `<div class="emp-revision">
-                ${completa ? '' : `<p class="ayuda-campo">${a.ejecutada ? 'Sube el acta y la herramienta para poder enviarla.' : 'Escribe y guarda el motivo para poder enviarla.'}</p>`}
+                ${completa ? '' : `<p class="ayuda-campo">${a.ejecutada ? 'Sube al menos un documento de la sesión y la herramienta para poder enviarla.' : 'Escribe y guarda el motivo para poder enviarla.'}</p>`}
                 <label class="etiqueta" for="nota-${a.ruta}-${a.n}">Mensaje para la Secretaría <small>(opcional)</small></label>
                 <textarea id="nota-${a.ruta}-${a.n}" class="campo" rows="2" maxlength="1000" data-nota-envio placeholder="Por ejemplo: la emprendedora firmó el acta al final de la sesión"></textarea>
                 <button type="button" class="btn btn-primario emp-enviar" data-enviar-act ${completa ? '' : 'disabled'}>${rev === 'devuelta' ? 'Volver a enviar a la Secretaría Técnica' : 'Enviar a la Secretaría Técnica'}</button>
@@ -535,13 +537,13 @@
             if (v) {
                 const ventana = window.open('', '_blank');
                 if (ventana) ventana.document.write('<p style="font-family:sans-serif;padding:2rem">Abriendo el documento…</p>');
-                try { abrirDocumento(await C.llamar('ver-documento', { ...actividad(v), tipo: v.dataset.verDoc }, true), ventana); } catch (err) { if (ventana) ventana.close(); C.aviso(err.message); }
+                try { abrirDocumento(await C.llamar('ver-documento', { ...actividad(v), clave: v.dataset.verDoc }, true), ventana); } catch (err) { if (ventana) ventana.close(); C.aviso(err.message); }
                 return;
             }
             const q = t.closest('[data-quitar-doc]');
             if (q) {
-                if (!confirm('¿Quitar este documento? Tendrás que subirlo de nuevo.')) return;
-                try { actualizar(await C.llamar('quitar-documento', { ...actividad(q), tipo: q.dataset.quitarDoc }, true)); } catch (err) { C.aviso(err.message); }
+                if (!confirm('¿Quitar este documento? Los demás se quedan.')) return;
+                try { actualizar(await C.llamar('quitar-documento', { ...actividad(q), clave: q.dataset.quitarDoc }, true)); C.aviso('Documento quitado.'); } catch (err) { C.aviso(err.message); }
             }
         };
         cont.onchange = async (ev) => {
@@ -550,15 +552,20 @@
                 try { actualizar(await C.llamar('marcar-actividad', { ...actividad(t), ejecutada: true, fecha: t.value }, true)); C.aviso('Fecha guardada.'); } catch (err) { C.aviso(err.message); }
                 return;
             }
-            if (t.matches('[data-subir]') && t.files && t.files[0]) {
+            if (t.matches('[data-subir]') && t.files && t.files.length) {
                 const etiqueta = t.closest('.emp-subir');
+                const archivos = [...t.files];
+                const datosAct = actividad(t), tipo = t.dataset.subir;
                 etiqueta.classList.add('cargando');
-                etiqueta.firstChild.textContent = 'Subiendo…';
-                try {
-                    const archivo = await prepararArchivo(t.files[0]);
-                    actualizar(await C.llamar('subir-documento', { ...actividad(t), tipo: t.dataset.subir, ...archivo }, true));
-                    C.aviso('Documento subido.');
-                } catch (err) { C.aviso(err.message); etiqueta.classList.remove('cargando'); etiqueta.firstChild.textContent = 'Subir foto o PDF'; }
+                let ultimo = null, subidos = 0;
+                for (const [i, f] of archivos.entries()) {
+                    etiqueta.firstChild.textContent = archivos.length > 1 ? `Subiendo ${i + 1} de ${archivos.length}…` : 'Subiendo…';
+                    try { ultimo = await C.llamar('subir-documento', { ...datosAct, tipo, ...(await prepararArchivo(f)) }, true); subidos++; }
+                    catch (err) { C.aviso(`«${f.name}»: ${err.message}`); }
+                }
+                if (ultimo) actualizar(ultimo);
+                else { etiqueta.classList.remove('cargando'); etiqueta.firstChild.textContent = 'Subir foto o PDF'; }
+                if (subidos) C.aviso(subidos === 1 ? 'Documento subido.' : `Se subieron ${subidos} documentos.`);
             }
         };
     }
