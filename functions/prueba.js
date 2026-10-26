@@ -548,23 +548,42 @@ function cuentasFalsas() {
   // Tabla de seguimiento: cada actividad viene como celda
   const filaTabla = (await ok('emprendimientos', {}, tSara)).emprendimientos.find((x) => x.cedula === '44444444');
   assert.deepEqual(filaTabla.celdas.hacer_1, { e: true, d: true, r: 'aprobada', f: '2026-10-08', c: 11 }); // 11 comentarios: incluye las devoluciones de la prueba de avisos
-  // Cuestionario de aprendizaje semanal
-  await falla('responder-aprendizaje', { semana: 1, respuestas: {} }, tRosa, 403); // aún no habilitado
-  await falla('habilitar-aprendizaje', { cedula: '44444444', semana: 7 }, tDina, 400);
-  sg = await ok('habilitar-aprendizaje', { cedula: '44444444', semana: 1 }, tDina);
-  assert.equal(sg.aprendizaje[0].habilitada, true);
-  let apr = await ok('mi-aprendizaje', {}, tRosa);
-  assert.equal(apr.semanas[0].habilitada, true); assert.equal(apr.semanas[1].habilitada, false);
-  await falla('responder-aprendizaje', { semana: 1, respuestas: { aprendi: 'Registrar mis ventas' } }, tRosa, 400);
-  const resp = { aprendi: 'A registrar mis ventas cada día', aplicare: 'Un cuaderno de ventas', utilidad: 5, confianza: 4 };
-  apr = await ok('responder-aprendizaje', { semana: 1, respuestas: resp }, tRosa);
-  assert.equal(apr.semanas[0].respuestas.utilidad, 5);
-  await falla('responder-aprendizaje', { semana: 1, respuestas: resp }, tRosa, 409);
-  await falla('habilitar-aprendizaje', { cedula: '44444444', semana: 1, habilitada: false }, tDina, 409);
+  // Evaluación de comprensión temática: al marcar que la sesión se hizo, queda habilitada para la emprendedora
+  assert.equal(sg.actividades[0].evaluacion.habilitada, true);
+  let ev = await ok('mi-evaluacion', {}, tRosa);
+  assert.deepEqual(ev.sesiones.map((x) => `${x.ruta}_${x.n}`), ['hacer_1']);
+  assert.equal(ev.preguntas.filter((q) => q.n).length, 5, 'las 5 preguntas del formato');
+  await falla('responder-evaluacion', { ruta: 'hacer', n: 2, respuestas: {} }, tRosa, 403); // no habilitada
+  const resp = { aprendi: 'A registrar mis ventas cada día', aplicar: 'Con un cuaderno de ventas', claridad: 'Muy clara', metodologia: 'Adecuada', refuerzo: ['Otro'] };
+  await falla('responder-evaluacion', { ruta: 'hacer', n: 1, respuestas: resp }, tRosa, 400); // marcó «Otro» sin decir cuál
+  await falla('responder-evaluacion', { ruta: 'hacer', n: 1, respuestas: { ...resp, claridad: 'Regular', refuerzo_otro: 'Precios' } }, tRosa, 400);
+  await falla('responder-evaluacion', { ruta: 'hacer', n: 1, respuestas: { ...resp, aprendi: '', refuerzo_otro: 'Precios' } }, tRosa, 400);
+  ev = await ok('responder-evaluacion', { ruta: 'hacer', n: 1, respuestas: { ...resp, refuerzo: ['Otro', 'Cómo aplicarlo en mi emprendimiento'], refuerzo_otro: 'Cómo poner precios' } }, tRosa);
+  assert.ok(ev.sesiones[0].respondida_en);
+  await falla('responder-evaluacion', { ruta: 'hacer', n: 1, respuestas: resp }, tRosa, 409);
+  await falla('habilitar-evaluacion', { cedula: '44444444', ruta: 'hacer', n: 1, habilitada: false }, tDina, 409);
   sg = await ok('seguimiento', { cedula: '44444444' }, tSara);
-  assert.equal(sg.aprendizaje[0].respuestas.aprendi, 'A registrar mis ventas cada día');
-  assert.deepEqual((await ok('emprendimientos', {}, tSara)).emprendimientos.find((x) => x.cedula === '44444444').aprendizaje, { habilitadas: [1], respondidas: [1] });
-  await falla('mi-aprendizaje', {}, tDina, 403);
+  const evH1 = sg.actividades[0].evaluacion;
+  assert.equal(evH1.forma, 'escrita');
+  assert.equal(evH1.respuestas[0].valor, 'A registrar mis ventas cada día');
+  assert.equal(evH1.respuestas.find((r) => r.id === 'refuerzo').valor, 'Cómo aplicarlo en mi emprendimiento · Otro');
+  // Valoración: la sesión ya fue aprobada, así que la dinamizadora ya no la cambia; la Secretaría sí
+  await falla('valorar-evaluacion', { cedula: '44444444', ruta: 'hacer', n: 1, comprension: 'comprendio', aplicacion: 'comprendio' }, tDina, 409);
+  await falla('valorar-evaluacion', { cedula: '44444444', ruta: 'hacer', n: 1, comprension: 'comprendio', aplicacion: 'refuerzo' }, tSara, 400); // falta la observación
+  sg = await ok('valorar-evaluacion', { cedula: '44444444', ruta: 'hacer', n: 1, comprension: 'comprendio', aplicacion: 'parcial', acciones: 'Retomar el cuaderno de ventas' }, tSara);
+  assert.equal(sg.actividades[0].evaluacion.valoracion.general, 'parcial');
+  assert.equal(sg.actividades[0].evaluacion.valoracion.por, undefined);
+  // Forma oral: la dinamizadora escribe las palabras de la emprendedora
+  const resp2 = { aprendi: 'Separar la plata del negocio', aplicar: 'Abrir una cuenta para el negocio', claridad: 'Clara', metodologia: 'Muy adecuada', refuerzo: ['Por ahora no necesito refuerzo'] };
+  await falla('responder-evaluacion', { cedula: '44444444', ruta: 'hacer', n: 3, respuestas: resp2 }, tDina, 400); // la sesión aún no se marca
+  await ok('marcar-actividad', { cedula: '44444444', ruta: 'hacer', n: 3, ejecutada: true, fecha: '2026-10-20' }, tDina);
+  sg = await ok('responder-evaluacion', { cedula: '44444444', ruta: 'hacer', n: 3, respuestas: resp2 }, tDina);
+  const evH3 = sg.actividades.find((a) => a.ruta === 'hacer' && a.n === 3).evaluacion;
+  assert.equal(evH3.forma, 'oral'); assert.ok(evH3.transcrita_por);
+  sg = await ok('valorar-evaluacion', { cedula: '44444444', ruta: 'hacer', n: 3, comprension: 'comprendio', aplicacion: 'comprendio' }, tDina);
+  assert.equal(sg.actividades.find((a) => a.ruta === 'hacer' && a.n === 3).evaluacion.valoracion.general, 'comprendio');
+  assert.deepEqual((await ok('emprendimientos', {}, tSara)).emprendimientos.find((x) => x.cedula === '44444444').aprendizaje, { habilitadas: ['hacer_1', 'hacer_3'], respondidas: ['hacer_1', 'hacer_3'] });
+  await falla('mi-evaluacion', {}, tDina, 403);
   paso('Seguimiento: la dinamizadora envía a la Secretaría; la Secretaría aprueba o devuelve con comentarios; la emprendedora ve si se aprobó');
   await ok('asignar', { cedulas: ['44444444'], dinamizadora: null }, tSara);
   await falla('seguimiento', { cedula: '44444444' }, tDina, 403); // ya no la tiene asignada

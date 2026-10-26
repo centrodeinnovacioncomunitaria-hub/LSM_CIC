@@ -1041,7 +1041,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   const actividadDe = (ruta, n) => ACTIVIDADES.find((a) => a.ruta === ruta && a.n === Number(n)) || null;
   const idSeguimiento = (emp, a) => `${emp}_${a.ruta}_${a.n}`;
   const requeridos = (a) => [
-    { tipo: 'acta', nombre: 'Documentos de la sesión', detalle: 'Acta firmada, informe de la sesión, registro fotográfico, lista de asistencia, evaluación de comprensión temática… Súbelos uno por uno (foto o PDF).' },
+    { tipo: 'acta', nombre: 'Documentos de la sesión', detalle: 'Acta firmada, informe de la sesión, registro fotográfico, lista de asistencia… Súbelos uno por uno (foto o PDF). La evaluación de comprensión temática se llena aquí abajo, en la plataforma.' },
     { tipo: 'herramienta', nombre: `Herramienta${a.herramientas.length > 1 ? 's' : ''} ${a.herramientas.join(', ')} diligenciada${a.herramientas.length > 1 ? 's' : ''}`, detalle: 'Foto o PDF de la herramienta trabajada en la sesión. Si son varias hojas, súbelas una por una.' },
   ];
   const metaDocumento = (m) => (m ? { nombre: m.nombre, mime: m.mime, bytes: m.bytes, subido_en: m.subido_en, drive_url: m.drive_url || null, drive_pendiente: !!m.drive_pendiente } : null);
@@ -1087,7 +1087,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   }
   const vistaRevision = (x) => (x && x.revision ? { estado: x.revision.estado, enviada_en: x.revision.enviada_en || null, revisada_en: x.revision.revisada_en || null, revisada_por: x.revision.revisada_por_nombre || null } : null);
   const vistaComentarios = (x) => ((x && x.comentarios) || []).map((c) => ({ autor: c.autor, rol: c.rol, texto: c.texto, estado: c.estado || null, en: c.en }));
-  // Avance de cada emprendedora, con el estado de cada actividad (celdas de la tabla de seguimiento) y del cuestionario semanal
+  // Avance de cada emprendedora, con el estado de cada actividad (celdas de la tabla de seguimiento) y de sus evaluaciones
   async function avancePorEmprendedora() {
     const porPersona = {};
     for (const x of await lista(col('seguimiento'))) (porPersona[x.emprendedora] = porPersona[x.emprendedora] || []).push(x);
@@ -1101,7 +1101,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
     }]));
     avance.aprendizaje = (id) => {
       const filas = cuestionarios[id] || [];
-      return { habilitadas: filas.filter((x) => x.habilitada).map((x) => x.semana).sort(), respondidas: filas.filter((x) => x.respondida_en).map((x) => x.semana).sort() };
+      return { habilitadas: filas.filter((x) => x.habilitada || x.respondida_en).map(claveEvaluacion).sort(), respondidas: filas.filter((x) => x.respondida_en).map(claveEvaluacion).sort() };
     };
     return avance;
   }
@@ -1213,6 +1213,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
   async function verSeguimiento(token, b) {
     const { e } = await emprendimientoPermitido(token, b.cedula);
     const filas = Object.fromEntries((await lista(col('seguimiento').where('emprendedora', '==', e.id))).map((x) => [`${x.ruta}_${x.n}`, x]));
+    const evals = await evaluacionesDe(e.id);
     const din = e.dinamizadora_cedula ? await datos(col('directorio').doc(e.dinamizadora_cedula)) : null;
     return {
       emprendimiento: { cedula: e.cedula, nombre: e.nombre, negocio: e.negocio || null, municipio: e.municipio || null, satelite: e.satelite || null, celular: e.celular || null, dinamizadora: e.dinamizadora_cedula || null, dinamizadora_nombre: din ? din.nombre : null },
@@ -1224,78 +1225,159 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
           // Por tipo, la lista de archivos subidos (cada uno con su clave para verlo, reemplazarlo o quitarlo)
           documentos: Object.fromEntries(TIPOS_DOCUMENTO.map((t) => [t, clavesDe(x && x.documentos, t).map((k) => ({ clave: k, ...metaDocumento(x.documentos[k]) }))])),
           revision: vistaRevision(x), comentarios: vistaComentarios(x),
+          evaluacion: vistaEvaluacion(evals[`${a.ruta}_${a.n}`]),
         };
       }),
       avance: avanceDe(Object.values(filas)),
-      aprendizaje: await semanasAprendizaje(e.id, true),
-      preguntas_aprendizaje: PREGUNTAS_APRENDIZAJE,
+      preguntas_evaluacion: PREGUNTAS_EVALUACION,
+      niveles_comprension: NIVELES_COMPRENSION,
     };
   }
 
-  // ---------- Cuestionario de aprendizaje semanal (emprendedoras) ----------
-  // La Secretaría o la dinamizadora asignada habilitan cada semana a cada emprendedora; ella lo diligencia
-  // en «Mi semana» y las respuestas quedan en «aprendizajes» (una por emprendedora y semana).
-  const SEMANAS_APRENDIZAJE = 6;
-  const PREGUNTAS_APRENDIZAJE = [
-    { id: 'aprendi', tipo: 'texto', texto: '¿Qué fue lo más importante que aprendiste esta semana?', obligatoria: true },
-    { id: 'aplicare', tipo: 'texto', texto: '¿Qué vas a aplicar en tu negocio a partir de esta semana?', obligatoria: true },
-    { id: 'dificultad', tipo: 'texto', texto: '¿Qué se te dificultó o qué te gustaría reforzar?', obligatoria: false },
-    { id: 'utilidad', tipo: 'escala', texto: '¿Qué tan útil fue esta semana para tu negocio?', obligatoria: true },
-    { id: 'confianza', tipo: 'escala', texto: '¿Qué tan segura te sientes para aplicar lo aprendido?', obligatoria: true },
+  // ---------- Evaluación de comprensión temática (una por sesión) ----------
+  // Formato oficial del Plan de Seguimiento y Monitoreo: al cierre de cada sesión la emprendedora responde 5 preguntas,
+  // ella misma en la plataforma (forma escrita) o la dinamizadora transcribe sus palabras tal cual (forma oral).
+  // Luego la dinamizadora o la Secretaría valoran la comprensión. Queda en «aprendizajes», una por emprendedora y sesión.
+  const OPCIONES_REFUERZO = ['El tema central de la sesión', 'Cómo aplicarlo en mi emprendimiento', 'El uso de los formatos o herramientas que trabajamos', 'Más ejemplos prácticos de mi actividad productiva', 'Por ahora no necesito refuerzo', 'Otro'];
+  const PREGUNTAS_EVALUACION = [
+    { id: 'aprendi', n: 1, tipo: 'texto', texto: 'Con sus propias palabras, ¿qué fue lo más importante que aprendió en esta sesión?', obligatoria: true },
+    { id: 'aplicar', n: 2, tipo: 'texto', texto: '¿Cómo piensa poner en práctica lo aprendido en su emprendimiento? Cuéntenos un ejemplo.', obligatoria: true },
+    { id: 'claridad', n: 3, tipo: 'opcion', texto: '¿Qué tan clara le pareció la información que se compartió en esta sesión?', opciones: ['Muy clara', 'Clara', 'Poco clara', 'Nada clara'], obligatoria: true },
+    { id: 'claridad_porque', tipo: 'texto', texto: '¿Por qué?', obligatoria: false },
+    { id: 'metodologia', n: 4, tipo: 'opcion', texto: '¿Cómo le pareció la forma en que se desarrolló la sesión (las actividades, los ejemplos, los materiales y el tiempo)?', opciones: ['Muy adecuada', 'Adecuada', 'Poco adecuada', 'Nada adecuada'], obligatoria: true },
+    { id: 'ayudo', tipo: 'texto', texto: '¿Qué fue lo que más le ayudó a aprender?', obligatoria: false },
+    { id: 'refuerzo', n: 5, tipo: 'varias', texto: '¿En qué le gustaría que la reforzáramos en el acompañamiento? (Puede marcar varias)', opciones: OPCIONES_REFUERZO, obligatoria: true },
+    { id: 'refuerzo_otro', tipo: 'texto', texto: 'Otro: ¿cuál?', obligatoria: false, si: ['refuerzo', 'Otro'] },
+    { id: 'dudas', tipo: 'texto', texto: '¿Le quedó alguna duda? Cuéntenosla aquí:', obligatoria: false },
   ];
-  const idAprendizaje = (emp, semana) => `${emp}_${semana}`;
-  async function semanasAprendizaje(empId, conRespuestas) {
-    const filas = Object.fromEntries((await lista(col('aprendizajes').where('emprendedora', '==', empId))).map((x) => [x.semana, x]));
-    return Array.from({ length: SEMANAS_APRENDIZAJE }, (_, i) => {
-      const x = filas[i + 1];
-      return {
-        semana: i + 1, habilitada: !!(x && x.habilitada), habilitada_en: (x && x.habilitada_en) || null,
-        respondida_en: (x && x.respondida_en) || null,
-        ...(conRespuestas && x && x.respondida_en ? { respuestas: x.respuestas } : {}),
-      };
-    });
+  // Respuestas del cuestionario semanal de antes, para seguir mostrándolas
+  const PREGUNTAS_ANTERIORES = {
+    aprendi: '¿Qué fue lo más importante que aprendiste esta semana?', aplicare: '¿Qué vas a aplicar en tu negocio a partir de esta semana?',
+    dificultad: '¿Qué se te dificultó o qué te gustaría reforzar?', utilidad: '¿Qué tan útil fue esta semana para tu negocio?', confianza: '¿Qué tan segura te sientes para aplicar lo aprendido?',
+  };
+  const NIVELES_COMPRENSION = { comprendio: 'Comprendió', parcial: 'Comprendió parcialmente', refuerzo: 'Requiere refuerzo' };
+  const idEvaluacion = (emp, a) => `${emp}_${a.ruta}_${a.n}`;
+  // Antes era una por semana (id emp_semana): la semana N equivale a la sesión N de la ruta HACER
+  const claveEvaluacion = (x) => (x.ruta ? `${x.ruta}_${x.n}` : `hacer_${x.semana}`);
+  async function evaluacionesDe(empId) {
+    return Object.fromEntries((await lista(col('aprendizajes').where('emprendedora', '==', empId))).map((x) => [claveEvaluacion(x), x]));
   }
-  const validarSemana = (s) => { const n = Number(s); if (!Number.isInteger(n) || n < 1 || n > SEMANAS_APRENDIZAJE) throw new Falla(400, 'semana', `La semana debe estar entre 1 y ${SEMANAS_APRENDIZAJE}.`); return n; };
-  async function habilitarAprendizaje(token, b) {
+  // La valoración general sale de las preguntas 1 y 2: lograda si ambas quedan en «Comprendió»
+  const valoracionGeneral = (v) => (v.comprension === 'comprendio' && v.aplicacion === 'comprendio' ? 'comprendio' : [v.comprension, v.aplicacion].includes('refuerzo') ? 'refuerzo' : 'parcial');
+  const vacia = (v) => v === null || v === undefined || v === '' || (Array.isArray(v) && !v.length);
+  function vistaEvaluacion(x) {
+    if (!x) return { habilitada: false, habilitada_en: null, respondida_en: null, forma: null, transcrita_por: null, respuestas: [], valoracion: null };
+    const r = x.respuestas || {};
+    const respuestas = !x.respondida_en ? [] : x.ruta
+      ? PREGUNTAS_EVALUACION.filter((q) => !vacia(r[q.id])).map((q) => ({ id: q.id, n: q.n || null, texto: q.texto, valor: Array.isArray(r[q.id]) ? r[q.id].join(' · ') : r[q.id] }))
+      : Object.entries(PREGUNTAS_ANTERIORES).filter(([k]) => !vacia(r[k])).map(([k, t]) => ({ id: k, n: null, texto: t, valor: typeof r[k] === 'number' ? `${r[k]} de 5` : r[k] }));
+    return {
+      habilitada: !!x.habilitada, habilitada_en: x.habilitada_en || null, respondida_en: x.respondida_en || null,
+      forma: x.respondida_en ? x.forma || 'escrita' : null, transcrita_por: x.transcrita_por_nombre || null, respuestas,
+      valoracion: x.valoracion ? { ...x.valoracion, por: undefined } : null,
+    };
+  }
+  // Deja la evaluación lista para que la emprendedora la responda y le avisa por correo
+  async function abrirEvaluacion(p, e, a, x) {
+    if (x && (x.habilitada || x.respondida_en)) return;
+    await col('aprendizajes').doc(idEvaluacion(e.id, a)).set({ ...(x || {}), emprendedora: e.id, ruta: a.ruta, n: a.n, habilitada: true, habilitada_por: p.id, habilitada_en: hoy(), respondida_en: null, respuestas: null });
+    await avisarPersona({ persona: e, tipo: 'aviso_cuestionario', de: p, asunto: `Cuéntanos qué aprendiste en tu ${a.ruta === 'hacer' ? `sesión de la semana ${a.n}` : `taller ${a.n}`}`,
+      lineas: [`Ya puedes responder la evaluación de la sesión «${a.titulo || a.nombre}».`, 'Entra a la plataforma: está en «Mi semana», arriba. Son 5 preguntas y te toma unos 10 minutos.', 'No es un examen: no hay respuestas buenas ni malas. Nos sirve para acompañarte mejor.'] });
+  }
+  const sesionDe = (b) => { const a = actividadDe(b.ruta, b.n); if (!a) throw new Falla(400, 'actividad', 'Esa sesión no existe.'); return a; };
+  async function habilitarEvaluacion(token, b) {
     const { p, e } = await emprendimientoPermitido(token, b.cedula);
-    const semana = validarSemana(b.semana);
-    const ref = col('aprendizajes').doc(idAprendizaje(e.id, semana));
+    const a = sesionDe(b);
+    const ref = col('aprendizajes').doc(idEvaluacion(e.id, a));
     const x = await datos(ref);
-    if (x && x.respondida_en) throw new Falla(409, 'respondida', 'Esa semana ya fue respondida: no se puede cambiar.');
-    const habilitada = b.habilitada !== false;
-    await ref.set({ ...(x || {}), emprendedora: e.id, semana, habilitada, habilitada_por: p.id, habilitada_en: habilitada ? hoy() : null, respondida_en: null, respuestas: null });
-    if (habilitada && !(x && x.habilitada)) await avisarPersona({ persona: e, tipo: 'aviso_cuestionario', de: p, asunto: `Tu cuestionario de la semana ${semana} está listo`,
-      lineas: [`Ya puedes responder el cuestionario de aprendizaje de la semana ${semana}.`, 'Entra a la plataforma: está en «Mi semana», en «Tu cuestionario de aprendizaje». Son 5 preguntas cortas.'] });
+    if (x && x.respondida_en) throw new Falla(409, 'respondida', 'Esta evaluación ya fue respondida: no se puede cambiar.');
+    if (b.habilitada === false) {
+      if (x) await ref.set({ ...x, habilitada: false, habilitada_en: null });
+      return verSeguimiento(token, b);
+    }
+    const fila = await datos(col('seguimiento').doc(idSeguimiento(e.id, a)));
+    if (!fila || fila.ejecutada !== true) throw new Falla(400, 'ejecutada', 'Primero marca que la sesión se hizo.');
+    await abrirEvaluacion(p, e, a, x);
     return verSeguimiento(token, b);
   }
-  async function miAprendizaje(token) {
+  async function miEvaluacion(token) {
     const p = await usuarioDelToken(token);
-    if (p.rol !== 'emprendedora') throw new Falla(403, 'permiso', 'Este cuestionario es para las emprendedoras.');
-    return { preguntas: PREGUNTAS_APRENDIZAJE, semanas: await semanasAprendizaje(p.id, true) };
+    if (p.rol !== 'emprendedora') throw new Falla(403, 'permiso', 'Esta evaluación es para las emprendedoras.');
+    const evals = await evaluacionesDe(p.id);
+    return {
+      preguntas: PREGUNTAS_EVALUACION,
+      sesiones: ACTIVIDADES.filter((a) => evals[`${a.ruta}_${a.n}`]).map((a) => {
+        const v = vistaEvaluacion(evals[`${a.ruta}_${a.n}`]);
+        return { ruta: a.ruta, n: a.n, nombre: a.nombre, titulo: a.titulo, habilitada: v.habilitada, respondida_en: v.respondida_en };
+      }),
+    };
   }
-  async function responderAprendizaje(token, b) {
-    const p = await usuarioDelToken(token);
-    if (p.rol !== 'emprendedora') throw new Falla(403, 'permiso', 'Este cuestionario es para las emprendedoras.');
-    const semana = validarSemana(b.semana);
-    const ref = col('aprendizajes').doc(idAprendizaje(p.id, semana));
-    const x = await datos(ref);
-    if (!x || !x.habilitada) throw new Falla(403, 'no_habilitada', 'Este cuestionario todavía no está habilitado. Tu dinamizadora lo habilita al terminar la semana.');
-    if (x.respondida_en) throw new Falla(409, 'respondida', 'Ya respondiste el cuestionario de esta semana. ¡Gracias!');
-    const r = b.respuestas || {};
+  function leerRespuestas(r) {
+    r = r || {};
     const respuestas = {};
-    for (const q of PREGUNTAS_APRENDIZAJE) {
-      if (q.tipo === 'escala') {
-        const v = Number(r[q.id]);
-        if (!Number.isInteger(v) || v < 1 || v > 5) { if (q.obligatoria) throw new Falla(400, q.id, `Elige un número del 1 al 5 en: «${q.texto}»`); continue; }
+    for (const q of PREGUNTAS_EVALUACION) {
+      const titulo = q.n ? `la pregunta ${q.n}` : `«${q.texto}»`;
+      if (q.tipo === 'opcion') {
+        const v = String(r[q.id] ?? '');
+        if (!q.opciones.includes(v)) { if (q.obligatoria) throw new Falla(400, q.id, `Marca una opción en ${titulo}.`); respuestas[q.id] = null; continue; }
+        respuestas[q.id] = v;
+      } else if (q.tipo === 'varias') {
+        const marcadas = (Array.isArray(r[q.id]) ? r[q.id] : []).map(String);
+        const v = q.opciones.filter((o) => marcadas.includes(o));
+        if (q.obligatoria && !v.length) throw new Falla(400, q.id, `Marca al menos una opción en ${titulo}.`);
         respuestas[q.id] = v;
       } else {
         const v = String(r[q.id] ?? '').trim().slice(0, 1500);
-        if (q.obligatoria && v.length < 3) throw new Falla(400, q.id, `Responde: «${q.texto}»`);
+        const exigida = q.obligatoria || (q.si && (respuestas[q.si[0]] || []).includes(q.si[1]));
+        if (exigida && v.length < 3) throw new Falla(400, q.id, q.si ? 'Marcaste «Otro» en la pregunta 5: escribe cuál.' : `Responde ${titulo}.`);
         respuestas[q.id] = v || null;
       }
     }
-    await ref.set({ ...x, respuestas, respondida_en: hoy() });
-    return miAprendizaje(token);
+    return respuestas;
+  }
+  // La emprendedora la responde ella misma (escrita). La dinamizadora asignada o la Secretaría pueden escribir
+  // sus palabras tal cual cuando prefiere responder de viva voz (oral).
+  async function responderEvaluacion(token, b) {
+    const p = await usuarioDelToken(token);
+    const a = sesionDe(b);
+    if (p.rol === 'emprendedora') {
+      const ref = col('aprendizajes').doc(idEvaluacion(p.id, a));
+      const x = await datos(ref);
+      if (!x || !x.habilitada) throw new Falla(403, 'no_habilitada', 'Esta evaluación todavía no está habilitada. Tu dinamizadora la habilita al terminar la sesión.');
+      if (x.respondida_en) throw new Falla(409, 'respondida', 'Ya respondiste la evaluación de esta sesión. ¡Gracias!');
+      await ref.set({ ...x, respuestas: leerRespuestas(b.respuestas), forma: 'escrita', respondida_en: hoy() });
+      const din = await dinamizadoraDe(p);
+      if (din) await avisarPersona({ persona: din, cedula: din.cedula, tipo: 'aviso_evaluacion', de: p, asunto: `${p.nombre} respondió la evaluación de la sesión`,
+        lineas: [`${p.nombre} respondió la evaluación de comprensión temática de «${a.titulo || a.nombre}».`, 'Léela y marca qué tanto comprendió: está en «Seguimiento», dentro de esa sesión.'] });
+      return miEvaluacion(token);
+    }
+    const { e } = await emprendimientoPermitido(token, b.cedula);
+    const ref = col('aprendizajes').doc(idEvaluacion(e.id, a));
+    const x = await datos(ref);
+    if (x && x.respondida_en) throw new Falla(409, 'respondida', 'Esta evaluación ya fue respondida.');
+    const fila = await datos(col('seguimiento').doc(idSeguimiento(e.id, a)));
+    if (!fila || fila.ejecutada !== true) throw new Falla(400, 'ejecutada', 'Primero marca que la sesión se hizo.');
+    await ref.set({ ...(x || {}), emprendedora: e.id, ruta: a.ruta, n: a.n, habilitada: true, habilitada_en: (x && x.habilitada_en) || hoy(),
+      respuestas: leerRespuestas(b.respuestas), forma: 'oral', transcrita_por: p.id, transcrita_por_nombre: p.nombre, respondida_en: hoy() });
+    return verSeguimiento(token, b);
+  }
+  // Valoración de la comprensión: la hace la dinamizadora o la Secretaría con base en las preguntas 1 y 2
+  async function valorarEvaluacion(token, b) {
+    const { p, e } = await emprendimientoPermitido(token, b.cedula);
+    const a = sesionDe(b);
+    const ref = col('aprendizajes').doc(idEvaluacion(e.id, a));
+    const x = await datos(ref);
+    if (!x || !x.respondida_en) throw new Falla(400, 'sin_respuesta', 'La emprendedora todavía no ha respondido la evaluación.');
+    exigirEditable(p, await datos(col('seguimiento').doc(idSeguimiento(e.id, a))));
+    const v = {};
+    for (const [k, nombre] of [['comprension', 'Comprensión del contenido'], ['aplicacion', 'Aplicación al emprendimiento']]) {
+      if (!NIVELES_COMPRENSION[b[k]]) throw new Falla(400, k, `Marca el nivel en «${nombre}».`);
+      v[k] = b[k];
+      v[`${k}_obs`] = texto(b[`${k}_obs`], 500) || null;
+      if (b[k] === 'refuerzo' && !v[`${k}_obs`]) throw new Falla(400, `${k}_obs`, `En «${nombre}» marcaste «Requiere refuerzo»: anota en la observación qué tema conviene retomar.`);
+    }
+    await ref.set({ ...x, valoracion: { ...v, general: valoracionGeneral(v), acciones: texto(b.acciones, 1000) || null, por: p.id, por_nombre: p.nombre, rol: NOMBRE_ROL[p.rol] || 'Equipo', en: hoy() } });
+    return verSeguimiento(token, b);
   }
   async function marcarActividad(token, b) {
     const { p, e } = await emprendimientoPermitido(token, b.cedula);
@@ -1312,6 +1394,7 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
       documentos: (previa && previa.documentos) || {}, marcado_por: p.id, marcado_en: hoy(),
       revision: (previa && previa.revision) || null, comentarios: (previa && previa.comentarios) || [],
     });
+    if (b.ejecutada && !(previa && previa.ejecutada === true)) await abrirEvaluacion(p, e, a, await datos(col('aprendizajes').doc(idEvaluacion(e.id, a))));
     return verSeguimiento(token, b);
   }
   const comentario = (p, txt, estado = null) => ({ autor: p.nombre, autor_id: p.id, rol: NOMBRE_ROL[p.rol] || 'Equipo', texto: txt, estado, en: hoy() });
@@ -2117,9 +2200,10 @@ function crearLogica({ db, cuentas, ahora = () => new Date(), catalogo = { archi
         case 'admin-crear-novedad': r = await adminCrearNovedad(token, b); break;
         case 'admin-enviar-novedad': r = await adminEnviarNovedad(token, b); break;
         case 'novedad': r = await ultimaNovedad(token); break;
-        case 'habilitar-aprendizaje': r = await habilitarAprendizaje(token, b); break;
-        case 'mi-aprendizaje': r = await miAprendizaje(token); break;
-        case 'responder-aprendizaje': r = await responderAprendizaje(token, b); break;
+        case 'habilitar-evaluacion': r = await habilitarEvaluacion(token, b); break;
+        case 'mi-evaluacion': r = await miEvaluacion(token); break;
+        case 'responder-evaluacion': r = await responderEvaluacion(token, b); break;
+        case 'valorar-evaluacion': r = await valorarEvaluacion(token, b); break;
         case 'material-transferencia': r = await materialTransferencia(token); break;
         case 'archivo-transferencia': r = await archivoTransferencia(token, b); break;
         case 'foro-modulo': r = await foroModulo(token, b); break;

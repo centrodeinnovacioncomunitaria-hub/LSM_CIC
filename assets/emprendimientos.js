@@ -51,7 +51,7 @@
         pendientes_envio: 'Con sesiones sin enviar',
         sin_avance: 'Sin ninguna sesión registrada',
         sin: 'Sin dinamizadora',
-        cuestionario: 'Con cuestionario sin responder',
+        cuestionario: 'Con evaluación de sesión sin responder',
     };
     let H = { datos: null, rol: '', sat: '', din: '', filtro: '', texto: '', verAsignadas: false, buscarDin: '' };
     let promesa = null;
@@ -89,7 +89,7 @@
     async function montar(cont, ctx, rol, modo) {
         C = ctx;
         montajes[modo] = cont;
-        cont.onclick = null; cont.onchange = null; cont.oninput = null;
+        cont.onclick = null; cont.onchange = null; cont.oninput = null; cont.onsubmit = null;
         delete cont.dataset.ficha;
         if (C.DEMO) return enDemo(cont);
         cont.innerHTML = '<p class="vista-intro" role="status">Cargando…</p>';
@@ -244,7 +244,7 @@
     // Descarga lo que se ve (con los filtros) en un archivo que abre Excel (CSV separado por punto y coma)
     function descargarExcel() {
         const celda = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-        const cab = ['Emprendedora', 'Cédula', 'Negocio', 'Municipio', 'Satélite', 'Dinamizadora', 'Semana actual', ...COLUMNAS.map(([r, n]) => (r === 'hacer' ? `HACER semana ${n}` : `SER taller ${n}`)), 'Aprobadas', 'Cuestionarios respondidos', 'Cuestionarios habilitados'];
+        const cab = ['Emprendedora', 'Cédula', 'Negocio', 'Municipio', 'Satélite', 'Dinamizadora', 'Semana actual', ...COLUMNAS.map(([r, n]) => (r === 'hacer' ? `HACER semana ${n}` : `SER taller ${n}`)), 'Aprobadas', 'Evaluaciones de sesión respondidas', 'Evaluaciones de sesión habilitadas'];
         const filasCsv = filtrados().map((x) => [x.nombre, x.cedula, x.negocio, x.municipio, nombreSat(x.satelite), x.dinamizadora_nombre, x.semana_actual || 1,
             ...COLUMNAS.map(([r, n]) => ESTADO_CELDA[estadoCelda(x.celdas[`${r}_${n}`])][2]), x.avance.aprobadas || 0, x.aprendizaje.respondidas.length, x.aprendizaje.habilitadas.length]);
         const csv = '﻿' + [cab, ...filasCsv].map((f) => f.map(celda).join(';')).join('\r\n');
@@ -334,19 +334,90 @@
         for (const o of orden) { const a = s.actividades.find((x) => est(x) === o); if (a) return clave(a); }
         return null;
     }
-    // Cuestionario de aprendizaje semanal: la Secretaría o la dinamizadora habilitan cada semana y ven las respuestas
-    function bloqueAprendizaje(s) {
-        const preguntas = s.preguntas_aprendizaje || [];
-        const semanas = s.aprendizaje || [];
-        return `<section class="emp-grupo" id="aprendizaje"><h4>Cuestionario de aprendizaje semanal</h4>
-            <p class="texto-suave">Al terminar cada semana, habilítale el cuestionario a la emprendedora: lo verá en «Mi semana» y sus respuestas aparecen aquí.</p>
-            <ul class="lista-limpia aprendizaje-semanas">${semanas.map((w) => `<li class="aprendizaje-semana" data-semana="${w.semana}">
-                <b>Semana ${w.semana}</b>
-                ${w.respondida_en ? `<span class="chip emp-ok">✓ Respondido · ${esc(fechaCorta(w.respondida_en))}</span>`
-                    : w.habilitada ? `<span><span class="chip emp-pend">Habilitado · esperando respuesta</span> <button type="button" class="boton-texto" data-apr="quitar">Deshabilitar</button></span>`
-                    : '<button type="button" class="btn btn-borde btn-pequeno" data-apr="habilitar">Habilitar cuestionario</button>'}
-                ${w.respuestas ? `<dl class="aprendizaje-respuestas">${preguntas.map((q) => `<dt>${esc(q.texto)}</dt><dd>${w.respuestas[q.id] == null || w.respuestas[q.id] === '' ? '—' : q.tipo === 'escala' ? `${esc(w.respuestas[q.id])} de 5` : esc(w.respuestas[q.id])}</dd>`).join('')}</dl>` : ''}
-            </li>`).join('')}</ul></section>`;
+    // ---------- Evaluación de comprensión temática (formato oficial, una por sesión) ----------
+    // Los campos del formato los usa también «Mi semana» de la emprendedora (window.CICEmprendimientos.evaluacion).
+    const escE = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    function camposEvaluacion(preguntas, pref) {
+        return preguntas.map((q) => {
+            const id = `${pref}-${q.id}`;
+            const titulo = `${q.n ? `<span class="eval-num">${q.n}</span> ` : ''}${escE(q.texto)}${q.obligatoria || q.si ? '' : ' <small>(opcional)</small>'}`;
+            if (q.tipo === 'texto') return `<div class="eval-pregunta ${q.n ? '' : 'eval-sub'}" ${q.si ? `data-si="${escE(q.si[0])}" data-si-valor="${escE(q.si[1])}" hidden` : ''}><label class="etiqueta" for="${id}">${titulo}</label><textarea class="campo" id="${id}" name="${q.id}" rows="${q.n ? 3 : 2}" maxlength="1500"></textarea></div>`;
+            const tipo = q.tipo === 'varias' ? 'checkbox' : 'radio';
+            return `<fieldset class="eval-pregunta"><legend class="etiqueta">${titulo}</legend><div class="eval-opciones ${tipo === 'checkbox' ? 'eval-varias' : ''}">${q.opciones.map((o) => `<label class="eval-opcion"><input type="${tipo}" name="${q.id}" value="${escE(o)}"><span>${escE(o)}</span></label>`).join('')}</div></fieldset>`;
+        }).join('');
+    }
+    // «Otro: ¿cuál?» solo aparece si se marcó «Otro»
+    function activarEvaluacion(form) {
+        const ver = () => form.querySelectorAll('[data-si]').forEach((d) => { d.hidden = ![...form.querySelectorAll(`input[name="${d.dataset.si}"]:checked`)].some((x) => x.value === d.dataset.siValor); });
+        form.addEventListener('change', ver); ver();
+    }
+    function leerEvaluacion(form, preguntas) {
+        const respuestas = {};
+        for (const q of preguntas) {
+            if (q.tipo === 'opcion') { const x = form.querySelector(`input[name="${q.id}"]:checked`); respuestas[q.id] = x ? x.value : null; }
+            else if (q.tipo === 'varias') respuestas[q.id] = [...form.querySelectorAll(`input[name="${q.id}"]:checked`)].map((x) => x.value);
+            else respuestas[q.id] = form.elements[q.id].value.trim();
+            const v = respuestas[q.id];
+            const falta = v === null || v === '' || (Array.isArray(v) && !v.length);
+            const exigida = q.obligatoria || (q.si && (respuestas[q.si[0]] || []).includes(q.si[1]));
+            if (exigida && falta) return { error: q.si ? 'Marcaste «Otro» en la pregunta 5: escribe cuál.' : `Falta responder la pregunta ${q.n}.`, campo: q.id };
+        }
+        return { respuestas };
+    }
+    let seguimientoActual = null;
+    function bloqueEvaluacion(a, fija) {
+        const ev = a.evaluacion;
+        if (!ev || a.ejecutada !== true) return '';
+        const clave = `${a.ruta}-${a.n}`;
+        const ella = fichaActual ? fichaActual.nombre : 'La emprendedora';
+        let cuerpo;
+        if (ev.respondida_en) {
+            cuerpo = `<p class="texto-suave">Respondida el ${esc(fechaCorta(ev.respondida_en))} · ${ev.forma === 'oral' ? `forma oral${ev.transcrita_por ? `: la escribió ${esc(ev.transcrita_por)}` : ''}` : 'forma escrita: la respondió ella en la plataforma'}</p>
+                <dl class="eval-respuestas">${ev.respuestas.map((r) => `<dt>${r.n ? `${r.n}. ` : ''}${esc(r.texto)}</dt><dd>${esc(r.valor)}</dd>`).join('')}</dl>
+                ${bloqueValoracion(ev, fija)}`;
+        } else {
+            cuerpo = `<p class="texto-suave">${ev.habilitada ? `✓ ${esc(ella)} ya la puede responder: la ve en «Mi semana» y le llegó un correo.` : 'Todavía no está habilitada para la emprendedora.'}</p>
+                <div class="eval-acciones">${ev.habilitada ? '<button type="button" class="boton-texto" data-eval-habilitar="no">Deshabilitar</button>' : '<button type="button" class="btn btn-borde btn-pequeno" data-eval-habilitar="si">Habilitarla para que la responda</button>'}</div>
+                <details class="eval-plegable"><summary>¿Prefiere responder de viva voz? Escribe tú sus respuestas</summary>
+                    <p class="ayuda-campo">Léele cada pregunta, escúchala sin corregirla ni completarle las ideas y escribe sus palabras tal cual. En las preguntas con opciones, marca la que ella elija.</p>
+                    <form class="eval-form" data-eval-oral novalidate>${camposEvaluacion((seguimientoActual && seguimientoActual.preguntas_evaluacion) || [], `oral-${clave}`)}
+                        <p class="mensaje error" role="alert" hidden></p>
+                        <button type="submit" class="btn btn-primario">Guardar sus respuestas</button></form>
+                </details>`;
+        }
+        return `<section class="eval-bloque">
+            <p class="emp-pregunta">Evaluación de comprensión temática ${ev.respondida_en ? '<span class="chip emp-ok">✓ Respondida</span>' : '<span class="chip emp-pend">Sin responder</span>'}</p>
+            ${cuerpo}
+        </section>`;
+    }
+    // Valoración de la comprensión: la dinamizadora (mientras la sesión no esté enviada) o la Secretaría
+    function bloqueValoracion(ev, fija) {
+        const v = ev.valoracion;
+        const niveles = (seguimientoActual && seguimientoActual.niveles_comprension) || {};
+        const puede = C.perfil.rol === 'secretaria' || !fija;
+        const resumen = v ? `<div class="eval-valoracion eval-${esc(v.general)}">
+            <p><b>Valoración general: ${esc(niveles[v.general] || v.general)}</b></p>
+            <ul class="lista-limpia">
+                <li>Comprensión del contenido: <b>${esc(niveles[v.comprension])}</b>${v.comprension_obs ? ` · ${esc(v.comprension_obs)}` : ''}</li>
+                <li>Aplicación al emprendimiento: <b>${esc(niveles[v.aplicacion])}</b>${v.aplicacion_obs ? ` · ${esc(v.aplicacion_obs)}` : ''}</li>
+            </ul>
+            ${v.acciones ? `<p>Acciones de refuerzo sugeridas: ${esc(v.acciones)}</p>` : ''}
+            <small>Valoró ${esc(v.por_nombre)} · ${esc(v.rol)} · ${esc(fechaCorta(v.en))}</small>
+        </div>` : '';
+        if (!puede) return resumen || '<p class="texto-suave">Falta valorar la comprensión.</p>';
+        const fila = (k, nombre, preg) => `<fieldset class="eval-pregunta"><legend class="etiqueta">${nombre} <small>(según la respuesta ${preg})</small></legend>
+            <div class="eval-opciones">${Object.entries(niveles).map(([id, t]) => `<label class="eval-opcion"><input type="radio" name="${k}" value="${id}" ${v && v[k] === id ? 'checked' : ''}><span>${esc(t)}</span></label>`).join('')}</div>
+            <input class="campo" name="${k}_obs" maxlength="500" aria-label="Observación sobre ${nombre}" placeholder="Observación (obligatoria si requiere refuerzo)" value="${esc((v && v[`${k}_obs`]) || '')}"></fieldset>`;
+        return `${resumen}<details class="eval-plegable" ${v ? '' : 'open'}><summary>${v ? 'Cambiar la valoración' : 'Valorar la comprensión'}</summary>
+            <p class="ayuda-campo">Mira las respuestas 1 y 2: son las que muestran lo que realmente comprendió. Se considera lograda cuando las dos quedan en «Comprendió»; si alguna requiere refuerzo, anota qué tema conviene retomar.</p>
+            <form class="eval-form" data-eval-valorar novalidate>
+                ${fila('comprension', 'Comprensión del contenido', 1)}
+                ${fila('aplicacion', 'Aplicación al emprendimiento', 2)}
+                <label class="etiqueta" for="acc-${esc(ev.respondida_en)}">Acciones de refuerzo sugeridas <small>(opcional)</small></label>
+                <textarea class="campo" id="acc-${esc(ev.respondida_en)}" name="acciones" rows="2" maxlength="1000">${esc((v && v.acciones) || '')}</textarea>
+                <p class="mensaje error" role="alert" hidden></p>
+                <button type="submit" class="btn btn-primario">Guardar valoración</button>
+            </form></details>`;
     }
     function estadoChip(a) {
         if (a.ejecutada === true) { const completos = a.requeridos.every((d) => archivosDe(a, d.tipo).length); return completos ? '<span class="chip emp-ok">Ejecutada · documentos completos</span>' : '<span class="chip emp-pend">Ejecutada · faltan documentos</span>'; }
@@ -397,7 +468,8 @@
                         </li>`).join('')}</ul>` : ''}
                         ${fija ? '' : `<label class="btn ${lista.length ? 'btn-borde' : 'btn-primario'} btn-pequeno emp-subir">${lista.length ? '+ Agregar otro documento' : 'Subir foto o PDF'}<input type="file" accept="image/*,application/pdf" data-subir="${d.tipo}" multiple hidden></label>`}
                     </li>`;
-                }).join('')}</ul>` : ''}
+                }).join('')}</ul>
+                ${bloqueEvaluacion(a, fija)}` : ''}
             ${a.ejecutada === false ? `
                 <label class="etiqueta" for="motivo-${clave}">¿Por qué no se hizo?</label>
                 <textarea id="motivo-${clave}" class="campo" rows="2" maxlength="300" data-motivo placeholder="Por ejemplo: la emprendedora no estaba disponible" ${fija ? 'disabled' : ''}>${esc(a.motivo || '')}</textarea>
@@ -445,6 +517,7 @@
     function pintarSeguimiento(cont, s, volver) {
         const e = s.emprendimiento;
         fichaActual = e;
+        seguimientoActual = s;
         const wa = whatsapp(e.celular);
         // Cada sesión es una fila; al tocarla se abre debajo con sus pasos (solo una abierta a la vez)
         const fila = (a) => {
@@ -472,8 +545,8 @@
             </div>
             <p class="vista-intro">Toca una sesión para abrirla.${C.perfil.rol === 'dinamizadora' ? ' Sigue los pasos en orden: ¿se hizo? → documentos → enviar a la Secretaría.' : ''}</p>
             ${grupo('hacer', 'Ruta HACER · sesiones semanales en el negocio')}
-            ${grupo('ser', 'Ruta SER · talleres en grupo')}
-            <details class="emp-grupo emp-cuestionario-plegable"><summary>Cuestionario de aprendizaje semanal</summary>${bloqueAprendizaje(s)}</details>`;
+            ${grupo('ser', 'Ruta SER · talleres en grupo')}`;
+        cont.querySelectorAll('[data-eval-oral]').forEach(activarEvaluacion);
         const actividad = (el) => { const [ruta, n] = el.closest('[data-act]').dataset.act.split('-'); return { cedula: e.cedula, ruta, n: Number(n) }; };
         const actualizar = (nuevo) => { const y = scrollY; pintarSeguimiento(cont, nuevo, volver); scrollTo(0, y); };
         cont.onclick = async (ev) => {
@@ -487,12 +560,12 @@
                 if (f2 && f2.getBoundingClientRect().top < 120) f2.scrollIntoView({ block: 'start' });
                 return;
             }
-            const ap = t.closest('[data-apr]');
-            if (ap) {
-                const semana = Number(ap.closest('[data-semana]').dataset.semana);
-                ap.disabled = true;
-                try { actualizar(await C.llamar('habilitar-aprendizaje', { cedula: e.cedula, semana, habilitada: ap.dataset.apr === 'habilitar' }, true)); C.aviso(ap.dataset.apr === 'habilitar' ? `Cuestionario de la semana ${semana} habilitado: ya lo ve en «Mi semana».` : 'Cuestionario deshabilitado.'); }
-                catch (err) { C.aviso(err.message); ap.disabled = false; }
+            const hab = t.closest('[data-eval-habilitar]');
+            if (hab) {
+                const si = hab.dataset.evalHabilitar === 'si';
+                hab.disabled = true;
+                try { actualizar(await C.llamar('habilitar-evaluacion', { ...actividad(hab), habilitada: si }, true)); C.aviso(si ? 'Evaluación habilitada: ya la ve en «Mi semana» y le llegó un correo.' : 'Evaluación deshabilitada.'); }
+                catch (err) { C.aviso(err.message); hab.disabled = false; }
                 return;
             }
             const m = t.closest('[data-marcar]');
@@ -548,6 +621,27 @@
                 try { actualizar(await C.llamar('quitar-documento', { ...actividad(q), clave: q.dataset.quitarDoc }, true)); C.aviso('Documento quitado.'); } catch (err) { C.aviso(err.message); }
             }
         };
+        // Evaluación: respuestas en forma oral y valoración de la comprensión
+        cont.onsubmit = async (ev) => {
+            const f = ev.target;
+            if (!f.matches('[data-eval-oral], [data-eval-valorar]')) return;
+            ev.preventDefault();
+            const m = $('.mensaje', f);
+            const boton = $('button[type="submit"]', f);
+            let accion, datos;
+            if (f.matches('[data-eval-oral]')) {
+                const r = leerEvaluacion(f, s.preguntas_evaluacion || []);
+                if (r.error) { m.textContent = r.error; m.hidden = false; return; }
+                accion = 'responder-evaluacion'; datos = { respuestas: r.respuestas };
+            } else {
+                const nivel = (k) => { const x = f.querySelector(`input[name="${k}"]:checked`); return x ? x.value : ''; };
+                accion = 'valorar-evaluacion';
+                datos = { comprension: nivel('comprension'), aplicacion: nivel('aplicacion'), comprension_obs: f.elements.comprension_obs.value, aplicacion_obs: f.elements.aplicacion_obs.value, acciones: f.elements.acciones.value };
+            }
+            boton.disabled = true;
+            try { actualizar(await C.llamar(accion, { ...actividad(f), ...datos }, true)); C.aviso(accion === 'valorar-evaluacion' ? 'Valoración guardada.' : 'Respuestas guardadas.'); }
+            catch (err) { m.textContent = err.message; m.hidden = false; boton.disabled = false; }
+        };
         cont.onchange = async (ev) => {
             const t = ev.target;
             if (t.matches('[data-fecha]')) {
@@ -600,5 +694,5 @@
         setTimeout(() => URL.revokeObjectURL(url), 60000);
     }
 
-    window.CICEmprendimientos = { secretaria, dinamizadora };
+    window.CICEmprendimientos = { secretaria, dinamizadora, evaluacion: { campos: camposEvaluacion, activar: activarEvaluacion, leer: leerEvaluacion } };
 })();

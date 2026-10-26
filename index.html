@@ -64,7 +64,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="assets/cic.css?v=20261042">
+    <link rel="stylesheet" href="assets/cic.css?v=20261043">
     <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -746,13 +746,13 @@
 
     <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 
-    <script src="./config.js?v=20261042"></script>
-    <script src="assets/datos-cic.js?v=20261042"></script>
-    <script src="assets/sitio.js?v=20261042"></script>
-    <script src="assets/cursos-equipo.js?v=20261042"></script>
-    <script src="assets/soporte.js?v=20261042"></script>
-    <script src="assets/soporte-flotante.js?v=20261042"></script>
-    <script src="assets/emprendimientos.js?v=20261042"></script>
+    <script src="./config.js?v=20261043"></script>
+    <script src="assets/datos-cic.js?v=20261043"></script>
+    <script src="assets/sitio.js?v=20261043"></script>
+    <script src="assets/cursos-equipo.js?v=20261043"></script>
+    <script src="assets/soporte.js?v=20261043"></script>
+    <script src="assets/soporte-flotante.js?v=20261043"></script>
+    <script src="assets/emprendimientos.js?v=20261043"></script>
     <script>
     (() => {
         'use strict';
@@ -1479,54 +1479,56 @@
             </div>`;
         }
 
-        // Cuestionario de aprendizaje semanal: aparece cuando la dinamizadora o la Secretaría habilitan la semana
+        // Evaluación de comprensión temática: al terminar cada sesión, cuando la dinamizadora la registra, aparece aquí
+        const OPC_REFUERZO = ['El tema central de la sesión', 'Cómo aplicarlo en mi emprendimiento', 'El uso de los formatos o herramientas que trabajamos', 'Más ejemplos prácticos de mi actividad productiva', 'Por ahora no necesito refuerzo', 'Otro'];
         const PREGUNTAS_DEMO = [
-            { id: 'aprendi', tipo: 'texto', texto: '¿Qué fue lo más importante que aprendiste esta semana?', obligatoria: true },
-            { id: 'aplicare', tipo: 'texto', texto: '¿Qué vas a aplicar en tu negocio a partir de esta semana?', obligatoria: true },
-            { id: 'dificultad', tipo: 'texto', texto: '¿Qué se te dificultó o qué te gustaría reforzar?', obligatoria: false },
-            { id: 'utilidad', tipo: 'escala', texto: '¿Qué tan útil fue esta semana para tu negocio?', obligatoria: true },
-            { id: 'confianza', tipo: 'escala', texto: '¿Qué tan segura te sientes para aplicar lo aprendido?', obligatoria: true },
+            { id: 'aprendi', n: 1, tipo: 'texto', texto: 'Con sus propias palabras, ¿qué fue lo más importante que aprendió en esta sesión?', obligatoria: true },
+            { id: 'aplicar', n: 2, tipo: 'texto', texto: '¿Cómo piensa poner en práctica lo aprendido en su emprendimiento? Cuéntenos un ejemplo.', obligatoria: true },
+            { id: 'claridad', n: 3, tipo: 'opcion', texto: '¿Qué tan clara le pareció la información que se compartió en esta sesión?', opciones: ['Muy clara', 'Clara', 'Poco clara', 'Nada clara'], obligatoria: true },
+            { id: 'claridad_porque', tipo: 'texto', texto: '¿Por qué?', obligatoria: false },
+            { id: 'metodologia', n: 4, tipo: 'opcion', texto: '¿Cómo le pareció la forma en que se desarrolló la sesión (las actividades, los ejemplos, los materiales y el tiempo)?', opciones: ['Muy adecuada', 'Adecuada', 'Poco adecuada', 'Nada adecuada'], obligatoria: true },
+            { id: 'ayudo', tipo: 'texto', texto: '¿Qué fue lo que más le ayudó a aprender?', obligatoria: false },
+            { id: 'refuerzo', n: 5, tipo: 'varias', texto: '¿En qué le gustaría que la reforzáramos en el acompañamiento? (Puede marcar varias)', opciones: OPC_REFUERZO, obligatoria: true },
+            { id: 'refuerzo_otro', tipo: 'texto', texto: 'Otro: ¿cuál?', obligatoria: false, si: ['refuerzo', 'Otro'] },
+            { id: 'dudas', tipo: 'texto', texto: '¿Le quedó alguna duda? Cuéntenosla aquí:', obligatoria: false },
         ];
+        const nombreSesion = (x) => `${x.ruta === 'hacer' ? `Semana ${x.n}` : `Taller ${x.n}`}${x.titulo ? ` · ${x.titulo}` : ''}`;
         async function pintarMiAprendizaje() {
             const caja = $('#mi-aprendizaje');
             if (!caja) return;
+            const E = window.CICEmprendimientos.evaluacion;
             let r;
-            if (DEMO) r = { preguntas: PREGUNTAS_DEMO, semanas: [1, 2, 3, 4, 5, 6].map((n) => ({ semana: n, habilitada: n === 1, respondida_en: null })) };
-            else { try { r = await llamar('mi-aprendizaje', {}, true); } catch (e) { caja.innerHTML = ''; return; } }
-            const pendientes = r.semanas.filter((w) => w.habilitada && !w.respondida_en);
-            const hechas = r.semanas.filter((w) => w.respondida_en);
+            if (DEMO) r = { preguntas: PREGUNTAS_DEMO, sesiones: [{ ruta: 'hacer', n: 1, titulo: DATOS.hacer[0].titulo, habilitada: true, respondida_en: null }] };
+            else { try { r = await llamar('mi-evaluacion', {}, true); } catch (e) { caja.innerHTML = ''; return; } }
+            const pendientes = r.sesiones.filter((x) => x.habilitada && !x.respondida_en);
+            const hechas = r.sesiones.filter((x) => x.respondida_en);
             if (!pendientes.length && !hechas.length) { caja.innerHTML = ''; return; }
-            const campo = (q, n) => q.tipo === 'escala'
-                ? `<fieldset class="pregunta-apr"><legend class="etiqueta">${esc(q.texto)}</legend><p class="ayuda-campo">1 = nada · 5 = mucho</p><div class="escala">${[1, 2, 3, 4, 5].map((v) => `<label><input type="radio" name="${q.id}" value="${v}"><span>${v}</span></label>`).join('')}</div></fieldset>`
-                : `<div class="pregunta-apr"><label class="etiqueta" for="apr-${n}-${q.id}">${esc(q.texto)}${q.obligatoria ? '' : ' (opcional)'}</label><textarea class="campo" id="apr-${n}-${q.id}" name="${q.id}" rows="3" maxlength="1500"></textarea></div>`;
-            caja.innerHTML = `<h3 class="vista-subtitulo" id="sec-cuestionario" data-seccion="Cuestionario semanal" data-seccion-cuenta="${pendientes.length}">Tu cuestionario de aprendizaje</h3>
-                ${pendientes.map((w) => `<form class="tarjeta form-aprendizaje" data-semana="${w.semana}" novalidate>
-                    <p class="eyebrow">Semana ${w.semana} · te lo habilitó tu dinamizadora</p>
-                    <p class="texto-suave">Cuéntanos qué aprendiste esta semana. Tus respuestas las lee tu dinamizadora para acompañarte mejor.</p>
-                    ${r.preguntas.map((q) => campo(q, w.semana)).join('')}
+            caja.innerHTML = `<h3 class="vista-subtitulo" id="sec-cuestionario" data-seccion="Evaluación de la sesión" data-seccion-cuenta="${pendientes.length}">Cuéntanos qué aprendiste en tu sesión</h3>
+                ${pendientes.map((x) => `<form class="tarjeta eval-form form-aprendizaje" data-ruta="${esc(x.ruta)}" data-n="${x.n}" novalidate>
+                    <p class="eyebrow">Evaluación de comprensión temática · ${esc(nombreSesion(x))}</p>
+                    <p class="texto-suave">No es un examen: no hay respuestas buenas ni malas. Responde con tus propias palabras; te toma unos 10 minutos. Con tus respuestas tu dinamizadora sabe en qué reforzarte.</p>
+                    ${E.campos(r.preguntas, `ev-${x.ruta}-${x.n}`)}
                     <p class="mensaje error" role="alert" hidden></p>
                     <button type="submit" class="btn btn-primario" style="margin-top:1rem">Enviar mis respuestas</button>
                 </form>`).join('')}
-                ${hechas.length ? `<p class="texto-suave" style="margin-top:.6rem">✓ Ya respondiste: ${hechas.map((w) => `semana ${w.semana}`).join(', ')}. ¡Gracias!</p>` : ''}`;
-            caja.querySelectorAll('.form-aprendizaje').forEach((f) => f.addEventListener('submit', async (ev) => {
-                ev.preventDefault();
-                const m = f.querySelector('.mensaje');
-                const respuestas = {};
-                for (const q of r.preguntas) {
-                    if (q.tipo === 'escala') { const x = f.querySelector(`input[name="${q.id}"]:checked`); respuestas[q.id] = x ? Number(x.value) : null; }
-                    else respuestas[q.id] = f.elements[q.id].value.trim();
-                    const vacia = respuestas[q.id] === null || respuestas[q.id] === '';
-                    if (q.obligatoria && vacia) { m.textContent = `Te falta responder: «${q.texto}»`; m.hidden = false; return; }
-                }
-                const b = f.querySelector('button[type="submit"]');
-                b.disabled = true; b.textContent = 'Enviando…';
-                try {
-                    if (!DEMO) await llamar('responder-aprendizaje', { semana: Number(f.dataset.semana), respuestas }, true);
-                    aviso('¡Gracias! Tus respuestas quedaron guardadas.');
-                    if (DEMO) { f.remove(); return; }
-                    pintarMiAprendizaje();
-                } catch (e) { m.textContent = e.message; m.hidden = false; b.disabled = false; b.textContent = 'Enviar mis respuestas'; }
-            }));
+                ${hechas.length ? `<p class="texto-suave" style="margin-top:.6rem">✓ Ya respondiste la evaluación de: ${hechas.map((x) => esc(x.ruta === 'hacer' ? `semana ${x.n}` : `taller ${x.n}`)).join(', ')}. ¡Gracias!</p>` : ''}`;
+            caja.querySelectorAll('.form-aprendizaje').forEach((f) => {
+                E.activar(f);
+                f.addEventListener('submit', async (ev) => {
+                    ev.preventDefault();
+                    const m = f.querySelector('.mensaje');
+                    const leido = E.leer(f, r.preguntas);
+                    if (leido.error) { m.textContent = leido.error; m.hidden = false; const c = f.elements[leido.campo]; if (c && c.focus) c.focus(); else if (c && c[0]) c[0].focus(); return; }
+                    const b = f.querySelector('button[type="submit"]');
+                    b.disabled = true; b.textContent = 'Enviando…';
+                    try {
+                        if (!DEMO) await llamar('responder-evaluacion', { ruta: f.dataset.ruta, n: Number(f.dataset.n), respuestas: leido.respuestas }, true);
+                        aviso('¡Gracias! Tus respuestas quedaron guardadas.');
+                        if (DEMO) { f.remove(); return; }
+                        pintarMiAprendizaje();
+                    } catch (e) { m.textContent = e.message; m.hidden = false; b.disabled = false; b.textContent = 'Enviar mis respuestas'; }
+                });
+            });
         }
 
         // ---------- Mis cursos (equipo): video, tema y avance por módulo ----------
