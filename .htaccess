@@ -1,0 +1,14 @@
+# Conexión segura siempre (HSTS): el navegador recuerda que este sitio solo se abre con https:// y ya no
+# intenta la versión sin seguridad. Así no aparece el aviso «Este sitio no admite una conexión segura»
+# cuando alguien escribe la dirección sin https:// o abre un enlace viejo con http://.
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+</IfModule>
+
+# Cualquier visita por http:// se lleva a https:// (respaldo de la redirección de Hostinger)
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} off
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
