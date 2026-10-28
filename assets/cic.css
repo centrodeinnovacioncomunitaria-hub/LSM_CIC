@@ -1650,15 +1650,30 @@ dialog { overflow-x: hidden; }
 .foto-grande .cerrar-foto { position: absolute; right: .6rem; bottom: .45rem; width: 2.6rem; height: 2.6rem; border: 0; border-radius: 50%; background: #fff; color: var(--bosque); font-size: 1.2rem; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .fotos-pista { scroll-behavior: auto; } .fotos-item img { transition: none; } }
 
-/* Enlace de la galería de inicio a las fotos del equipo */
-.galeria-equipo { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.4rem; margin-top: 1.6rem; padding: 1rem 1.3rem; border-radius: 1.4rem; background: #fff; color: var(--bosque); text-decoration: none; box-shadow: var(--sombra); transition: transform .25s; }
-.galeria-equipo:hover { transform: translateY(-3px); }
-.galeria-equipo-fotos { display: flex; }
-.galeria-equipo-fotos img { width: 4.2rem; height: 4.2rem; object-fit: cover; border: 3px solid #fff; border-radius: 50%; }
-.galeria-equipo-fotos img + img { margin-left: -1.1rem; }
-.galeria-equipo-texto { display: grid; gap: .15rem; flex: 1 1 16rem; }
-.galeria-equipo-texto b { font: 700 1.15rem var(--titulo); }
-.galeria-equipo-texto span { color: var(--musgo); }
+/* Galería de inicio: en el recuadro apaisado de «Trabajo en equipo» se ven las mesas y los rostros */
+.galeria-ancha .foto-mesas { object-position: 50% 55%; }
+
+/* Tarjeta que lleva de la galería de inicio a las fotos del equipo */
+.galeria-equipo { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 1.6rem; margin-top: 2rem; padding: 1.8rem 1.4rem 2rem; border-radius: 2rem; background: var(--bosque); color: #fff; text-decoration: none; box-shadow: var(--sombra); }
+.galeria-equipo:focus-visible { outline: 3px solid var(--coralp); outline-offset: 4px; }
+.galeria-equipo .patron-hojas { position: absolute; inset: 0 0 0 45%; opacity: .14; pointer-events: none; }
+.galeria-equipo-fotos { position: relative; width: min(100%, 22rem); height: 12.5rem; justify-self: center; }
+.galeria-equipo-fotos img { position: absolute; width: 58%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border: 6px solid #fff; border-radius: 1rem; box-shadow: 0 18px 30px -16px rgba(0, 0, 0, .6); transition: transform .45s cubic-bezier(.3, .7, .2, 1); }
+.galeria-equipo-fotos img:nth-child(1) { left: 0; top: 1.4rem; transform: rotate(-7deg); z-index: 1; }
+.galeria-equipo-fotos img:nth-child(2) { left: 20%; top: 0; transform: rotate(2deg); z-index: 3; }
+.galeria-equipo-fotos img:nth-child(3) { right: 0; top: .9rem; width: 38%; aspect-ratio: 3 / 4; transform: rotate(8deg); z-index: 2; }
+.galeria-equipo:hover .galeria-equipo-fotos img:nth-child(1) { transform: rotate(-11deg) translate(-8px, 4px); }
+.galeria-equipo:hover .galeria-equipo-fotos img:nth-child(2) { transform: rotate(0) translateY(-8px) scale(1.04); }
+.galeria-equipo:hover .galeria-equipo-fotos img:nth-child(3) { transform: rotate(12deg) translate(8px, 4px); }
+.galeria-equipo-texto { position: relative; display: grid; justify-items: start; gap: .6rem; }
+.galeria-equipo-chip { padding: .25rem .8rem; border-radius: 999px; background: var(--mantequilla); color: var(--bosque); font-weight: 700; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; }
+.galeria-equipo-texto b { font: 700 clamp(1.55rem, 3.2vw, 2.2rem)/1.15 var(--titulo); }
+.galeria-equipo-texto b em { font-style: normal; color: var(--mantequilla); background: none; }
+.galeria-equipo-lead { max-width: 34rem; color: rgba(255, 255, 255, .88); }
+.galeria-equipo-cta { display: inline-flex; align-items: center; gap: .5rem; margin-top: .3rem; padding: .8rem 1.5rem; border-radius: 999px; background: var(--coralp); color: #fff; font-weight: 700; transition: background .2s, gap .2s; }
+.galeria-equipo:hover .galeria-equipo-cta { background: var(--coralp-osc); gap: .85rem; }
+@media (min-width: 760px) { .galeria-equipo { grid-template-columns: 22rem minmax(0, 1fr); gap: 2.6rem; padding: 2.2rem 2.8rem; } .galeria-equipo-fotos { height: 13.5rem; } }
+@media (prefers-reduced-motion: reduce) { .galeria-equipo-fotos img { transition: none; } }
 
 /* ---------- Evaluación de comprensión temática (una por sesión) ---------- */
 .eval-bloque { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px dashed var(--linea); }
