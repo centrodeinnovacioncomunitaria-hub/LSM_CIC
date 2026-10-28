@@ -834,7 +834,7 @@
             <p>${cedula} realizó y aprobó el curso <b>«${esc(C.CURSOS[curso].titulo)}»</b>, conformado por ${n} ${unidad}${n === 1 ? '' : /[rd]$/.test(unidad) ? 'es' : 's'}, con sus videos, materiales de estudio, evaluaciones y evidencias, en la plataforma de formación del CIC.</p>
             <p>Se expide el ${esc(fecha)}.</p>
             <div class="firmas"><div class="firma"><b>Coordinación del CIC</b><br>Red de Mujeres del Caribe</div><div class="firma"><b>Secretaría Técnica</b><br>Centro de Innovación Comunitaria</div></div>
-            <div class="logos"><img src="${logo('red-mujeres-caribe.png')}" alt="Red de Mujeres del Caribe"><img src="${logo('aprodefa.png')}" alt="APRODEFA"><img class="oscuro" src="${logo('fonigualdad.png')}" alt="FonIgualdad"><img src="${logo('padf.png')}" alt="PADF"></div>
+            <div class="logos"><img src="${logo('red-mujeres-caribe.png')}" alt="Red de Mujeres del Caribe"><img src="${logo('aprodefa.png')}" alt="APRODEFA"><img class="oscuro" src="${logo('fonigualdad.png')}" alt="FonIgualdad"><img src="${logo('fupad.png')}" alt="FUPAD"></div>
             <p class="cod">Código de verificación ${esc(x.codigo)} · ${esc(url)}</p>
             </div><div class="acciones"><button onclick="print()">Imprimir o guardar en PDF</button></div></body></html>`);
         w.document.close();
