@@ -1628,6 +1628,38 @@ dialog { overflow-x: hidden; }
 .escala input:focus-visible + span { outline: 3px solid var(--coralp); outline-offset: 2px; }
 .form-aprendizaje .pregunta-apr { margin-top: 1rem; }
 
+/* ---------- Carrusel de fotos (El CIC · el equipo en encuentro) ---------- */
+.galeria-fotos { margin-top: .5rem; }
+.fotos-pista { position: relative; display: flex; gap: 1rem; margin: 0; padding: .3rem .3rem 1.1rem; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--durazno) transparent; }
+.fotos-pista:focus-visible { outline: 3px solid var(--coralp); outline-offset: 4px; border-radius: 1.4rem; }
+.fotos-item { flex: 0 0 auto; height: clamp(17rem, 48vw, 30rem); aspect-ratio: var(--ar); max-width: calc(100vw - 4rem); scroll-snap-align: start; }
+.fotos-item figure { position: relative; height: 100%; margin: 0; border-radius: 1.4rem; overflow: hidden; background: var(--bosque); box-shadow: var(--sombra); }
+.fotos-ampliar { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.fotos-item img { width: 100%; height: 100%; object-fit: cover; transition: transform .7s ease; }
+.fotos-ampliar:hover img { transform: scale(1.04); }
+.fotos-ampliar:focus-visible { outline: 3px solid var(--coralp); outline-offset: -3px; }
+.fotos-item figcaption { position: absolute; left: .8rem; bottom: .8rem; max-width: calc(100% - 1.6rem); padding: .35rem .85rem; border-radius: 999px; background: rgba(255, 246, 238, .94); color: var(--bosque); font-weight: 700; font-size: .92rem; pointer-events: none; }
+.fotos-controles { display: flex; align-items: center; justify-content: flex-end; gap: .6rem; }
+.fotos-cuenta { margin-right: auto; color: var(--musgo); font-weight: 700; font-size: .95rem; }
+.fotos-btn { display: grid; place-items: center; width: 3rem; height: 3rem; border: 2px solid var(--bosque); border-radius: 50%; background: #fff; color: var(--bosque); font-size: 1.25rem; cursor: pointer; transition: background .2s, color .2s; }
+.fotos-btn:hover:not(:disabled) { background: var(--bosque); color: #fff; }
+.fotos-btn:disabled { opacity: .3; cursor: default; }
+.foto-grande { width: min(70rem, 100vw - 1.5rem); padding: 0; background: #1d2f27; border-radius: 1.4rem; overflow: hidden; }
+.foto-grande img { width: 100%; max-height: calc(100vh - 6rem); object-fit: contain; }
+.foto-grande p { margin: 0; padding: .7rem 3.6rem .8rem 1rem; color: #fff; font-weight: 700; }
+.foto-grande .cerrar-foto { position: absolute; right: .6rem; bottom: .45rem; width: 2.6rem; height: 2.6rem; border: 0; border-radius: 50%; background: #fff; color: var(--bosque); font-size: 1.2rem; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .fotos-pista { scroll-behavior: auto; } .fotos-item img { transition: none; } }
+
+/* Enlace de la galería de inicio a las fotos del equipo */
+.galeria-equipo { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.4rem; margin-top: 1.6rem; padding: 1rem 1.3rem; border-radius: 1.4rem; background: #fff; color: var(--bosque); text-decoration: none; box-shadow: var(--sombra); transition: transform .25s; }
+.galeria-equipo:hover { transform: translateY(-3px); }
+.galeria-equipo-fotos { display: flex; }
+.galeria-equipo-fotos img { width: 4.2rem; height: 4.2rem; object-fit: cover; border: 3px solid #fff; border-radius: 50%; }
+.galeria-equipo-fotos img + img { margin-left: -1.1rem; }
+.galeria-equipo-texto { display: grid; gap: .15rem; flex: 1 1 16rem; }
+.galeria-equipo-texto b { font: 700 1.15rem var(--titulo); }
+.galeria-equipo-texto span { color: var(--musgo); }
+
 /* ---------- Evaluación de comprensión temática (una por sesión) ---------- */
 .eval-bloque { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px dashed var(--linea); }
 .eval-bloque .emp-pregunta { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }

@@ -77,6 +77,48 @@
         requestAnimationFrame(paso);
     }
 
+    // Carruseles de fotos: se deslizan con el dedo, con las flechas del teclado o con los botones; al tocar una foto se ve en grande
+    const sinMovimiento = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+    $$('[data-fotos]').forEach((c) => {
+        const pista = $('.fotos-pista', c);
+        const fotos = $$('.fotos-item', pista);
+        const cuenta = $('.fotos-cuenta', c), ant = $('[data-fotos-ant]', c), sig = $('[data-fotos-sig]', c);
+        if (!pista || !fotos.length) return;
+        const inicio = (f) => f.offsetLeft - fotos[0].offsetLeft;
+        const alFinal = () => pista.scrollLeft + pista.clientWidth >= pista.scrollWidth - 8;
+        const actual = () => (alFinal() ? fotos.length - 1 : fotos.reduce((n, f, i) => (inicio(f) <= pista.scrollLeft + 8 ? i : n), 0));
+        // Mientras se desliza, los toques seguidos avanzan desde la foto a la que va (no desde la que se ve)
+        let destino = null, quieto = null;
+        const desde = () => (destino === null ? actual() : destino);
+        const ir = (i) => { destino = Math.max(0, Math.min(fotos.length - 1, i)); pista.scrollTo({ left: inicio(fotos[destino]), behavior: sinMovimiento() ? 'auto' : 'smooth' }); };
+        const pintar = () => { cuenta.textContent = `${actual() + 1} de ${fotos.length}`; ant.disabled = pista.scrollLeft < 8; sig.disabled = alFinal(); };
+        ant.addEventListener('click', () => ir(desde() - 1));
+        sig.addEventListener('click', () => ir(desde() + 1));
+        pista.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); ir(desde() + (e.key === 'ArrowRight' ? 1 : -1)); }
+        });
+        let pendiente = false;
+        pista.addEventListener('scroll', () => { clearTimeout(quieto); quieto = setTimeout(() => { destino = null; }, 180); if (!pendiente) { pendiente = true; requestAnimationFrame(() => { pendiente = false; pintar(); }); } }, { passive: true });
+        addEventListener('resize', pintar);
+        pintar();
+        // Foto en grande, en un diálogo que se cierra con ✕, con Esc o tocando afuera
+        const dialogo = document.createElement('dialog');
+        dialogo.className = 'foto-grande';
+        dialogo.innerHTML = '<img alt=""><p></p><button type="button" class="cerrar-foto" aria-label="Cerrar">✕</button>';
+        document.body.appendChild(dialogo);
+        $('.cerrar-foto', dialogo).addEventListener('click', () => dialogo.close());
+        dialogo.addEventListener('click', (e) => { if (e.target === dialogo) dialogo.close(); });
+        pista.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-ampliar]');
+            if (!b || typeof dialogo.showModal !== 'function') return;
+            const img = $('img', b);
+            $('img', dialogo).src = img.currentSrc || img.src;
+            $('img', dialogo).alt = img.alt;
+            $('p', dialogo).textContent = b.closest('figure').querySelector('figcaption').textContent;
+            dialogo.showModal();
+        });
+    });
+
     // Apariciones suaves y escalonadas al desplazarse; el trazo firme se dibuja al aparecer
     $$('.rejilla, .linea, .obtienes, .temas, .cascada').forEach((grupo) => {
         $$(':scope > .aparece', grupo).forEach((el, i) => el.style.setProperty('--i', i % 6));
@@ -196,7 +238,7 @@
     $$('[data-carrusel]').forEach((c) => {
         const pista = document.getElementById(`carrusel-${c.dataset.carrusel}`);
         if (!pista) return;
-        $$('.carrusel-btn', c).forEach((b) => b.addEventListener('click', () => {
+        $$('.fotos-btn', c).forEach((b) => b.addEventListener('click', () => {
             const paso = (pista.firstElementChild?.offsetWidth || 240) + 16;
             pista.scrollBy({ left: Number(b.dataset.dir) * paso, behavior: 'smooth' });
         }));
